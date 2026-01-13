@@ -38,32 +38,15 @@ class AISettings(BaseSettings):
     )
 
 
-class StockbitSettings(BaseSettings):
-    """Stockbit API configuration."""
-
-    username: str | None = Field(default=None, description="Stockbit username")
-    password: str | None = Field(default=None, description="Stockbit password")
-    secrets_file: Path = Field(
-        default=Path("data/stockbit/secrets.json"), description="Path to secrets file"
-    )
-    auth_state_file: Path = Field(
-        default=Path("data/stockbit/auth_state.json"), description="Path to auth state file"
-    )
-    api_base_url: str = Field(
-        default="https://exodus.stockbit.com", description="Stockbit API base URL"
-    )
-    headless: bool = Field(default=True, description="Run browser in headless mode")
-
-
 class DataSettings(BaseSettings):
     """Data fetching and caching configuration."""
 
     cache_dir: Path = Field(default=Path("data/cache"), description="Cache directory")
     cache_ttl: int = Field(default=3600, description="Cache TTL in seconds (1 hour)")
-    yfinance_suffix: str = Field(default=".JK", description="yfinance ticker suffix for IDX")
+    yfinance_suffix: str = Field(default=".TW", description="yfinance ticker suffix for Taiwan")
     default_period: str = Field(default="3mo", description="Default historical data period")
     tickers_file: Path = Field(
-        default=Path("data/tickers.json"), description="Path to tickers list file"
+        default=Path("data/tw_tickers.json"), description="Path to tickers list file"
     )
 
 
@@ -124,7 +107,6 @@ class Settings(BaseSettings):
 
     # Sub-configurations
     ai: AISettings = Field(default_factory=AISettings)
-    stockbit: StockbitSettings = Field(default_factory=StockbitSettings)
     data: DataSettings = Field(default_factory=DataSettings)
     analysis: AnalysisSettings = Field(default_factory=AnalysisSettings)
     ui: UISettings = Field(default_factory=UISettings)
@@ -168,7 +150,6 @@ class Settings(BaseSettings):
         """Ensure required directories exist."""
         dirs_to_create = [
             self.data.cache_dir,
-            self.stockbit.secrets_file.parent,
             Path("data/broker_summary"),
             Path("data/reports"),
         ]

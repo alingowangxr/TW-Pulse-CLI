@@ -1,5 +1,5 @@
 # Pulse CLI Configuration
-# AI-powered Indonesian Stock Market Analysis
+# AI-powered Taiwan Stock Market Analysis
 
 app_name: "Pulse CLI"
 version: "0.1.0"
@@ -23,18 +23,15 @@ ai:
     gemini-claude-opus-4-5-thinking: "Claude Opus 4.5 Thinking [Antigravity]"
     gpt-oss-120b-medium: "GPT OSS 120B Medium [Antigravity]"
 
-# Stockbit Configuration
-stockbit:
-  api_base_url: "https://exodus.stockbit.com"
-  headless: true
-  # Credentials should be in .env file:
-  # STOCKBIT_USERNAME=your_username
-  # STOCKBIT_PASSWORD=your_password
+# FinMind Configuration
+finmind:
+  api_token: "" # Will be loaded from environment variable FINMIND_TOKEN
+  api_url: "https://api.finmindtrade.com/api"
 
 # Data Configuration
 data:
   cache_ttl: 3600  # 1 hour
-  yfinance_suffix: ".JK"
+  yfinance_suffix: ".TW"
   default_period: "3mo"
 
 # Analysis Configuration

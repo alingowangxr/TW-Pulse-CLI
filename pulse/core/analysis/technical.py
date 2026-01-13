@@ -15,7 +15,7 @@ except ImportError:
     HAS_TA = False
 
 from pulse.core.config import settings
-from pulse.core.data.yfinance import YFinanceFetcher
+from pulse.core.data.stock_data_provider import StockDataProvider
 from pulse.core.models import SignalType, TechnicalIndicators, TrendType
 from pulse.utils.logger import get_logger
 
@@ -27,7 +27,7 @@ class TechnicalAnalyzer:
 
     def __init__(self):
         """Initialize technical analyzer."""
-        self.fetcher = YFinanceFetcher()
+        self.fetcher = StockDataProvider()
         self.settings = settings.analysis
 
     async def analyze(
@@ -49,8 +49,18 @@ class TechnicalAnalyzer:
             log.error("ta library not installed. Run: pip install ta")
             return None
 
+        from datetime import datetime, timedelta
+
+        # Define date range for fetching data (e.g., 1 year history)
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=365)
+        start_date_str = start_date.strftime("%Y-%m-%d")
+        end_date_str = end_date.strftime("%Y-%m-%d")
+
         # Get historical data
-        df = self.fetcher.get_history_df(ticker, period)
+        df = await self.fetcher.fetch_history(
+            ticker, period, start_date=start_date_str, end_date=end_date_str
+        )
 
         if df is None or df.empty:
             log.warning(f"No data available for {ticker}")
@@ -82,21 +92,19 @@ class TechnicalAnalyzer:
         # === Trend Indicators ===
 
         # SMA
-        sma_20 = SMAIndicator(close, window=20).sma_indicator().iloc[-1]
-        sma_50 = SMAIndicator(close, window=50).sma_indicator().iloc[-1]
-        sma_200 = (
-            SMAIndicator(close, window=200).sma_indicator().iloc[-1] if len(df) >= 200 else None
-        )
+        sma_20 = SMAIndicator(close, n=20).sma_indicator().iloc[-1]
+        sma_50 = SMAIndicator(close, n=50).sma_indicator().iloc[-1]
+        sma_200 = SMAIndicator(close, n=200).sma_indicator().iloc[-1] if len(df) >= 200 else None
 
         # EMA
-        ema_9 = EMAIndicator(close, window=9).ema_indicator().iloc[-1]
-        ema_21 = EMAIndicator(close, window=21).ema_indicator().iloc[-1]
-        ema_55 = EMAIndicator(close, window=55).ema_indicator().iloc[-1] if len(df) >= 55 else None
+        ema_9 = EMAIndicator(close, n=9).ema_indicator().iloc[-1]
+        ema_21 = EMAIndicator(close, n=21).ema_indicator().iloc[-1]
+        ema_55 = EMAIndicator(close, n=55).ema_indicator().iloc[-1] if len(df) >= 55 else None
 
         # === Momentum Indicators ===
 
         # RSI
-        rsi = RSIIndicator(close, window=14)
+        rsi = RSIIndicator(close, n=14)
         rsi_14 = float(rsi.rsi().iloc[-1])
 
         # MACD
@@ -113,14 +121,14 @@ class TechnicalAnalyzer:
         # === Volatility Indicators ===
 
         # Bollinger Bands
-        bb = BollingerBands(close, window=20, window_dev=2)
+        bb = BollingerBands(close, n=20, ndev=2)
         bb_upper = float(bb.bollinger_hband().iloc[-1])
         bb_middle = float(bb.bollinger_mavg().iloc[-1])
         bb_lower = float(bb.bollinger_lband().iloc[-1])
         bb_width = float(bb.bollinger_wband().iloc[-1])
 
         # ATR
-        atr = AverageTrueRange(high, low, close, window=14)
+        atr = AverageTrueRange(high, low, close, n=14)
         atr_14 = float(atr.average_true_range().iloc[-1])
 
         # === Volume Indicators ===
@@ -130,11 +138,11 @@ class TechnicalAnalyzer:
         obv_val = float(obv.on_balance_volume().iloc[-1])
 
         # MFI
-        mfi = MFIIndicator(high, low, close, volume, window=14)
+        mfi = MFIIndicator(high, low, close, volume, n=14)
         mfi_14 = float(mfi.money_flow_index().iloc[-1])
 
         # Volume SMA
-        volume_sma = SMAIndicator(volume.astype(float), window=20).sma_indicator().iloc[-1]
+        volume_sma = SMAIndicator(volume.astype(float), n=20).sma_indicator().iloc[-1]
 
         # === Support/Resistance ===
         support_1, support_2, resistance_1, resistance_2 = self._calculate_support_resistance(df)

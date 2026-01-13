@@ -7,9 +7,9 @@
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-Alpha-orange?style=for-the-badge)
 
-**AI-Powered Indonesian Stock Market Analysis CLI**
+**AI-Powered Taiwan Stock Market Analysis CLI**
 
-*Analisis saham Indonesia dengan kecerdasan buatan langsung dari terminal*
+*台灣股市分析工具 (基於 AI 的終端介面)*
 
 [Features](#features) • [Installation](#installation) • [Usage](#usage) • [Commands](#commands) • [SAPTA Engine](#sapta-engine) • [Configuration](#configuration)
 
@@ -21,15 +21,15 @@
 
 ## Overview
 
-**Pulse CLI** adalah aplikasi Terminal User Interface (TUI) yang powerful untuk analisis pasar saham Indonesia (IDX). Menggabungkan:
+**Pulse CLI** 是一個強大的終端使用者介面 (TUI) 應用程式，用於台灣股市分析。它整合了：
 
-- **Real-time Data** dari Yahoo Finance
-- **Technical Analysis** (RSI, MACD, Bollinger Bands, Support/Resistance)
-- **Fundamental Analysis** (PE, PB, ROE, Dividend Yield)
-- **AI/LLM Integration** untuk analisis cerdas dan natural language
-- **SAPTA Engine** - Sistem deteksi pre-markup berbasis Machine Learning
-- **Trading Plan Generator** dengan TP/SL/Risk-Reward calculations
-- **Broker Flow Analysis** via Stockbit integration
+- **即時數據** 來自 FinMind (主要), Yahoo Finance (備用)
+- **技術分析** (RSI, MACD, 布林通道, 支撐/壓力)
+- **基本面分析** (本益比, 股價淨值比, 股東權益報酬率, 股利殖利率)
+- **AI/LLM 整合** 用於智慧分析和自然語言互動
+- **SAPTA 引擎** - 基於機器學習的盤前預漲偵測系統
+- **交易計畫生成器** 包含停利/停損/風險報酬計算
+- **法人動向分析** 來自 FinMind 數據
 
 ---
 
@@ -39,14 +39,14 @@
 
 | Feature | Description |
 |---------|-------------|
-| **Smart Agent** | True agentic AI yang mengambil data real sebelum analisis |
-| **Natural Language** | Tanya dalam Bahasa Indonesia atau English |
-| **Stock Screening** | Filter 900+ saham IDX dengan berbagai kriteria |
-| **Technical Analysis** | 15+ indikator teknikal otomatis |
-| **Trading Plan** | Generate TP/SL/RR dengan position sizing |
-| **SAPTA Detection** | Deteksi fase pre-markup dengan ML |
-| **Price Forecast** | Prediksi harga dengan confidence interval |
-| **Chart Generation** | Export chart sebagai PNG |
+| **Smart Agent** | AI 代理會在分析前獲取真實數據 |
+| **Natural Language** | 支援繁體中文或英文提問 |
+| **Stock Screening** | 使用多種條件篩選台灣股票 |
+| **Technical Analysis** | 15+ 種技術指標自動分析 |
+| **Trading Plan** | 生成包含停利/停損/風險報酬的交易計畫 |
+| **SAPTA Detection** | 使用機器學習偵測預漲階段 |
+| **Price Forecast** | 價格預測含信賴區間 |
+| **Chart Generation** | 匯出圖表為 PNG 格式 |
 
 ### Supported Analysis
 
@@ -90,7 +90,7 @@ source .venv/bin/activate  # Linux/macOS
 # Install package
 pip install -e .
 
-# Install Playwright browsers (for Stockbit auth - optional)
+# Install Playwright browsers (optional - for legacy Stockbit integration)
 playwright install chromium
 ```
 
@@ -147,37 +147,37 @@ You'll see the TUI interface:
 
 ### Basic Interactions
 
-#### Natural Language (Bahasa Indonesia)
+#### Natural Language (Traditional Chinese / 繁體中文)
 
 ```
-> analisa BBCA
-> gimana kondisi IHSG hari ini?
-> bandingkan BBRI dan BMRI
-> carikan saham yang oversold
-> buatkan trading plan TLKM
-> cek pre-markup ANTM
+> 分析 2330
+> 台灣股市今天狀況如何?
+> 比較 2330 和 2317
+> 找出超賣的股票
+> 幫 2454 建立交易計畫
+> 檢查 2303 的潛在買點
 ```
 
 #### Natural Language (English)
 
 ```
-> analyze BBCA
-> what's the technical outlook for ASII?
-> compare banking stocks BBCA BBRI BMRI
+> analyze 2330
+> what's the technical outlook for 2317?
+> compare tech stocks 2330 2454 2303
 > find undervalued stocks
-> generate trading plan for UNVR
+> generate trading plan for 2881
 ```
 
 #### Slash Commands
 
 ```
-> /analyze BBCA
-> /technical BBRI
-> /fundamental TLKM
-> /chart ASII 6mo
-> /forecast UNVR 14
-> /plan BMRI
-> /sapta ANTM
+> /analyze 2330
+> /technical 2317
+> /fundamental 2454
+> /chart 2330 6mo
+> /forecast 2454 14
+> /plan 2317
+> /sapta 2303
 > /screen oversold
 ```
 
@@ -204,38 +204,36 @@ You'll see the TUI interface:
 | `/analyze` | `/a`, `/stock` | Complete stock analysis |
 | `/technical` | `/ta`, `/tech` | Technical analysis only |
 | `/fundamental` | `/fa`, `/fund` | Fundamental analysis only |
-| `/broker` | `/b`, `/flow` | Broker flow analysis (single day) |
-| `/bandar` | `/bm`, `/bandarmology` | **Bandarmology analysis (multi-day)** |
-| `/chart` | `/c`, `/grafik` | Generate price chart |
-| `/forecast` | `/fc`, `/prediksi` | Price prediction |
+| `/institutional` | `/inst`, `/flow` | Institutional investor flow analysis |
+| `/chart` | `/c` | Generate price chart |
+| `/forecast` | `/fc` | Price prediction |
 | `/screen` | `/s`, `/filter` | Stock screening |
 | `/sector` | `/sec` | Sector analysis |
 | `/compare` | `/cmp`, `/vs` | Compare multiple stocks |
 | `/plan` | `/tp`, `/sl` | Trading plan generator |
 | `/sapta` | `/premarkup` | SAPTA pre-markup detection |
-| `/ihsg` | `/index`, `/market` | Market index status |
+| `/index` | `/market` | Market index status |
 | `/models` | `/model`, `/m` | Switch AI model |
-| `/auth` | `/login` | Stockbit authentication (set token) |
 | `/clear` | `/cls` | Clear chat history |
 
 ### Command Details
 
 #### `/analyze <TICKER>` - Complete Analysis
 
-Analisis lengkap mencakup harga, teknikal, dan AI insight.
+完整分析包括價格、技術面和 AI 洞察。
 
 ```
-/analyze BBCA
+/analyze 2330
 ```
 
 Output:
 ```
-BBCA - Bank Central Asia Tbk
+2330 - 台積電 (Taiwan Semiconductor Manufacturing Company)
 
-Price: Rp 9,850 (+75, +0.77%)
+Price: NT$ 820 (+5, +0.61%)
 Volume: 15,234,500 (Avg: 12,456,000)
-Range: 9,775 - 9,900
-52W: 8,100 - 10,450
+Range: 815 - 825
+52W: 500 - 850
 
 Technical:
   RSI(14): 58.3 - Neutral
@@ -244,18 +242,18 @@ Technical:
   Signal: Buy
 
 AI Insight:
-BBCA menunjukkan momentum positif dengan RSI di zona netral...
+台積電顯示出積極的動能，RSI 位於中性區間...
 ```
 
 #### `/technical <TICKER>` - Technical Analysis
 
 ```
-/technical BBRI
+/technical 2317
 ```
 
 Output:
 ```
-Technical Analysis: BBRI
+Technical Analysis: 2317
 
   RSI(14): 45.2 (Neutral)
   MACD: -12.5 (Signal: -15.3) - Bullish
@@ -268,11 +266,11 @@ Technical Analysis: BBRI
 
 #### `/chart <TICKER> [period]` - Price Chart
 
-Generate dan save chart sebagai PNG.
+生成並儲存圖表為 PNG。
 
 ```
-/chart TLKM 3mo
-/chart ASII 1y
+/chart 2330 3mo
+/chart 2317 1y
 ```
 
 Periods: `1mo`, `3mo`, `6mo`, `1y`, `2y`
@@ -280,21 +278,21 @@ Periods: `1mo`, `3mo`, `6mo`, `1y`, `2y`
 #### `/forecast <TICKER> [days]` - Price Forecast
 
 ```
-/forecast UNVR 14
+/forecast 2454 14
 ```
 
 Output:
 ```
-Forecast: UNVR (14 days)
+Forecast: 2454 (14 days)
 
-Current: Rp 4,250
-Target: Rp 4,420 (+4.00%)
+Current: NT$ 750
+Target: NT$ 770 (+2.67%)
 Trend: UP
-Support: Rp 4,100
-Resistance: Rp 4,500
+Support: NT$ 730
+Resistance: NT$ 780
 Confidence: 72%
 
-Chart saved: charts/UNVR_forecast_20240115.png
+Chart saved: charts/2454_forecast_20240115.png
 ```
 
 #### `/screen <criteria>` - Stock Screening
@@ -322,41 +320,38 @@ Chart saved: charts/UNVR_forecast_20240115.png
 **Universe Options:**
 
 ```
-/screen oversold --universe=lq45      # 45 stocks (fast)
-/screen bullish --universe=idx80      # 80 stocks
-/screen momentum --universe=popular   # 113 stocks
-/screen breakout --universe=all       # 955 stocks (slow)
+/screen oversold --universe=all       # All Taiwan stocks
 ```
 
 #### `/plan <TICKER> [account_size]` - Trading Plan
 
 ```
-/plan BBCA
-/plan BBRI 50000000
+/plan 2330
+/plan 2317 5000000
 ```
 
 Output:
 ```
-TRADING PLAN: BBCA
+TRADING PLAN: 2330
 Generated: 2024-01-15 14:30
 
 === ENTRY ===
-Price: Rp 9,850 (current)
+Price: NT$ 820 (current)
 Type: Market
 Trend: Bullish | Signal: Buy
 
 === TAKE PROFIT ===
-TP1: Rp 10,150 (+3.05%) - Conservative
-TP2: Rp 10,450 (+6.09%) - Moderate
-TP3: Rp 10,800 (+9.64%) - Aggressive
+TP1: NT$ 840 (+2.44%) - Conservative
+TP2: NT$ 860 (+4.88%) - Moderate
+TP3: NT$ 880 (+7.32%) - Aggressive
 
 === STOP LOSS ===
-SL: Rp 9,550 (-3.05%)
+SL: NT$ 800 (-2.44%)
 Method: Hybrid
 
 === RISK/REWARD ===
-Risk: Rp 300 per share (3.05%)
-Reward (TP1): Rp 300 (3.05%)
+Risk: NT$ 20 per share (2.44%)
+Reward (TP1): NT$ 20 (2.44%)
 R:R to TP1: 1:1.0 [FAIR]
 R:R to TP2: 1:2.0 [GOOD]
 
@@ -364,23 +359,23 @@ Trade Quality: FAIR
 Confidence: 65%
 
 === POSITION SIZING (2% Risk) ===
-Account: Rp 100,000,000
-Max Risk: Rp 2,000,000
-Suggested: 66 lot (6,600 shares)
-Position Value: Rp 65,010,000 (65.0% of account)
+Account: NT$ 10,000,000
+Max Risk: NT$ 200,000
+Suggested: 10 units (10,000 shares)
+Position Value: NT$ 8,200,000 (82.0% of account)
 
 === EXECUTION STRATEGY ===
-1. Entry: Buy at market or limit Rp 9,850
-2. Set stop loss immediately at Rp 9,550
-3. TP1: Sell 50% position at Rp 10,150
+1. Entry: Buy at market or limit NT$ 820
+2. Set stop loss immediately at NT$ 800
+3. TP1: Sell 50% position at NT$ 840
 4. After TP1 hit: Move SL to breakeven
-5. TP2: Sell remaining 50% at Rp 10,450
+5. TP2: Sell remaining 50% at NT$ 860
 ```
 
 #### `/compare <TICKER1> <TICKER2> ...` - Compare Stocks
 
 ```
-/compare BBCA BBRI BMRI BBNI
+/compare 2330 2317 2454
 ```
 
 Output:
@@ -389,176 +384,49 @@ Stock Comparison
 
 Ticker   Price        Change      Volume
 ------------------------------------------------
-BBCA       9,850      +0.77%      15,234,500
-BBRI       5,425      +1.23%      45,678,900
-BMRI       6,150      +0.65%      23,456,700
-BBNI       5,875      -0.42%      18,765,400
+2330       820        +0.61%      15,234,500
+2317       120        +1.23%      45,678,900
+2454       750        +0.65%      23,456,700
 ```
 
-#### `/broker <TICKER>` - Broker Flow Analysis
-
-Requires Stockbit authentication (see [Stockbit Authentication](#stockbit-authentication)).
+#### `/institutional <TICKER>` - Institutional Investor Flow Analysis
 
 ```
-/broker BBCA
+/institutional 2330
 ```
 
 Output:
 ```
-BROKER SUMMARY - BBCA
-============================================
+═══ 機構法人動向: 2330 (2024-01-01 至 2024-01-15) ═══
 
-TOP 5 BUYERS:
-   SQ: 274,337 lot | Rp 222,457,800,000
-   CC: 29,146 lot | Rp 23,690,252,500
-   BB: 15,017 lot | Rp 12,166,650,000
+總體訊號: BUY (評分: 70/100)
 
-TOP 5 SELLERS:
-   BK: 67,196 lot | Rp 54,371,875,000
-   KZ: 65,734 lot | Rp 53,276,152,500
-   ZP: 62,642 lot | Rp 50,425,677,500
+─── 機構法人淨買賣超 ───
+總計淨流量: NT$ 500,000,000
+外資淨流量: NT$ 300,000,000
+投信淨流量: NT$ 150,000,000
+自營商淨流量: NT$ 50,000,000
 
-BANDAR DETECTOR:
-   Overall: Acc
-   Top 1: Big Acc (55%)
-   Top 5: Normal Acc (17%)
+─── 洞察報告 ───
+🟢 機構法人總計淨買超 NT$ 500,000,000 (過去 20 個交易日)
+🟢 外資淨買超 NT$ 300,000,000
+🟢 投信淨買超 NT$ 150,000,000
+🟢 自營商淨買超 NT$ 50,000,000
 ```
 
-#### `/auth` - Stockbit Authentication
+#### `/auth` - Stockbit Authentication (Deprecated)
 
-Manage Stockbit token for broker flow analysis.
+⚠️ **Note**: Stockbit is an Indonesian platform. This feature is deprecated for Taiwan market.
+For Taiwan institutional flow analysis, use `/institutional` command instead.
 
 ```
+# Legacy Stockbit auth commands (not recommended for Taiwan market)
 /auth                              # Check auth status
 /auth status                       # Detailed token info
 /auth set-token <JWT_TOKEN>        # Set token manually
 ```
 
-Example:
-```
-/auth set-token eyJhbGciOiJSUzI1NiIs...
-```
 
-Output:
-```
-✅ Token saved successfully!
-
-Token valid for: 23.5 hours
-Saved to: data/stockbit/secrets.json
-
-You can now use /broker command.
-```
-
----
-
-## Bandarmology Analysis
-
-### Overview
-
-**Bandarmology** adalah analisis mendalam tentang aktivitas broker (bandar) dalam trading saham. Fitur ini menganalisis data broker summary selama beberapa hari untuk mendeteksi pola akumulasi/distribusi dan kesiapan markup.
-
-### Features
-
-- **Multi-day Analysis** - Analisis 5-60 hari trading
-- **Broker Profiling** - Klasifikasi broker berdasarkan karakteristik
-- **Accumulation Phase Detection** - Deteksi fase akumulasi dari early hingga markup-ready
-- **Pattern Recognition** - Deteksi pola seperti Crossing, Dominasi, Retail Trap
-- **Flow Momentum Score** - Skor 0-100 untuk kekuatan flow
-- **Markup Readiness Score** - Skor kesiapan markup
-
-### Broker Profiles
-
-| Profile | Brokers | Karakteristik |
-|---------|---------|---------------|
-| **Smart Money Foreign** | AK, BK, MS, GR, LG, KZ, CS, DX | Institusi asing, directional, high conviction |
-| **Bandar/Gorengan** | SQ, MG, EP, DR, BZ | Sering terlibat pump & dump, hati-hati |
-| **Retail** | XA, AZ, KI, YO, ZP | Platform retail, sering late, contrarian signal |
-| **Local Institutional** | CC, NI, OD, TP, IF | Dana kelolaan lokal, lebih informed |
-| **Market Maker** | YU, RX, PD | Sering di kedua sisi, lihat net position |
-
-### Usage
-
-**Single Stock Analysis:**
-
-```
-/bandar BBCA              # Analisis 10 hari (default)
-/bandar BBRI 5            # Analisis 5 hari
-/bandar ANTM 20           # Analisis 20 hari (~1 bulan)
-/bandar TLKM --detailed   # Dengan daily timeline
-```
-
-**Scan for Markup Candidates:**
-
-```
-/bandar scan              # Scan LQ45
-/bandar scan lq45         # Scan LQ45 (45 stocks)
-/bandar scan idx80        # Scan IDX80 (80 stocks)
-/bandar scan popular      # Scan popular stocks
-```
-
-### Example Output
-
-```
-=================================================================
-BANDARMOLOGY REPORT: BBCA
-Period: 10 days (2025-12-29 to 2026-01-08)
-=================================================================
-
-FLOW MOMENTUM: 78/100 [Buy] 🟢
-MARKUP READINESS: 72/100
-PHASE: Late Accumulation 📈
-CONFIDENCE: 85%
-
------------------------------------------------------------------
-FLOW SUMMARY
------------------------------------------------------------------
-  Foreign Net     : +Rp 245.5B
-  Smart Money Net : +Rp 180.2B
-  Retail Net      : -Rp 45.3B
-  Akumulasi Streak: 8 hari
-
------------------------------------------------------------------
-BROKER COMPOSITION
------------------------------------------------------------------
-  Smart Money :  45.0% ████████████░░░░░░░░
-  Bandar      :  18.0% ███████░░░░░░░░░░░░░
-  Retail      :  12.0% █████░░░░░░░░░░░░░░░
-  Local Inst  :  25.0% ██████████░░░░░░░░░░
-
------------------------------------------------------------------
-PATTERN ALERTS
------------------------------------------------------------------
-  [+] HIGH Smart money akumulasi: AK, BK, MS NET BUY
-  [+] Contrarian bullish: Retail jual, smart money beli
-  [+] DOMINASI SQ menguasai 28% volume
-  [+] HIGH MARKUP SIGNAL (4/4): 8 hari akumulasi, smart money NET BUY
-
------------------------------------------------------------------
-RECOMMENDATION
------------------------------------------------------------------
-  STRONG BUY - Akumulasi kuat, tunggu konfirmasi breakout.
-```
-
-### Accumulation Phases
-
-| Phase | Description |
-|-------|-------------|
-| **Early Accumulation** | 2-3 hari konsisten beli |
-| **Mid Accumulation** | 4-6 hari, volume mulai naik |
-| **Late Accumulation** | 7+ hari, hampir siap markup |
-| **Markup Ready** | Semua sinyal align, siap breakout |
-| **Distribution** | Smart money mulai keluar |
-
-### Pattern Detection
-
-| Pattern | Description | Signal |
-|---------|-------------|--------|
-| **Crossing** | Broker sama di buy & sell side | Potensi distribusi terselubung |
-| **Dominasi** | 1 broker > 25% volume | Big player masuk |
-| **Retail Trap** | Retail beli, smart money jual | Bearish untuk retail |
-| **Smart Money Entry** | Multiple SM brokers akumulasi | Bullish |
-| **Markup Signal** | Semua kondisi align | Strong bullish |
-| **Broker Consistency** | Broker sama beli berhari-hari | Akumulasi kuat |
 
 ---
 
@@ -566,61 +434,61 @@ RECOMMENDATION
 
 ### Overview
 
-**SAPTA** (System for Analyzing Pre-markup Technical Accumulation) adalah engine ML-powered untuk mendeteksi saham yang sedang dalam fase **pre-markup** - fase akumulasi sebelum harga breakout.
+**SAPTA** (System for Analyzing Pre-markup Technical Accumulation) 是基於機器學習的引擎，用於偵測股票是否處於 **預漲階段** - 即價格突破前的吸籌階段。
 
 ### How It Works
 
-SAPTA menggunakan 6 modul analisis:
+SAPTA 使用 6 個分析模組:
 
 | Module | Weight | Description |
 |--------|--------|-------------|
-| **Supply Absorption** | 25% | Deteksi akumulasi smart money melalui volume dan price action |
-| **Compression** | 20% | Volatility contraction - range harga yang menyempit |
-| **BB Squeeze** | 15% | Bollinger Band squeeze detection |
-| **Elliott Wave** | 15% | Posisi wave dan Fibonacci retracement |
-| **Time Projection** | 15% | Fibonacci time windows + planetary aspects |
-| **Anti-Distribution** | 10% | Filter untuk menghindari fase distribusi |
+| **Supply Absorption** | 25% | 透過成交量和價格行為偵測主力吸籌 |
+| **Compression** | 20% | 波動收縮 - 價格區間縮窄 |
+| **BB Squeeze** | 15% | 布林通道擠壓偵測 |
+| **Elliott Wave** | 15% | 波浪位置和費波那契回撤 |
+| **Time Projection** | 15% | 費波那契時間窗口 + 行星相位 |
+| **Anti-Distribution** | 10% | 過濾出貨階段 |
 
 ### Status Levels
 
 | Status | Score | Meaning |
 |--------|-------|---------|
-| **PRE-MARKUP** | >= 47 | Siap breakout dalam waktu dekat |
-| **SIAP** | >= 35 | Hampir siap, perlu monitoring ketat |
-| **WATCHLIST** | >= 24 | Masih dalam tahap akumulasi awal |
-| **ABAIKAN** | < 24 | Belum menunjukkan sinyal pre-markup |
+| **PRE-MARKUP** | >= 47 | 準備在短期內突破 |
+| **SIAP** | >= 35 | 接近就緒，需密切監控 |
+| **WATCHLIST** | >= 24 | 仍處於早期吸籌階段 |
+| **SKIP** | < 24 | 尚未顯示預漲訊號 |
 
 ### Usage
 
 **Single Stock Analysis:**
 
 ```
-/sapta BBCA
-/sapta ANTM --detailed
+/sapta 2330
+/sapta 2454 --detailed
 ```
 
 **Scan Multiple Stocks:**
 
 ```
-/sapta scan              # Scan LQ45 (default)
-/sapta scan lq45         # 45 stocks
-/sapta scan idx80        # 80 stocks
-/sapta scan popular      # 113 stocks
-/sapta scan all          # 955 stocks
+/sapta scan              # Scan TW50 (default)
+/sapta scan tw50         # 50 stocks
+/sapta scan midcap       # 100 stocks
+/sapta scan popular      # Popular stocks
+/sapta scan all          # All stocks
 ```
 
 **Natural Language:**
 
 ```
-> carikan saham pre-markup
-> carikan saham siap breakout
-> scan pre-markup semua saham
+> 找預漲股票
+> 找準備突破的股票
+> 掃描全市場預漲股
 ```
 
 ### Example Output
 
 ```
-SAPTA Analysis: ANTM
+SAPTA Analysis: 2330
 ========================================
 Status: [PRE-MARKUP]
 Score: 68.5/100
@@ -660,78 +528,17 @@ Create `.env` file in project root:
 ```env
 # AI Configuration (CLIProxyAPI)
 PULSE_AI__BASE_URL=http://localhost:8317/v1
-PULSE_AI__API_KEY=your api CliProxyAPI
+PULSE_AI__API_KEY=your_cliproxyapi_key
 PULSE_AI__DEFAULT_MODEL=gemini-3-flash-preview
 
-# Stockbit Authentication (for broker flow analysis)
-# Option 1: Manual Token (RECOMMENDED - see "Stockbit Authentication" section)
-STOCKBIT_TOKEN=eyJhbGciOiJSUzI1NiIs...
-
-# Option 2: Username/Password (NOT recommended - CAPTCHA issues)
-# STOCKBIT_USERNAME=your_username
-# STOCKBIT_PASSWORD=your_password
+# Legacy Stockbit Authentication (Indonesian platform - optional)
+# STOCKBIT_TOKEN=eyJhbGciOiJSUzI1NiIs...
 
 # Debug
 PULSE_DEBUG=false
 ```
 
----
 
-## Stockbit Authentication
-
-Broker flow analysis (`/broker` command) requires Stockbit authentication. Due to Stockbit's strict CAPTCHA protection, **manual token extraction** is the recommended method.
-
-### Getting Your Stockbit Token
-
-1. **Open Chrome** and go to https://stockbit.com
-2. **Login** to your Stockbit account
-3. **Open DevTools** (F12 or Cmd+Option+I on Mac)
-4. Go to **Network** tab
-5. **Click any stock** (e.g., BBCA) to trigger API requests
-6. **Filter** requests by typing `exodus` in the filter box
-7. **Click** on any request to `exodus.stockbit.com`
-8. In the **Headers** tab, find `authorization: Bearer eyJhbG...`
-9. **Copy** the token (everything after "Bearer ")
-
-### Setting Your Token
-
-**Method 1: Environment Variable (Recommended)**
-
-Add to your `.env` file:
-```env
-STOCKBIT_TOKEN=eyJhbGciOiJSUzI1NiIs...your_full_token_here
-```
-
-**Method 2: CLI Command**
-
-```
-/auth set-token eyJhbGciOiJSUzI1NiIs...your_full_token_here
-```
-
-**Method 3: Direct File Edit**
-
-Edit `data/stockbit/secrets.json`:
-```json
-{
-  "access_token": "eyJhbGciOiJSUzI1NiIs...your_full_token_here",
-  "updated_at": 1704700000
-}
-```
-
-### Token Status Commands
-
-```
-/auth              # Check authentication status
-/auth status       # Detailed token status (expiry, source)
-/auth set-token    # Show instructions for setting token
-```
-
-### Important Notes
-
-- **Token expires in ~24 hours** - you'll need to refresh it daily
-- Token is stored locally and never sent anywhere except Stockbit API
-- If you see "Unauthorized" errors, your token has expired - get a new one
-- Priority: `STOCKBIT_TOKEN` env var → `secrets.json` file
 
 ### Configuration File
 
@@ -795,20 +602,14 @@ Switch model:
 
 | Universe | Count | Description |
 |----------|-------|-------------|
-| `LQ45` | 45 | Most liquid stocks |
-| `IDX80` | 83 | LQ45 + additional liquid stocks |
-| `POPULAR` | 113 | LQ45 + IDX80 + high retail interest |
-| `ALL` | 955 | All IDX listed stocks |
+| `ALL` | All | All Taiwan listed stocks (from FinMind) |
 
 ### Data Source
 
-Stock data fetched from Yahoo Finance with `.JK` suffix for Indonesian stocks.
+股票數據主要從 [FinMind](https://finmindtrade.com/) 獲取，輔以 Yahoo Finance 作為備用。
 
 Supported indices:
-- **IHSG** (^JKSE) - IDX Composite
-- **LQ45** (^JKLQ45) - IDX LQ45
-- **IDX30** (^JKIDX30) - IDX30
-- **JII** (^JKII) - Jakarta Islamic Index
+- **TAIEX** (^TWII) - Taiwan Weighted Index
 
 ---
 
@@ -887,7 +688,7 @@ pulse-cli/
 │   └── pulse.yaml                # Configuration file
 │
 ├── data/
-│   ├── tickers.json              # 955 IDX tickers
+│   ├── tw_tickers.json           # Taiwan stock tickers
 │   └── cache/                    # Disk cache
 │
 ├── tests/                        # Test suite
@@ -970,44 +771,33 @@ python -m pulse.core.sapta.ml.train_model
 **1. "No data found for XXXX"**
 
 ```
-Cause: Ticker tidak valid atau tidak ada di Yahoo Finance
-Solution: Pastikan ticker benar dengan suffix .JK (contoh: BBCA.JK)
+Cause: Ticker 無效或 FinMind/Yahoo Finance 無資料
+Solution: 請確認股票代號正確
 ```
 
 **2. "AI request failed"**
 
 ```
-Cause: AI backend tidak tersedia
+Cause: AI backend not available
 Solution: 
-  - Pastikan CLIProxyAPI running di localhost:8317
-  - Atau ubah PULSE_AI__BASE_URL di .env
+  - Make sure CLIProxyAPI is running on localhost:8317
+  - Or change PULSE_AI__BASE_URL in .env
 ```
 
 **3. "Insufficient data for SAPTA"**
 
 ```
-Cause: Saham baru listing atau data historis < 100 hari
-Solution: SAPTA membutuhkan minimal 100 hari data historis
+Cause: Newly listed stock or historical data < 100 days
+Solution: SAPTA requires at least 100 days of historical data
 ```
 
-**4. "Stockbit not authenticated" or "Unauthorized"**
+**4. "Stockbit not authenticated" (Legacy)**
 
 ```
-Cause: Token tidak ada atau sudah expired (token valid ~24 jam)
+Cause: Stockbit is an Indonesian platform, not applicable for Taiwan market
 Solution: 
-  1. Dapatkan token baru dari browser (lihat "Stockbit Authentication" section)
-  2. Set token dengan: /auth set-token <TOKEN>
-  3. Atau tambahkan ke .env: STOCKBIT_TOKEN=<TOKEN>
-```
-
-**5. "Token is expired"**
-
-```
-Cause: Stockbit token hanya valid ~24 jam
-Solution:
-  1. Login ulang ke stockbit.com di browser
-  2. Copy token baru dari DevTools > Network > Authorization header
-  3. Update dengan /auth set-token atau edit .env
+  - For Taiwan market, use /institutional command instead
+  - Stockbit features are deprecated for Taiwan stocks
 ```
 
 ### Debug Mode
@@ -1073,12 +863,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [yfinance](https://github.com/ranaroussi/yfinance) - Yahoo Finance API wrapper
 - [TA-Lib](https://github.com/bukosabino/ta) - Technical analysis library
 - [Rich](https://github.com/Textualize/rich) - Beautiful terminal formatting
+- [FinMind](https://github.com/FinMind/FinMind) - Taiwan Financial Data Source
 
 ---
 
 <div align="center">
 
-**Made with :heart: for Indonesian Stock Market**
+**Made with :heart: for Taiwan Stock Market**
 
 [Report Bug](https://github.com/sukirman1901/Pulse-CLI/issues) • [Request Feature](https://github.com/sukirman1901/Pulse-CLI/issues)
 

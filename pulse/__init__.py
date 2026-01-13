@@ -1,11 +1,11 @@
 """
-Pulse CLI - AI-powered Indonesian Stock Market Analysis
+Pulse CLI - AI-powered Taiwan Stock Market Analysis
 
 A powerful terminal-based stock analysis tool with:
 - Multi-agent AI system for intelligent analysis
-- Broker flow / bandar detection
+- Institutional investor flow analysis (三大法人)
 - Technical & fundamental analysis
-- Real-time market data from yfinance
+- Real-time market data from FinMind and yfinance
 - Interactive TUI with rich widgets
 """
 

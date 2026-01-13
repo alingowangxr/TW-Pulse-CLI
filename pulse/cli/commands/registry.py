@@ -108,105 +108,9 @@ class CommandRegistry:
         self.register(
             "analyze",
             self._cmd_analyze,
-            "Analyze a stock",
+            "Analyze a stock (分析股票)",
             "/analyze <TICKER>",
             aliases=["a", "stock"],
-        )
-
-        self.register(
-            "broker",
-            self._cmd_broker,
-            "View broker flow analysis",
-            "/broker <TICKER>",
-            aliases=["b", "flow"],
-        )
-
-        self.register(
-            "technical",
-            self._cmd_technical,
-            "Technical analysis",
-            "/technical <TICKER>",
-            aliases=["ta", "tech"],
-        )
-
-        self.register(
-            "fundamental",
-            self._cmd_fundamental,
-            "Fundamental analysis",
-            "/fundamental <TICKER>",
-            aliases=["fa", "fund"],
-        )
-
-        self.register(
-            "screen",
-            self._cmd_screen,
-            "Screen stocks",
-            "/screen <criteria>",
-            aliases=["s", "filter"],
-        )
-
-        self.register(
-            "sector",
-            self._cmd_sector,
-            "Sector analysis",
-            "/sector <SECTOR>",
-            aliases=["sec"],
-        )
-
-        self.register(
-            "compare",
-            self._cmd_compare,
-            "Compare stocks",
-            "/compare <TICKER1> <TICKER2>",
-            aliases=["cmp", "vs"],
-        )
-
-        self.register(
-            "chart",
-            self._cmd_chart,
-            "Show price chart",
-            "/chart <TICKER> [period]",
-            aliases=["c", "grafik"],
-        )
-
-        self.register(
-            "forecast",
-            self._cmd_forecast,
-            "Price forecast",
-            "/forecast <TICKER> [days]",
-            aliases=["fc", "prediksi"],
-        )
-
-        self.register(
-            "clear",
-            self._cmd_clear,
-            "Clear chat history",
-            "/clear",
-            aliases=["cls"],
-        )
-
-        self.register(
-            "auth",
-            self._cmd_auth,
-            "Authenticate with Stockbit",
-            "/auth",
-            aliases=["login"],
-        )
-
-        self.register(
-            "ihsg",
-            self._cmd_ihsg,
-            "Show IHSG/index status",
-            "/ihsg [index]",
-            aliases=["index", "market"],
-        )
-
-        self.register(
-            "plan",
-            self._cmd_plan,
-            "Generate trading plan with TP/SL/RR",
-            "/plan <TICKER> [account_size]",
-            aliases=["tp", "sl", "tradingplan"],
         )
 
         self.register(
@@ -266,11 +170,11 @@ Aliases: {aliases_str}
     async def _cmd_analyze(self, args: str) -> str:
         """Analyze command handler."""
         if not args:
-            return "Please specify a ticker. Usage: /analyze BBCA"
+            return "Please specify a ticker. Usage: /analyze 2330 (台積電)"
 
         ticker = args.strip().upper()
 
-        from pulse.core.analysis.broker_flow import BrokerFlowAnalyzer
+        from pulse.core.analysis.institutional_flow import InstitutionalFlowAnalyzer
         from pulse.core.analysis.technical import TechnicalAnalyzer
         from pulse.core.data.yfinance import YFinanceFetcher
 
@@ -283,7 +187,7 @@ Aliases: {aliases_str}
         tech_analyzer = TechnicalAnalyzer()
         technical = await tech_analyzer.analyze(ticker)
 
-        broker_analyzer = BrokerFlowAnalyzer()
+        broker_analyzer = InstitutionalFlowAnalyzer()
         broker = await broker_analyzer.analyze(ticker)
 
         data = {
@@ -307,16 +211,13 @@ Aliases: {aliases_str}
     async def _cmd_broker(self, args: str) -> str:
         """Broker flow command handler."""
         if not args:
-            return "Please specify a ticker. Usage: /broker BBCA"
+            return "Please specify a ticker. Usage: /broker 2330 (台積電)"
 
         ticker = args.strip().upper()
 
-        from pulse.core.analysis.broker_flow import BrokerFlowAnalyzer
+        from pulse.core.analysis.institutional_flow import InstitutionalFlowAnalyzer
 
-        analyzer = BrokerFlowAnalyzer()
-
-        if not analyzer.client.is_authenticated:
-            return "Not authenticated with Stockbit. Run /auth first."
+        analyzer = InstitutionalFlowAnalyzer()
 
         result = await analyzer.analyze(ticker)
 
@@ -328,7 +229,7 @@ Aliases: {aliases_str}
     async def _cmd_technical(self, args: str) -> str:
         """Technical analysis command handler."""
         if not args:
-            return "Please specify a ticker. Usage: /technical BBCA"
+            return "Please specify a ticker. Usage: /technical 2330 (台積電)"
 
         ticker = args.strip().upper()
 
@@ -353,7 +254,7 @@ Aliases: {aliases_str}
     async def _cmd_fundamental(self, args: str) -> str:
         """Fundamental analysis command handler."""
         if not args:
-            return "Please specify a ticker. Usage: /fundamental BBCA"
+            return "Please specify a ticker. Usage: /fundamental 2330 (台積電)"
 
         ticker = args.strip().upper()
 
@@ -385,31 +286,31 @@ Aliases: {aliases_str}
     async def _cmd_screen(self, args: str) -> str:
         """Screen stocks based on technical/fundamental criteria."""
         if not args:
-            return """Stock Screening
+            return """Stock Screening (股票篩選)
 
-Usage: /screen <criteria> [--universe=lq45|idx80|popular]
+Usage: /screen <criteria> [--universe=tw50|midcap|popular]
 
-Presets:
-  /screen oversold    - RSI < 30 (siap bounce)
-  /screen overbought  - RSI > 70 (siap turun)
-  /screen bullish     - MACD bullish + price > SMA20
-  /screen bearish     - MACD bearish + price < SMA20
-  /screen breakout    - Near resistance + volume spike
-  /screen momentum    - RSI 50-70 + MACD bullish
-  /screen undervalued - PE < 15 + ROE > 10%
+Presets (預設篩選條件):
+  /screen oversold    - RSI < 30 (超賣,準備反彈)
+  /screen overbought  - RSI > 70 (超買,準備回落)
+  /screen bullish     - MACD bullish + price > SMA20 (多頭)
+  /screen bearish     - MACD bearish + price < SMA20 (空頭)
+  /screen breakout    - Near resistance + volume spike (突破)
+  /screen momentum    - RSI 50-70 + MACD bullish (動能)
+  /screen undervalued - PE < 15 + ROE > 10% (低估)
 
-Flexible:
+Flexible (自訂條件):
   /screen rsi<30
   /screen rsi>70
   /screen pe<15
 
-Universe:
-  --universe=lq45    - 43 saham (fast)
-  --universe=idx80   - 83 saham (medium)
-  --universe=popular - 113 saham (slower)
+Universe (股票池):
+  --universe=tw50    - 台灣50成分股 (快速)
+  --universe=midcap  - 中型股100檔 (中速)
+  --universe=popular - 熱門股150檔 (較慢)
 
-Example:
-  /screen oversold --universe=idx80
+Example (範例):
+  /screen oversold --universe=tw50
 """
 
         from pulse.core.screener import ScreenPreset, StockScreener, StockUniverse
@@ -424,15 +325,18 @@ Example:
             match = re.search(r"--universe=(\w+)", args.lower())
             if match:
                 universe_map = {
-                    "lq45": StockUniverse.LQ45,
-                    "idx80": StockUniverse.IDX80,
+                    "tw50": StockUniverse.TW50,
+                    "lq45": StockUniverse.TW50,  # backward compat
+                    "midcap": StockUniverse.MIDCAP,
+                    "tw100": StockUniverse.MIDCAP,
                     "popular": StockUniverse.POPULAR,
                     "all": StockUniverse.ALL,
                 }
                 universe_type = universe_map.get(match.group(1))
                 criteria_str = re.sub(r"\s*--universe=\w+", "", args).strip()
 
-        screener = StockScreener(universe_type=universe_type)
+        # Create screener with proper universe
+        screener = StockScreener()
         args_lower = criteria_str.strip().lower()
 
         # Check if it's a preset
@@ -453,7 +357,7 @@ Example:
     async def _cmd_sector(self, args: str) -> str:
         """Sector analysis command handler."""
         from pulse.core.analysis.sector import SectorAnalyzer
-        from pulse.utils.constants import IDX_SECTORS
+        from pulse.utils.constants import TW_SECTORS
 
         analyzer = SectorAnalyzer()
 
@@ -470,7 +374,7 @@ Example:
 
         sector = args.strip().upper()
 
-        if sector not in IDX_SECTORS:
+        if sector not in TW_SECTORS:
             return f"Unknown sector: {sector}"
 
         analysis = await analyzer.analyze_sector(sector)
@@ -497,7 +401,7 @@ Example:
     async def _cmd_compare(self, args: str) -> str:
         """Compare stocks command handler."""
         if not args:
-            return "Please specify tickers. Usage: /compare BBCA BBRI"
+            return "Please specify tickers. Usage: /compare 2330 2454 (台積電 vs 聯發科)"
 
         tickers = args.strip().upper().split()
 
@@ -540,7 +444,7 @@ Example:
     async def _cmd_chart(self, args: str) -> str:
         """Chart command handler - generate and save price chart as PNG."""
         if not args:
-            return "Please specify a ticker. Usage: /chart BBCA [1mo|3mo|6mo|1y]"
+            return "Please specify a ticker. Usage: /chart 2330 [1mo|3mo|6mo|1y] (台積電圖表)"
 
         parts = args.strip().upper().split()
         ticker = parts[0]
@@ -577,14 +481,14 @@ Example:
         change = current - prev
         change_pct = (change / prev * 100) if prev else 0
 
-        return f"""{ticker}: Rp {current:,.0f} ({change:+,.0f}, {change_pct:+.2f}%)
+        return f"""{ticker}: NT$ {current:,.2f} ({change:+,.2f}, {change_pct:+.2f}%)
 
 Chart saved: {filepath}"""
 
     async def _cmd_forecast(self, args: str) -> str:
         """Forecast command handler - predict future prices and save chart as PNG."""
         if not args:
-            return "Please specify a ticker. Usage: /forecast BBCA [7|14|30]"
+            return "Please specify a ticker. Usage: /forecast 2330 [7|14|30] (台積電預測)"
 
         parts = args.strip().upper().split()
         ticker = parts[0]
@@ -637,11 +541,11 @@ Chart saved: {filepath}"""
 
         summary = f"""Forecast: {ticker} ({days} days)
 
-Current: Rp {current:,.0f}
-Target: Rp {target:,.0f} ({change_pct:+.2f}%)
+Current: NT$ {current:,.2f}
+Target: NT$ {target:,.2f} ({change_pct:+.2f}%)
 Trend: {trend_icon}
-Support: Rp {result.support:,.0f}
-Resistance: Rp {result.resistance:,.0f}
+Support: NT$ {result.support:,.2f}
+Resistance: NT$ {result.resistance:,.2f}
 Confidence: {result.confidence:.0f}%"""
 
         if filepath:
@@ -654,137 +558,22 @@ Confidence: {result.confidence:.0f}%"""
         self.app.action_clear()
         return None
 
-    async def _cmd_auth(self, args: str) -> str:
-        """Authenticate with Stockbit."""
-        from pulse.core.data.stockbit import StockbitClient
-
-        client = StockbitClient()
-        args_lower = args.strip().lower() if args else ""
-
-        # Check subcommands
-        if args_lower.startswith("set-token") or args_lower.startswith("token"):
-            # Extract token from args
-            parts = args.strip().split(maxsplit=1)
-            if len(parts) < 2:
-                return """Set Stockbit Token
-
-Usage: /auth set-token <JWT_TOKEN>
-
-How to get token:
-1. Open https://stockbit.com in Chrome and login
-2. Open DevTools (F12 or Cmd+Option+I)
-3. Go to Network tab
-4. Click any stock (e.g., BBCA)
-5. Find request to exodus.stockbit.com
-6. Copy the Authorization header value (without 'Bearer ')
-
-Example:
-/auth set-token eyJhbGciOiJSUzI1NiIs...
-
-Note: Token is valid for ~24 hours. Update when expired."""
-
-            token = parts[1].strip()
-            # Remove "Bearer " prefix if present
-            if token.lower().startswith("bearer "):
-                token = token[7:]
-
-            success = client.set_token(token, save=True)
-            if success:
-                status = client.get_token_status()
-                hours = status.get("hours_remaining", 0)
-                return f"""✅ Token saved successfully!
-
-Token valid for: {hours:.1f} hours
-Saved to: {client.secrets_file}
-
-You can now use /broker command."""
-            else:
-                return "❌ Invalid token. Make sure you copied the full JWT token."
-
-        if args_lower == "status":
-            status = client.get_token_status()
-            if not status["has_token"]:
-                return """❌ No Stockbit token found.
-
-Set token with: /auth set-token <JWT_TOKEN>
-Or set STOCKBIT_TOKEN environment variable."""
-
-            expires = (
-                status["expires_at"].strftime("%Y-%m-%d %H:%M")
-                if status["expires_at"]
-                else "Unknown"
-            )
-            hours = status["hours_remaining"]
-            valid_str = "✅ Valid" if status["is_valid"] else "❌ Expired"
-
-            return f"""Stockbit Auth Status
-
-Status: {valid_str}
-Source: {status["source"]}
-Expires: {expires}
-Hours remaining: {hours:.1f if hours else 0}"""
-
-        # Default - show auth info
-        if client.is_authenticated:
-            status = client.get_token_status()
-            hours = status.get("hours_remaining", 0)
-            if status["is_valid"]:
-                return f"""✅ Authenticated with Stockbit
-
-Token source: {status["source"]}
-Valid for: {hours:.1f} hours
-
-Commands:
-  /auth status     - Check token status
-  /auth set-token  - Set new token"""
-            else:
-                return f"""⚠️ Stockbit token expired!
-
-Please update your token:
-  /auth set-token <NEW_TOKEN>
-
-How to get token:
-1. Login to stockbit.com in browser
-2. Open DevTools > Network tab
-3. Copy Authorization header from any exodus.stockbit.com request"""
-
-        return """Stockbit Authentication
-
-You need a Stockbit token to use broker flow features.
-
-Commands:
-  /auth set-token <TOKEN>  - Set token manually (recommended)
-  /auth status             - Check token status
-
-How to get token:
-1. Open https://stockbit.com in Chrome and login
-2. Open DevTools (F12 or Cmd+Option+I)
-3. Go to Network tab
-4. Click any stock page
-5. Find request to exodus.stockbit.com
-6. Copy the Authorization header (after 'Bearer ')
-
-Alternative: Set STOCKBIT_TOKEN environment variable in .env file.
-
-Note: Token is valid for ~24 hours."""
-
-    async def _cmd_ihsg(self, args: str) -> str:
-        """Show IHSG or other index status."""
+    async def _cmd_taiex(self, args: str) -> str:
+        """Show TAIEX or other Taiwan index status."""
         # Determine which index to show
-        index_name = args.strip().upper() if args else "IHSG"
+        index_name = args.strip().upper() if args else "TAIEX"
 
-        valid_indices = ["IHSG", "LQ45", "IDX30", "JII"]
+        valid_indices = ["TAIEX", "TWII", "TPEX", "OTC", "TW50"]
         if index_name not in valid_indices:
             return f"""Unknown index: {index_name}
 
 Available indices:
-  IHSG  - IDX Composite
-  LQ45  - IDX LQ45
-  IDX30 - IDX30
-  JII   - Jakarta Islamic Index
+  TAIEX - Taiwan Weighted Index (加權指數)
+  TPEX  - Taiwan OTC Index (櫃買指數)
+  TW50  - Taiwan 50 ETF (台灣50)
 
-Usage: /ihsg [index]
-Example: /ihsg LQ45
+Usage: /taiex [index]
+Example: /taiex TPEX
 """
 
         from pulse.core.chart_generator import ChartGenerator
@@ -797,7 +586,7 @@ Example: /ihsg LQ45
             return f"Could not fetch data for {index_name}"
 
         # Generate chart
-        yf_ticker = fetcher.INDEX_MAPPING.get(index_name, ("^JKSE", "IHSG"))[0]
+        yf_ticker = fetcher.INDEX_MAPPING.get(index_name, ("^TWII", "TAIEX"))[0]
         df = fetcher.get_history_df(yf_ticker, "3mo")
         chart_path = None
 
@@ -825,21 +614,21 @@ Range: {index_data.day_low:,.2f} - {index_data.day_high:,.2f}
     async def _cmd_plan(self, args: str) -> str:
         """Trading plan command handler."""
         if not args:
-            return """Trading Plan - Generate TP/SL/RR analysis
+            return """Trading Plan - Generate TP/SL/RR analysis (交易計畫生成器)
 
 Usage: /plan <TICKER> [account_size]
 
-Examples:
-  /plan BBCA              - Trading plan with default account size
-  /plan BBRI 50000000     - Trading plan with Rp 50 juta account
+Examples (範例):
+  /plan 2330              - Trading plan with default account size (預設帳戶大小)
+  /plan 2881 1000000      - Trading plan with NT$ 1M account (百萬帳戶)
 
-Output includes:
-  - Entry price (current market)
-  - Take Profit levels (TP1, TP2, TP3)
-  - Stop Loss with method used
-  - Risk/Reward ratio analysis
-  - Position sizing suggestion
-  - Execution strategy"""
+Output includes (輸出內容):
+  - Entry price (current market) (進場價格)
+  - Take Profit levels (TP1, TP2, TP3) (停利點位)
+  - Stop Loss with method used (停損點位)
+  - Risk/Reward ratio analysis (風險報酬比分析)
+  - Position sizing suggestion (部位建議)
+  - Execution strategy (執行策略)"""
 
         parts = args.strip().split()
         ticker = parts[0].upper()
@@ -866,43 +655,40 @@ Output includes:
     async def _cmd_sapta(self, args: str) -> str:
         """SAPTA PRE-MARKUP detection command handler."""
         if not args:
-            return """SAPTA - PRE-MARKUP Detection Engine (ML-powered)
+            return """SAPTA - PRE-MARKUP Detection Engine (預漲偵測引擎 - ML機器學習)
 
-Usage:
-  /sapta <TICKER>              - Analyze single stock
-  /sapta scan [universe]       - Scan for PRE-MARKUP candidates
+Usage (用法):
+  /sapta <TICKER>              - Analyze single stock (分析單一股票)
+  /sapta scan [universe]       - Scan for PRE-MARKUP candidates (掃描預漲股)
 
-Universe Options:
-  /sapta scan lq45             - Scan LQ45 (45 stocks, fast)
-  /sapta scan idx80            - Scan IDX80 (80 stocks)
-  /sapta scan popular          - Scan popular stocks (113 stocks)
-  /sapta scan all              - Scan ALL 955 stocks (slower)
+Universe Options (股票池選項):
+  /sapta scan tw50             - Scan TW50 (台灣50, 50檔股票, 快速)
+  /sapta scan midcap           - Scan Mid-Cap 100 stocks (中型股100檔)
+  /sapta scan popular          - Scan popular stocks (熱門股)
+  /sapta scan all              - Scan ALL stocks (全部股票, 較慢)
 
-Options:
-  --detailed                   - Show module breakdown
+Options (選項):
+  --detailed                   - Show module breakdown (顯示模組詳情)
 
-Examples:
-  /sapta BBCA                  - Analyze BBCA
-  /sapta BBRI --detailed       - Detailed analysis
-  /sapta scan all              - Scan semua saham untuk pre-markup
+Examples (範例):
+  /sapta 2330                  - Analyze TSMC (分析台積電)
+  /sapta 2881 --detailed       - Detailed analysis (詳細分析國泰金)
+  /sapta scan all              - Scan all stocks for pre-markup (掃描全市場)
 
-Natural Language (via chat):
-  "carikan saham pre-markup"   - Scan LQ45
-  "carikan saham pre-markup semua" - Scan all 955 stocks
+Status Levels (狀態等級 - ML學習門檻):
+  PRE-MARKUP  (score >= 47)    - Ready to breakout (準備突破)
+  SIAP        (score >= 35)    - Almost ready (接近突破)
+  WATCHLIST   (score >= 24)    - Monitor (觀察中)
+  SKIP        (score < 24)     - Skip (跳過)
 
-Status Levels (ML-learned thresholds):
-  PRE-MARKUP  (score >= 47)    - Ready to breakout
-  SIAP        (score >= 35)    - Almost ready
-  WATCHLIST   (score >= 24)    - Monitor
-  ABAIKAN     (score < 24)     - Skip
-
-Modules:
-  1. Supply Absorption - Smart money accumulation
-  2. Compression - Volatility contraction
-  3. BB Squeeze - Bollinger Band squeeze
-  4. Elliott Wave - Wave position & Fibonacci
-  5. Time Projection - Fib time + planetary aspects
-  6. Anti-Distribution - Filter distribution patterns
+Modules (分析模組):
+  1. Supply Absorption - Smart money accumulation (供給吸收 - 主力吸籌)
+  2. Compression - Volatility contraction (壓縮 - 波動收斂)
+  3. BB Squeeze - Bollinger Band squeeze (布林通道擠壓)
+  4. Elliott Wave - Wave position & Fibonacci (艾略特波浪 & 費波那契)
+  5. Time Projection - Fib time + planetary aspects (時間投影 - 費氏時間)
+  6. Anti-Distribution - Filter distribution patterns (反派發 - 過濾出貨)
+  7. Institutional Flow - Foreign/Trust flow analysis (法人動向分析)
 """
 
         from pulse.core.sapta import SaptaEngine, SaptaStatus
@@ -932,11 +718,13 @@ Modules:
             else:
                 # Select universe using screener's universe logic
                 universe_map = {
-                    "lq45": StockUniverse.LQ45,
-                    "idx80": StockUniverse.IDX80,
+                    "tw50": StockUniverse.TW50,
+                    "lq45": StockUniverse.TW50,  # backward compat
+                    "midcap": StockUniverse.MIDCAP,
+                    "tw100": StockUniverse.MIDCAP,
                     "popular": StockUniverse.POPULAR,
                 }
-                universe_type = universe_map.get(universe, StockUniverse.LQ45)
+                universe_type = universe_map.get(universe, StockUniverse.TW50)
                 screener = StockScreener(universe_type=universe_type)
                 tickers = screener.universe
                 universe_name = universe.upper()
@@ -961,104 +749,3 @@ Modules:
             return f"Could not analyze {ticker}. Make sure the ticker is valid."
 
         return engine.format_result(result, detailed=detailed)
-
-    async def _cmd_bandar(self, args: str) -> str:
-        """Bandarmology analysis command handler."""
-        if not args:
-            return """BANDARMOLOGY - Advanced Broker Flow Analysis
-
-Usage:
-  /bandar <TICKER>              - Analyze single stock (default 10 days)
-  /bandar <TICKER> <days>       - Analyze with custom period
-  /bandar scan [universe]       - Scan for markup-ready candidates
-
-Period Options:
-  /bandar BBCA                  - Last 10 trading days
-  /bandar BBCA 5                - Last 5 trading days
-  /bandar BBCA 20               - Last 20 trading days (1 month)
-
-Scan Options:
-  /bandar scan                  - Scan LQ45 (default)
-  /bandar scan lq45             - Scan LQ45 (45 stocks)
-  /bandar scan idx80            - Scan IDX80 (80 stocks)
-  /bandar scan popular          - Scan popular stocks
-
-Options:
-  --detailed                    - Show daily timeline
-
-Examples:
-  /bandar BBCA                  - Analyze BBCA (10 days)
-  /bandar BBRI 20               - Analyze BBRI (20 days / ~1 month)
-  /bandar ANTM --detailed       - Detailed with daily breakdown
-  /bandar scan lq45             - Scan LQ45 for markup candidates
-
-Analysis Includes:
-  - Flow Momentum Score (0-100)
-  - Markup Readiness Score (0-100)
-  - Accumulation Phase Detection
-  - Smart Money vs Retail Flow
-  - Broker Composition by Profile
-  - Pattern Detection (Crossing, Dominasi, Retail Trap, etc.)
-  - Top Broker Consistency Tracking
-  - Daily Timeline (with --detailed)
-
-Broker Profiles:
-  - Smart Money Foreign: AK, BK, MS, GR, LG, KZ, CS, DX
-  - Bandar/Gorengan: SQ, MG, EP, DR, BZ
-  - Retail: XA, AZ, KI, YO, ZP
-  - Local Institutional: CC, NI, OD, TP, IF
-"""
-
-        from pulse.core.analysis.bandarmology import BandarmologyEngine
-        from pulse.core.screener import StockScreener, StockUniverse
-
-        engine = BandarmologyEngine()
-        args_lower = args.lower().strip()
-        detailed = "--detailed" in args_lower
-        args_clean = args_lower.replace("--detailed", "").strip()
-
-        # Check if it's a scan command
-        if args_clean.startswith("scan"):
-            parts = args_clean.split()
-            universe = parts[1] if len(parts) > 1 else "lq45"
-
-            # Select universe
-            universe_map = {
-                "lq45": StockUniverse.LQ45,
-                "idx80": StockUniverse.IDX80,
-                "popular": StockUniverse.POPULAR,
-            }
-            universe_type = universe_map.get(universe, StockUniverse.LQ45)
-            screener = StockScreener(universe_type=universe_type)
-            tickers = screener.universe
-            universe_name = universe.upper()
-
-            # Scan for markup-ready candidates
-            results = await engine.scan_markup_ready(tickers, min_score=60, days=10)
-
-            if not results:
-                return f"No markup-ready stocks found in {universe_name}."
-
-            return engine.format_scan_results(
-                results, title=f"Bandarmology Scan: {universe_name} ({len(results)} found)"
-            )
-
-        # Single stock analysis
-        parts = args_clean.split()
-        ticker = parts[0].upper()
-
-        # Parse optional days parameter
-        days = 10  # Default
-        if len(parts) > 1:
-            try:
-                days = int(parts[1])
-                days = min(max(days, 3), 60)  # Clamp between 3-60 days
-            except ValueError:
-                pass  # Keep default
-
-        result = await engine.analyze(ticker, days=days)
-
-        if not result:
-            return f"Could not analyze {ticker}. Make sure the ticker is valid and you have a valid Stockbit token."
-
-        return engine.format_report(result, detailed=detailed)

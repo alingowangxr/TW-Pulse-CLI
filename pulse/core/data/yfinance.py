@@ -1,5 +1,4 @@
-"""yfinance data fetcher for Indonesian stocks."""
-
+"""yfinance data fetcher for Taiwan stocks (fallback)."""
 
 import pandas as pd
 import yfinance as yf
@@ -11,28 +10,28 @@ log = get_logger(__name__)
 
 
 class YFinanceFetcher:
-    """Fetch stock data from yfinance for IDX stocks."""
+    """Fetch stock data from yfinance for Taiwan stocks."""
 
-    # Indonesian market indices mapping
+    # Taiwan market indices mapping
     INDEX_MAPPING = {
-        "IHSG": ("^JKSE", "IDX Composite"),
-        "LQ45": ("^JKLQ45", "IDX LQ45"),
-        "IDX30": ("^JKIDX30", "IDX30"),
-        "JII": ("^JKII", "Jakarta Islamic Index"),
-        "KOMPAS100": ("^JKSE", "Kompas 100"),  # fallback to IHSG
+        "TAIEX": ("^TWII", "Taiwan Weighted Index"),
+        "TWII": ("^TWII", "Taiwan Weighted Index"),
+        "TPEX": ("^TWOTCI", "Taiwan OTC Index"),
+        "OTC": ("^TWOTCI", "Taiwan OTC Index"),
+        "TW50": ("0050.TW", "Taiwan 50 ETF"),
     }
 
-    def __init__(self, suffix: str = ".JK"):
+    def __init__(self, suffix: str = ".TW"):
         """
         Initialize yfinance fetcher.
-        
+
         Args:
-            suffix: Ticker suffix for IDX (default: .JK)
+            suffix: Ticker suffix for Taiwan (default: .TW)
         """
         self.suffix = suffix
 
     def _format_ticker(self, ticker: str) -> str:
-        """Format ticker with IDX suffix."""
+        """Format ticker with Taiwan suffix (.TW)."""
         ticker = ticker.upper().strip()
 
         # Check if it's an index
@@ -50,7 +49,7 @@ class YFinanceFetcher:
     def _clean_ticker(self, ticker: str) -> str:
         """Remove suffix from ticker."""
         if ticker.endswith(self.suffix):
-            return ticker[:-len(self.suffix)]
+            return ticker[: -len(self.suffix)]
         return ticker
 
     async def fetch_stock(
@@ -60,11 +59,11 @@ class YFinanceFetcher:
     ) -> StockData | None:
         """
         Fetch stock data for a ticker.
-        
+
         Args:
-            ticker: Stock ticker (e.g., "BBCA")
+            ticker: Stock ticker (e.g., "2330", "2881")
             period: Historical data period (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
-            
+
         Returns:
             StockData object or None if failed
         """
@@ -89,14 +88,16 @@ class YFinanceFetcher:
             # Convert history to OHLCV list
             history: list[OHLCV] = []
             for date, row in hist.iterrows():
-                history.append(OHLCV(
-                    date=date.to_pydatetime(),
-                    open=float(row.get("Open", 0)),
-                    high=float(row.get("High", 0)),
-                    low=float(row.get("Low", 0)),
-                    close=float(row.get("Close", 0)),
-                    volume=int(row.get("Volume", 0)),
-                ))
+                history.append(
+                    OHLCV(
+                        date=date.to_pydatetime(),
+                        open=float(row.get("Open", 0)),
+                        high=float(row.get("High", 0)),
+                        low=float(row.get("Low", 0)),
+                        close=float(row.get("Close", 0)),
+                        volume=int(row.get("Volume", 0)),
+                    )
+                )
 
             # Get latest data
             latest = history[-1] if history else None
@@ -139,10 +140,10 @@ class YFinanceFetcher:
     async def fetch_fundamentals(self, ticker: str) -> FundamentalData | None:
         """
         Fetch fundamental data for a ticker.
-        
+
         Args:
             ticker: Stock ticker
-            
+
         Returns:
             FundamentalData object or None if failed
         """
@@ -171,12 +172,18 @@ class YFinanceFetcher:
                 eps=info.get("trailingEps"),
                 bvps=info.get("bookValue"),
                 dps=info.get("dividendRate"),
-                revenue_growth=info.get("revenueGrowth", 0) * 100 if info.get("revenueGrowth") else None,
-                earnings_growth=info.get("earningsGrowth", 0) * 100 if info.get("earningsGrowth") else None,
+                revenue_growth=info.get("revenueGrowth", 0) * 100
+                if info.get("revenueGrowth")
+                else None,
+                earnings_growth=info.get("earningsGrowth", 0) * 100
+                if info.get("earningsGrowth")
+                else None,
                 debt_to_equity=info.get("debtToEquity"),
                 current_ratio=info.get("currentRatio"),
                 quick_ratio=info.get("quickRatio"),
-                dividend_yield=info.get("dividendYield", 0) * 100 if info.get("dividendYield") else None,
+                dividend_yield=info.get("dividendYield", 0) * 100
+                if info.get("dividendYield")
+                else None,
                 payout_ratio=info.get("payoutRatio", 0) * 100 if info.get("payoutRatio") else None,
                 market_cap=info.get("marketCap"),
                 enterprise_value=info.get("enterpriseValue"),
@@ -193,11 +200,11 @@ class YFinanceFetcher:
     ) -> list[StockData]:
         """
         Fetch data for multiple tickers.
-        
+
         Args:
             tickers: List of stock tickers
             period: Historical data period
-            
+
         Returns:
             List of StockData objects
         """
@@ -217,11 +224,11 @@ class YFinanceFetcher:
     ) -> pd.DataFrame | None:
         """
         Fetch historical data as DataFrame (async wrapper).
-        
+
         Args:
             ticker: Stock ticker
             period: Historical data period
-            
+
         Returns:
             DataFrame with OHLCV data
         """
@@ -230,11 +237,11 @@ class YFinanceFetcher:
     def get_history_df(self, ticker: str, period: str = "1y") -> pd.DataFrame | None:
         """
         Get historical data as pandas DataFrame (for technical analysis).
-        
+
         Args:
             ticker: Stock ticker
             period: Historical data period
-            
+
         Returns:
             DataFrame with OHLCV data
         """
@@ -262,12 +269,12 @@ class YFinanceFetcher:
         period: str = "3mo",
     ) -> StockData | None:
         """
-        Fetch market index data (IHSG, LQ45, IDX30, etc).
-        
+        Fetch market index data (TAIEX, TPEX, etc).
+
         Args:
-            index_name: Index name (IHSG, LQ45, IDX30, JII)
+            index_name: Index name (TAIEX, TPEX, TW50, OTC)
             period: Historical data period
-            
+
         Returns:
             StockData object with index data, or None if failed
         """
@@ -301,14 +308,16 @@ class YFinanceFetcher:
             # Convert history to OHLCV list
             history: list[OHLCV] = []
             for date, row in hist.iterrows():
-                history.append(OHLCV(
-                    date=date.to_pydatetime(),
-                    open=float(row.get("Open", 0)),
-                    high=float(row.get("High", 0)),
-                    low=float(row.get("Low", 0)),
-                    close=float(row.get("Close", 0)),
-                    volume=int(row.get("Volume", 0)),
-                ))
+                history.append(
+                    OHLCV(
+                        date=date.to_pydatetime(),
+                        open=float(row.get("Open", 0)),
+                        high=float(row.get("High", 0)),
+                        low=float(row.get("Low", 0)),
+                        close=float(row.get("Close", 0)),
+                        volume=int(row.get("Volume", 0)),
+                    )
+                )
 
             # Get latest data
             latest = history[-1] if history else None

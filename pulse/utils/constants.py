@@ -1,192 +1,525 @@
-"""Constants for Indonesian Stock Market (IDX)."""
+"""Constants for Taiwan Stock Market (TWSE/TPEx)."""
 
-
-# IDX Sector Classifications (JASICA)
-IDX_SECTORS: dict[str, list[str]] = {
+# Taiwan Sector Classifications (TWSE - 上市)
+TWSE_SECTORS: dict[str, list[str]] = {
+    "SEMICONDUCTOR": [
+        "2330",
+        "2454",
+        "2303",
+        "3711",
+        "2379",
+        "3034",
+        "6415",
+        "2449",
+        "3529",
+        "2408",
+        "3443",
+        "5274",
+        "6669",
+        "2344",
+        "3661",
+        "8046",
+    ],
+    "ELECTRONICS": [
+        "2317",
+        "2382",
+        "2357",
+        "3231",
+        "2324",
+        "2356",
+        "2301",
+        "2308",
+        "2377",
+        "3702",
+        "2353",
+        "6176",
+        "2409",
+        "2354",
+        "3037",
+        "2312",
+    ],
     "FINANCE": [
-        "BBCA", "BBRI", "BMRI", "BBNI", "BBTN", "BRIS", "MEGA", "NISP",
-        "BTPN", "BDMN", "BNGA", "BNLI", "PNBN", "BJBR", "BJTM", "ARTO",
-        "BBYB", "NOBU", "BINA", "MCOR", "SDRA", "AGRO", "BMAS", "BBHI",
+        "2881",
+        "2882",
+        "2891",
+        "2886",
+        "2884",
+        "2892",
+        "2880",
+        "2883",
+        "2887",
+        "5880",
+        "2885",
+        "2888",
+        "2890",
+        "2889",
+        "5876",
+        "2834",
     ],
     "BANKING": [
-        "BBCA", "BBRI", "BMRI", "BBNI", "BBTN", "BRIS", "MEGA", "NISP",
-        "BTPN", "BDMN", "BNGA", "BNLI", "PNBN", "BJBR", "BJTM", "ARTO",
+        "2881",
+        "2882",
+        "2891",
+        "2886",
+        "2884",
+        "2892",
+        "2880",
+        "2883",
+        "2887",
+        "5880",
+        "2834",
+        "2836",
+        "2838",
+        "2845",
+        "2849",
     ],
-    "MINING": [
-        "ADRO", "PTBA", "ITMG", "BUMI", "BYAN", "INDY", "HRUM", "DOID",
-        "ANTM", "INCO", "TINS", "MDKA", "NICL", "NCKL", "MBMA", "ADMR",
-        "MEDC", "GEMS", "BSSR", "MYOH", "KKGI",
+    "INSURANCE": [
+        "2823",
+        "2816",
+        "2832",
+        "2850",
+        "2852",
+        "2855",
+        "2867",
     ],
-    "COAL": [
-        "ADRO", "PTBA", "ITMG", "BUMI", "BYAN", "INDY", "HRUM", "DOID",
-        "GEMS", "BSSR", "MYOH", "KKGI", "MBAP", "TOBA",
+    "STEEL": [
+        "2002",
+        "2006",
+        "2014",
+        "2027",
+        "2031",
+        "2062",
+        "2069",
+        "2023",
     ],
-    "NICKEL": [
-        "ANTM", "INCO", "NICL", "NCKL", "MBMA",
+    "PLASTIC": [
+        "1301",
+        "1303",
+        "1326",
+        "6505",
+        "1304",
+        "1308",
+        "1309",
+        "1310",
     ],
-    "CONSUMER": [
-        "UNVR", "ICBP", "INDF", "MYOR", "KLBF", "HMSP", "GGRM", "SIDO",
-        "ULTJ", "CPIN", "JPFA", "MAIN", "GOOD", "CLEO", "ADES",
+    "TEXTILE": [
+        "1402",
+        "1409",
+        "1434",
+        "1440",
+        "1444",
+        "1451",
+        "1454",
+        "1460",
     ],
-    "TELCO": [
-        "TLKM", "EXCL", "ISAT", "TOWR", "TBIG", "MTEL",
+    "FOOD": [
+        "1216",
+        "1227",
+        "1229",
+        "1231",
+        "1215",
+        "1232",
+        "1218",
+        "1234",
     ],
-    "PROPERTY": [
-        "BSDE", "CTRA", "SMRA", "PWON", "LPKR", "DILD", "ASRI", "APLN",
-        "KIJA", "DMAS", "JRPT", "MKPI", "PPRO", "BEST",
+    "SHIPPING": [
+        "2603",
+        "2609",
+        "2615",
+        "2618",
+        "2634",
+        "2637",
+        "5608",
     ],
-    "INFRASTRUCTURE": [
-        "JSMR", "PGAS", "WIKA", "WSKT", "PTPP", "ADHI", "WTON", "ACST",
-        "TOTL", "NRCA", "WSBP",
+    "BIOTECH": [
+        "4736",
+        "4743",
+        "4746",
+        "6446",
+        "4142",
+        "4147",
+        "4174",
+        "4726",
     ],
-    "PLANTATION": [
-        "LSIP", "AALI", "SSMS", "SIMP", "SGRO", "TBLA", "SMAR", "DSNG",
-        "PALM", "BWPT",
+    "TELECOM": [
+        "2412",
+        "3045",
+        "4904",
+        "4906",
+        "6285",
     ],
-    "AUTOMOTIVE": [
-        "ASII", "AUTO", "SMSM", "GJTL", "IMAS", "INDS",
+    "CONSTRUCTION": [
+        "2504",
+        "2511",
+        "2520",
+        "2527",
+        "2534",
+        "2535",
+        "2536",
+        "2538",
     ],
-    "TECHNOLOGY": [
-        "GOTO", "BUKA", "EMTK", "DCII", "CASH",
-    ],
-    "HEALTHCARE": [
-        "KLBF", "SIDO", "MIKA", "HEAL", "SILO", "PRDA",
-    ],
-    "RETAIL": [
-        "AMRT", "MAPI", "ACES", "RALS", "LPPF", "ERAA", "MIDI",
+    "TOURISM": [
+        "2702",
+        "2704",
+        "2705",
+        "2707",
+        "2712",
+        "2722",
+        "2724",
+        "2729",
     ],
 }
 
+# TPEX/OTC Sector Classifications (櫃買) - Selected popular stocks
+TPEX_SECTORS: dict[str, list[str]] = {
+    "BIOTECH": [  # 生技醫療
+        "3176",
+        "4108",
+        "4123",
+        "4130",
+        "4164",
+        "4175",
+        "4190",
+        "4736",
+        "4743",
+        "4746",
+        "4763",
+        "4807",
+        "6436",
+        "6456",
+        "6461",
+        "6547",
+    ],
+    "ELECTRONICS": [  # 電子
+        "3050",
+        "3105",
+        "3141",
+        "3171",
+        "3209",
+        "3211",
+        "3213",
+        "3217",
+        "3227",
+        "3230",
+        "3257",
+        "3260",
+        "3264",
+        "3265",
+        "3276",
+        "3284",
+        "3289",
+        "3293",
+        "3305",
+        "3310",
+        "3313",
+        "3321",
+        "3323",
+        "3332",
+        "3346",
+        "3354",
+        "3360",
+        "3363",
+        "3379",
+        "3380",
+        "3388",
+        "3390",
+        "3406",
+        "3416",
+        "3426",
+        "3434",
+        "3441",
+        "3443",
+        "3450",
+        "3455",
+    ],
+    "CONSTRUCTION": [  # 營建
+        "2505",
+        "2506",
+        "2509",
+        "2512",
+        "2514",
+        "2515",
+        "2516",
+        "2524",
+        "2528",
+        "2530",
+        "2531",
+        "2537",
+        "2539",
+        "2540",
+        "2541",
+        "2542",
+        "2543",
+        "2545",
+        "2546",
+        "2547",
+        "2548",
+        "2550",
+        "2551",
+        "2552",
+        "2553",
+        "2554",
+        "2555",
+        "2556",
+        "2557",
+        "2558",
+        "2560",
+        "2562",
+    ],
+    "OTHER": [  # 其他
+        "6005",
+        "6020",
+        "6025",
+        "6033",
+        "6038",
+        "6054",
+        "6058",
+        "6063",
+        "6068",
+        "6070",
+        "6075",
+        "6081",
+        "6089",
+        "6095",
+        "6098",
+        "6109",
+    ],
+}
+
+# Combined sectors (TWSE + TPEX)
+TW_SECTORS = {**TWSE_SECTORS, **TPEX_SECTORS}
+
 # Flatten all tickers
 ALL_TICKERS: set[str] = set()
-for sector_tickers in IDX_SECTORS.values():
+for sector_tickers in TW_SECTORS.values():
     ALL_TICKERS.update(sector_tickers)
 
-# Major IDX Broker Codes
+# Taiwan Securities Broker Codes
 BROKER_CODES: dict[str, str] = {
-    # Foreign Brokers (Asing)
-    "YU": "Mirae Asset Sekuritas",
-    "PD": "CGS International Sekuritas",
-    "MS": "Morgan Stanley Sekuritas",
-    "CC": "Mandiri Sekuritas",
-    "RX": "Macquarie Sekuritas",
-    "LG": "Deutsche Sekuritas",
-    "AK": "UBS Sekuritas",
-    "KZ": "Credit Suisse Sekuritas",
-    "CS": "CLSA Sekuritas",
-    "DX": "BNP Paribas Sekuritas",
-    "BK": "J.P. Morgan Sekuritas",
-    "GR": "Citi Sekuritas",
-    "ML": "Merrill Lynch Sekuritas",
-    "FG": "Asia Kapitalindo Sekuritas",
-    "KK": "Phillip Sekuritas",
-    "DB": "Deutsche Bank Sekuritas",
-
-    # Local Brokers (Lokal)
-    "OD": "Henan Putihrai Sekuritas",
-    "NI": "BNI Sekuritas",
-    "EP": "MNC Sekuritas",
-    "IF": "Sucor Sekuritas",
-    "SQ": "Sinarmas Sekuritas",
-    "AI": "Artha Sekuritas",
-    "YP": "Samuel Sekuritas",
-    "DR": "Danpac Sekuritas",
-    "BZ": "Jasa Utama Capital Sekuritas",
-    "AG": "Panin Sekuritas",
-    "TP": "Trimegah Sekuritas",
-    "ZP": "Ajaib Sekuritas",
-    "AZ": "Stockbit Sekuritas",
-    "KI": "Phintraco Sekuritas",
-    "GI": "Kresna Sekuritas",
-    "XA": "IPOT (Indo Premier)",
-    "RG": "RHB Sekuritas",
-    "PG": "Mandiri Sekuritas (Retail)",
-    "DH": "Danareksa Sekuritas",
-    "AO": "APERD Sekuritas",
-    "LS": "Lautandhana Sekuritas",
-    "YO": "Yuanta Sekuritas",
-    "MG": "Maybank Sekuritas",
-    "SK": "Shinhan Sekuritas",
-    "KB": "KB Valbury Sekuritas",
-    "NH": "NH Korindo Sekuritas",
+    # Major Brokers
+    "1020": "合庫證券",
+    "1030": "土銀證券",
+    "1040": "台銀證券",
+    "1160": "日盛證券",
+    "1380": "台企銀證券",
+    "1440": "兆豐證券",
+    "1470": "台新證券",
+    "1520": "華泰證券",
+    "1560": "第一金證券",
+    "5380": "元大證券",
+    "5850": "統一證券",
+    "5860": "日盛證券",
+    "5920": "元富證券",
+    "5950": "凱基證券",
+    "6010": "永豐金證券",
+    "6020": "宏遠證券",
+    "6110": "富邦證券",
+    "6160": "中信證券",
+    "6210": "群益金鼎證券",
+    "6380": "光和證券",
+    "6450": "新光證券",
+    "6480": "玉山證券",
+    "6950": "國泰證券",
+    "7000": "國票證券",
+    "8150": "大慶證券",
+    "8440": "摩根大通證券",
+    "8560": "美林證券",
+    "8840": "瑞士信貸證券",
+    "8880": "花旗環球證券",
+    "9200": "港商法國興業證券",
+    "9600": "富達證券",
+    "9800": "高盛證券",
+    "9A00": "港商野村證券",
 }
 
 # Major/Important Brokers to watch
 MAJOR_BROKERS: dict[str, list[str]] = {
-    "FOREIGN_BIG": ["YU", "PD", "MS", "CC", "RX", "LG", "BK", "GR", "ML"],
-    "FOREIGN_MID": ["AK", "KZ", "CS", "DX", "FG", "KK", "DB"],
-    "LOCAL_BIG": ["OD", "NI", "EP", "IF", "SQ", "AG", "TP"],
-    "RETAIL": ["ZP", "AZ", "KI", "XA", "YO"],
+    "FOREIGN_BIG": ["8440", "8560", "8840", "8880", "9800", "9A00"],
+    "LOCAL_BIG": ["5380", "5850", "5950", "6010", "6110", "6160", "6210"],
+    "RETAIL": ["1020", "1440", "1470", "1560", "6450", "6480"],
 }
 
-# Broker type classification
+# Broker type classification (外資/本土)
 BROKER_TYPES: dict[str, str] = {
-    "YU": "Asing",
-    "PD": "Asing",
-    "MS": "Asing",
-    "CC": "Lokal",
-    "RX": "Asing",
-    "LG": "Asing",
-    "BK": "Asing",
-    "GR": "Asing",
-    "ML": "Asing",
-    "AK": "Asing",
-    "KZ": "Asing",
-    "CS": "Asing",
-    "DX": "Asing",
-    "OD": "Lokal",
-    "NI": "Lokal",
-    "EP": "Lokal",
-    "IF": "Lokal",
-    "SQ": "Lokal",
-    "ZP": "Lokal",
-    "AZ": "Lokal",
-    "KI": "Lokal",
-    "XA": "Lokal",
-    "TP": "Lokal",
+    "8440": "外商",  # 摩根大通
+    "8560": "外商",  # 美林
+    "8840": "外商",  # 瑞士信貸
+    "8880": "外商",  # 花旗
+    "9800": "外商",  # 高盛
+    "9A00": "外商",  # 野村
+    "9200": "外商",  # 法興
+    "9600": "外商",  # 富達
+    "5380": "本土",  # 元大
+    "5850": "本土",  # 統一
+    "5950": "本土",  # 凱基
+    "6010": "本土",  # 永豐金
+    "6110": "本土",  # 富邦
+    "6160": "本土",  # 中信
+    "6210": "本土",  # 群益
+    "6950": "本土",  # 國泰
 }
 
-# LQ45 Components (frequently updated)
-LQ45_TICKERS: list[str] = [
-    "ACES", "ADRO", "AMRT", "ANTM", "ASII", "BBCA", "BBNI", "BBRI",
-    "BBTN", "BMRI", "BRPT", "BUKA", "CPIN", "EMTK", "EXCL", "GGRM",
-    "GOTO", "HMSP", "ICBP", "INCO", "INDF", "INKP", "ISAT", "ITMG",
-    "JPFA", "KLBF", "MAPI", "MDKA", "MEDC", "MIKA", "MNCN", "PGAS",
-    "PTBA", "SMGR", "SRTG", "TBIG", "TINS", "TLKM", "TOWR", "TPIA",
-    "UNTR", "UNVR", "WIKA", "WSKT",
+# Taiwan 50 ETF Components (台灣50成分股)
+TW50_TICKERS: list[str] = [
+    "2330",
+    "2454",
+    "2317",
+    "2881",
+    "2882",
+    "2303",
+    "2891",
+    "2886",
+    "2308",
+    "2412",
+    "1301",
+    "1303",
+    "2884",
+    "3711",
+    "2892",
+    "1216",
+    "2002",
+    "2880",
+    "3034",
+    "2885",
+    "2379",
+    "2887",
+    "5871",
+    "2603",
+    "3045",
+    "6505",
+    "1326",
+    "2357",
+    "5880",
+    "2801",
+    "2883",
+    "2912",
+    "2327",
+    "2408",
+    "4904",
+    "1101",
+    "3008",
+    "2382",
+    "9910",
+    "2207",
+    "3231",
+    "4938",
+    "2301",
+    "6415",
+    "5876",
+    "6669",
+    "1402",
+    "2474",
+    "5347",
+    "8454",
 ]
 
-# IDX30 Components
-IDX30_TICKERS: list[str] = [
-    "ADRO", "AMRT", "ANTM", "ASII", "BBCA", "BBNI", "BBRI", "BBTN",
-    "BMRI", "BRPT", "CPIN", "EMTK", "EXCL", "GGRM", "ICBP", "INCO",
-    "INDF", "ITMG", "KLBF", "MDKA", "PGAS", "PTBA", "SMGR", "TBIG",
-    "TLKM", "TOWR", "TPIA", "UNTR", "UNVR",
+# Mid-Cap 100 (中型100成分股)
+MIDCAP100_TICKERS: list[str] = [
+    "2377",
+    "3443",
+    "2609",
+    "3037",
+    "2356",
+    "2344",
+    "2409",
+    "6176",
+    "2324",
+    "2353",
+    "3702",
+    "2354",
+    "2312",
+    "6285",
+    "2449",
+    "8046",
+    "5274",
+    "3529",
+    "2014",
+    "2006",
+    "2027",
+    "4736",
+    "4147",
+    "2504",
+    "2511",
+    "2702",
+    "2704",
+    "1440",
+    "1402",
 ]
 
-# Trading hours (WIB - Jakarta time)
+# Popular TPEX/OTC stocks (熱門上櫃股票)
+TPEX_POPULAR: list[str] = [
+    "3176",
+    "3050",
+    "3105",
+    "3141",
+    "3211",
+    "3260",
+    "3310",
+    "3354",
+    "3416",
+    "3443",
+    "3455",
+    "4108",
+    "4123",
+    "4130",
+    "4164",
+    "4175",
+    "4190",
+    "4736",
+    "4743",
+    "4746",
+    "4763",
+    "4807",
+    "6436",
+    "6456",
+    "6461",
+    "6547",
+]
+
+# Trading hours (Taiwan Time, UTC+8)
 TRADING_HOURS = {
-    "pre_opening": ("08:45", "09:00"),
-    "session_1": ("09:00", "11:30"),
-    "break": ("11:30", "13:30"),
-    "session_2": ("13:30", "15:00"),
-    "pre_closing": ("15:00", "15:10"),
-    "post_trading": ("15:10", "16:00"),
+    "pre_opening": ("08:30", "09:00"),
+    "continuous": ("09:00", "13:30"),
+    "post_trading": ("13:30", "14:30"),
 }
 
-# Price fractions (tick size) based on price level
-PRICE_FRACTIONS: dict[tuple, int] = {
-    (0, 200): 1,
-    (200, 500): 2,
-    (500, 2000): 5,
-    (2000, 5000): 10,
-    (5000, float("inf")): 25,
+# Price tick size based on price level (Taiwan rules)
+PRICE_FRACTIONS: dict[tuple, float] = {
+    (0, 10): 0.01,
+    (10, 50): 0.05,
+    (50, 100): 0.1,
+    (100, 500): 0.5,
+    (500, 1000): 1.0,
+    (1000, float("inf")): 5.0,
 }
 
-# Auto Rejection Limits (ARA/ARB)
-AUTO_REJECTION = {
-    "acceleration_board": {"up": 0.35, "down": 0.35},
-    "development_board": {"up": 0.35, "down": 0.35},
-    "main_board": {"up": 0.25, "down": 0.25},
-    "ipo_day1": {"up": 0.50, "down": 0.50},
+# Price limit (漲跌幅限制)
+PRICE_LIMIT = {
+    "normal": {"up": 0.10, "down": 0.10},  # 10%
+    "warning": {"up": 0.05, "down": 0.05},  # 處置股 5%
+    "ipo_first_5_days": {"up": None, "down": None},  # 無漲跌幅限制
 }
+
+# Lot size (交易單位)
+LOT_SIZE = 1000  # 1張 = 1000股
+
+# Taiwan Market Indices
+MARKET_INDICES = {
+    "TAIEX": ("^TWII", "加權指數"),
+    "TPEX": ("^TWOTCI", "櫃買指數"),
+    "TW50": ("0050.TW", "台灣50"),
+    "MIDCAP": ("0051.TW", "中型100"),
+}
+
+# Institutional Investor Types (三大法人)
+INSTITUTIONAL_INVESTORS = {
+    "Foreign_Investor": "外資",
+    "Investment_Trust": "投信",
+    "Dealer_self": "自營商(自行買賣)",
+    "Dealer_Hedging": "自營商(避險)",
+}
+
+# For backward compatibility
+IDX_SECTORS = TW_SECTORS
+LQ45_TICKERS = TW50_TICKERS
+IDX30_TICKERS = TW50_TICKERS[:30]

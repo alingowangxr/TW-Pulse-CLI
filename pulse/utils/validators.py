@@ -6,11 +6,11 @@ from datetime import datetime, timedelta
 
 def validate_ticker(ticker: str) -> tuple[bool, str]:
     """
-    Validate an Indonesian stock ticker.
-    
+    Validate a Taiwan stock ticker.
+
     Args:
-        ticker: Stock ticker symbol
-        
+        ticker: Stock ticker symbol (e.g., "2330", "00878")
+
     Returns:
         Tuple of (is_valid, normalized_ticker or error_message)
     """
@@ -20,24 +20,34 @@ def validate_ticker(ticker: str) -> tuple[bool, str]:
     # Normalize: uppercase, strip whitespace
     normalized = ticker.upper().strip()
 
-    # Remove .JK suffix if present (yfinance format)
-    if normalized.endswith(".JK"):
+    # Remove .TW or .TWO suffix if present (yfinance format)
+    if normalized.endswith(".TW"):
         normalized = normalized[:-3]
+    elif normalized.endswith(".TWO"):
+        normalized = normalized[:-4]
 
-    # IDX tickers are 4 characters, alphabetic
-    if not re.match(r"^[A-Z]{4}$", normalized):
-        return False, f"Invalid ticker format: {ticker}. Expected 4 letters (e.g., BBCA)"
+    # Taiwan tickers are 4-6 digits for stocks, or alphanumeric for ETFs
+    # Common patterns:
+    # - 4 digits: regular stocks (2330, 2881)
+    # - 5 digits: emerging stocks (6xxxx)
+    # - ETFs: 0050, 00878, etc.
+    if re.match(r"^\d{4,6}$", normalized):
+        return True, normalized
 
-    return True, normalized
+    # Some special tickers like warrants have letters
+    if re.match(r"^\d{4,6}[A-Z]?$", normalized):
+        return True, normalized
+
+    return False, f"Invalid ticker format: {ticker}. Expected 4-6 digits (e.g., 2330)"
 
 
 def validate_date(date_str: str) -> tuple[bool, str]:
     """
     Validate and normalize a date string.
-    
+
     Args:
         date_str: Date string in various formats
-        
+
     Returns:
         Tuple of (is_valid, YYYY-MM-DD format or error_message)
     """
@@ -47,9 +57,9 @@ def validate_date(date_str: str) -> tuple[bool, str]:
     # Try various formats
     formats = [
         "%Y-%m-%d",  # 2024-01-15
+        "%Y/%m/%d",  # 2024/01/15
         "%d-%m-%Y",  # 15-01-2024
         "%d/%m/%Y",  # 15/01/2024
-        "%Y/%m/%d",  # 2024/01/15
     ]
 
     for fmt in formats:
@@ -59,17 +69,17 @@ def validate_date(date_str: str) -> tuple[bool, str]:
         except ValueError:
             continue
 
-    # Try relative dates
+    # Try relative dates (Chinese and English)
     date_lower = date_str.lower().strip()
     today = datetime.now()
 
-    if date_lower in ("today", "hari ini"):
+    if date_lower in ("today", "今天", "今日"):
         return True, today.strftime("%Y-%m-%d")
-    elif date_lower in ("yesterday", "kemarin"):
+    elif date_lower in ("yesterday", "昨天", "昨日"):
         return True, (today - timedelta(days=1)).strftime("%Y-%m-%d")
-    elif date_lower in ("last week", "minggu lalu"):
+    elif date_lower in ("last week", "上週", "上周"):
         return True, (today - timedelta(weeks=1)).strftime("%Y-%m-%d")
-    elif date_lower in ("last month", "bulan lalu"):
+    elif date_lower in ("last month", "上個月", "上月"):
         return True, (today - timedelta(days=30)).strftime("%Y-%m-%d")
 
     return False, f"Invalid date format: {date_str}. Use YYYY-MM-DD"
@@ -81,11 +91,11 @@ def validate_date_range(
 ) -> tuple[bool, tuple[str, str] | str]:
     """
     Validate a date range.
-    
+
     Args:
         start_date: Start date string
         end_date: End date string
-        
+
     Returns:
         Tuple of (is_valid, (start, end) or error_message)
     """
@@ -107,10 +117,10 @@ def validate_date_range(
 def validate_period(period: str) -> tuple[bool, str]:
     """
     Validate a period string for yfinance.
-    
+
     Args:
         period: Period string (e.g., "1d", "5d", "1mo", "3mo", "1y")
-        
+
     Returns:
         Tuple of (is_valid, normalized_period or error_message)
     """
@@ -129,10 +139,10 @@ def validate_period(period: str) -> tuple[bool, str]:
 def validate_indicator(indicator: str) -> tuple[bool, str]:
     """
     Validate a technical indicator name.
-    
+
     Args:
         indicator: Indicator name
-        
+
     Returns:
         Tuple of (is_valid, normalized_indicator or error_message)
     """
@@ -161,11 +171,11 @@ def validate_indicator(indicator: str) -> tuple[bool, str]:
 
 def validate_broker_code(code: str) -> tuple[bool, str]:
     """
-    Validate a broker code.
-    
+    Validate a Taiwan securities broker code.
+
     Args:
-        code: Broker code (e.g., "YU", "PD")
-        
+        code: Broker code (e.g., "5380", "6110")
+
     Returns:
         Tuple of (is_valid, normalized_code or error_message)
     """
@@ -174,8 +184,9 @@ def validate_broker_code(code: str) -> tuple[bool, str]:
 
     normalized = code.upper().strip()
 
-    if not re.match(r"^[A-Z]{2}$", normalized):
-        return False, f"Invalid broker code: {code}. Expected 2 letters (e.g., YU)"
+    # Taiwan broker codes are typically 4 digits or 4 digits + letter
+    if not re.match(r"^\d{4}[A-Z]?$", normalized):
+        return False, f"Invalid broker code: {code}. Expected 4 digits (e.g., 5380)"
 
     return True, normalized
 
@@ -183,10 +194,10 @@ def validate_broker_code(code: str) -> tuple[bool, str]:
 def parse_screening_criteria(criteria: str) -> tuple[bool, dict | str]:
     """
     Parse screening criteria string into structured format.
-    
+
     Args:
         criteria: Criteria string (e.g., "rsi<30 and volume>1m")
-        
+
     Returns:
         Tuple of (is_valid, parsed_criteria or error_message)
     """

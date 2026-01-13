@@ -3,10 +3,9 @@
 from datetime import datetime
 from typing import Any
 
-from pulse.core.data.stockbit import StockbitClient
 from pulse.core.data.yfinance import YFinanceFetcher
 from pulse.core.models import SectorAnalysis, StockData
-from pulse.utils.constants import IDX30_TICKERS, IDX_SECTORS, LQ45_TICKERS
+from pulse.utils.constants import TW50_TICKERS, TW_SECTORS, MIDCAP100_TICKERS
 from pulse.utils.logger import get_logger
 
 log = get_logger(__name__)
@@ -18,7 +17,6 @@ class SectorAnalyzer:
     def __init__(self):
         """Initialize sector analyzer."""
         self.fetcher = YFinanceFetcher()
-        self.stockbit = StockbitClient()
 
     async def analyze_sector(
         self,
@@ -27,21 +25,21 @@ class SectorAnalyzer:
     ) -> SectorAnalysis | None:
         """
         Analyze a specific sector.
-        
+
         Args:
             sector: Sector name (e.g., "BANKING", "MINING")
             limit: Max stocks to analyze per sector
-            
+
         Returns:
             SectorAnalysis object
         """
         sector_upper = sector.upper()
 
-        if sector_upper not in IDX_SECTORS:
+        if sector_upper not in TW_SECTORS:
             log.warning(f"Unknown sector: {sector}")
             return None
 
-        tickers = IDX_SECTORS[sector_upper][:limit]
+        tickers = TW_SECTORS[sector_upper][:limit]
 
         # Fetch data for all tickers
         stocks: list[StockData] = []
@@ -77,7 +75,8 @@ class SectorAnalyzer:
                 "price": s.current_price,
                 "volume": s.volume,
             }
-            for s in sorted_by_change[:5] if s.change_percent > 0
+            for s in sorted_by_change[:5]
+            if s.change_percent > 0
         ]
 
         top_losers = [
@@ -87,7 +86,8 @@ class SectorAnalyzer:
                 "price": s.current_price,
                 "volume": s.volume,
             }
-            for s in sorted_by_change[-5:] if s.change_percent < 0
+            for s in sorted_by_change[-5:]
+            if s.change_percent < 0
         ]
 
         most_active = [
@@ -114,15 +114,15 @@ class SectorAnalyzer:
     async def get_sector_rotation(self) -> dict[str, Any]:
         """
         Analyze sector rotation and relative strength.
-        
+
         Returns:
             Sector rotation analysis
         """
         sector_performance = {}
 
-        for sector, tickers in IDX_SECTORS.items():
-            # Skip sub-sectors (those that are subsets of others)
-            if sector in ["BANKING", "COAL", "NICKEL"]:
+        for sector, tickers in TW_SECTORS.items():
+            # Skip sub-sectors if needed
+            if sector in ["BANKING", "INSURANCE"]:  # BANKING and INSURANCE are separate
                 continue
 
             # Sample a few stocks from each sector
@@ -148,40 +148,30 @@ class SectorAnalyzer:
 
         # Sort by performance
         sorted_sectors = sorted(
-            sector_performance.items(),
-            key=lambda x: x[1]["avg_return"],
-            reverse=True
+            sector_performance.items(), key=lambda x: x[1]["avg_return"], reverse=True
         )
 
         return {
-            "leaders": [
-                {"sector": s, "return": d["avg_return"]}
-                for s, d in sorted_sectors[:3]
-            ],
-            "laggards": [
-                {"sector": s, "return": d["avg_return"]}
-                for s, d in sorted_sectors[-3:]
-            ],
-            "all_sectors": {
-                s: d["avg_return"] for s, d in sorted_sectors
-            },
+            "leaders": [{"sector": s, "return": d["avg_return"]} for s, d in sorted_sectors[:3]],
+            "laggards": [{"sector": s, "return": d["avg_return"]} for s, d in sorted_sectors[-3:]],
+            "all_sectors": {s: d["avg_return"] for s, d in sorted_sectors},
             "analyzed_at": datetime.now().isoformat(),
         }
 
-    async def get_index_summary(self, index: str = "LQ45") -> dict[str, Any]:
+    async def get_index_summary(self, index: str = "TW50") -> dict[str, Any]:
         """
         Get summary for a major index.
-        
+
         Args:
-            index: Index name (LQ45 or IDX30)
-            
+            index: Index name (TW50 or MIDCAP)
+
         Returns:
             Index summary
         """
-        if index.upper() == "LQ45":
-            tickers = LQ45_TICKERS
-        elif index.upper() == "IDX30":
-            tickers = IDX30_TICKERS
+        if index.upper() in ["TW50", "LQ45"]:  # LQ45 for backward compat
+            tickers = TW50_TICKERS
+        elif index.upper() in ["MIDCAP", "TW100", "IDX80"]:  # IDX80 for backward compat
+            tickers = MIDCAP100_TICKERS
         else:
             log.warning(f"Unknown index: {index}")
             return {}
@@ -213,12 +203,10 @@ class SectorAnalyzer:
             "losers": losers,
             "unchanged": len(stocks) - gainers - losers,
             "top_gainers": [
-                {"ticker": s.ticker, "change": s.change_percent}
-                for s in sorted_stocks[:5]
+                {"ticker": s.ticker, "change": s.change_percent} for s in sorted_stocks[:5]
             ],
             "top_losers": [
-                {"ticker": s.ticker, "change": s.change_percent}
-                for s in sorted_stocks[-5:]
+                {"ticker": s.ticker, "change": s.change_percent} for s in sorted_stocks[-5:]
             ],
             "analyzed_at": datetime.now().isoformat(),
         }
@@ -231,23 +219,23 @@ class SectorAnalyzer:
                 "stock_count": len(tickers),
                 "sample_tickers": tickers[:5],
             }
-            for sector, tickers in IDX_SECTORS.items()
+            for sector, tickers in TW_SECTORS.items()
         ]
 
     def get_sector_for_ticker(self, ticker: str) -> list[str]:
         """
         Get sectors that a ticker belongs to.
-        
+
         Args:
             ticker: Stock ticker
-            
+
         Returns:
             List of sector names
         """
         ticker_upper = ticker.upper()
         sectors = []
 
-        for sector, tickers in IDX_SECTORS.items():
+        for sector, tickers in TW_SECTORS.items():
             if ticker_upper in tickers:
                 sectors.append(sector)
 

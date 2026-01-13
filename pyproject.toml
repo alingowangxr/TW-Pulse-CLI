@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "pulse-cli"
 version = "0.1.0"
-description = "AI-powered Indonesian Stock Market Analysis CLI with Broker Flow Intelligence"
+description = "AI-powered Taiwan Stock Market Analysis CLI with Broker Flow Intelligence"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
@@ -14,11 +14,12 @@ authors = [
 ]
 keywords = [
     "stock",
-    "indonesia",
-    "idx",
+    "taiwan",
+    "twse",
+    "tpex",
     "analysis",
     "broker",
-    "bandar",
+    "institutional",
     "ai",
     "cli",
     "tui"
@@ -43,6 +44,7 @@ dependencies = [
     
     # Data Fetching
     "yfinance>=0.2.0",
+    "FinMind>=1.6.0",
     "requests>=2.31.0",
     "httpx>=0.26.0",
     "aiohttp>=3.9.0",
@@ -50,7 +52,7 @@ dependencies = [
     # Technical Analysis
     "pandas>=2.0.0",
     "numpy>=1.24.0",
-    "ta>=0.11.0",
+    "ta>=0.5.25,<0.12.0",  # Compatible with FinMind's requirement
     
     # Browser Automation (Stockbit Auth)
     "playwright>=1.40.0",

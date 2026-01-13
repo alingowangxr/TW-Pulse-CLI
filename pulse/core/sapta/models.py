@@ -87,7 +87,6 @@ class SaptaConfig(BaseModel):
     weight_elliott: float = 1.0
     weight_time_projection: float = 1.0
     weight_anti_distribution: float = 1.0
-    weight_broker_flow: float = 1.0  # Module 7: Broker Flow
 
     # Module max scores
     max_absorption: float = 20.0
@@ -96,7 +95,6 @@ class SaptaConfig(BaseModel):
     max_elliott: float = 20.0
     max_time_projection: float = 15.0
     max_anti_distribution: float = 15.0
-    max_broker_flow: float = 15.0  # Module 7: Broker Flow
 
     # Target for ML labeling
     target_gain_pct: float = 10.0  # 10% gain
@@ -123,7 +121,6 @@ class SaptaConfig(BaseModel):
             + self.max_elliott
             + self.max_time_projection
             + self.max_anti_distribution
-            + self.max_broker_flow
         )
 
 
@@ -146,7 +143,6 @@ class SaptaResult(BaseModel):
     elliott: dict[str, Any] | None = None
     time_projection: dict[str, Any] | None = None
     anti_distribution: dict[str, Any] | None = None
-    broker_flow: dict[str, Any] | None = None  # Module 7: Broker Flow
 
     # Decision
     status: SaptaStatus = SaptaStatus.ABAIKAN

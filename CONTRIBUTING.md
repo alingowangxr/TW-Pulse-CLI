@@ -63,8 +63,11 @@ source .venv/bin/activate  # Linux/macOS
 # Install with development dependencies
 pip install -e ".[dev]"
 
-# Install Playwright browsers (for Stockbit integration)
+# Install Playwright browsers (if needed for browser automation)
 playwright install chromium
+
+# Install FinMind (primary data source for TW stocks)
+pip install FinMind
 ```
 
 ### Setup Environment
@@ -292,7 +295,7 @@ from pulse.core.screener import StockScreener, ScreenPreset
 
 @pytest.fixture
 def screener():
-    return StockScreener(universe=["BBCA", "BBRI", "BMRI"])
+    return StockScreener(universe=["2330", "2317", "2454"])
 
 @pytest.mark.asyncio
 async def test_oversold_screening(screener):

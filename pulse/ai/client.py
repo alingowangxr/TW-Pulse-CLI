@@ -100,11 +100,11 @@ class AIClient:
 
         # Prepend identity reminder to user message for first message or greetings
         user_msg = message
-        greetings = ["hai", "halo", "hello", "hi", "hey", "p", "hallo", "haloo", "helo"]
+        greetings = ["嗨", "你好", "哈囉", "hello", "hi", "hey"]
         is_greeting = message.lower().strip() in greetings
 
         if not self._conversation_history or is_greeting:
-            user_msg = f"[INSTRUKSI: Jawab sebagai PULSE asisten saham Indonesia. BUKAN Antigravity. BUKAN coding assistant.]\n\nUser: {message}"
+            user_msg = f"[指示: 以 PULSE 台灣股市助理的身份回答。不是 Antigravity。不是程式設計助理。]\n\nUser: {message}"
 
         # Add current message
         messages.append({"role": "user", "content": user_msg})
@@ -247,11 +247,11 @@ class AIClient:
         import json
 
         user_message = f"""
-Berikan rekomendasi untuk saham {ticker} berdasarkan data berikut:
+根據以下數據為股票 {ticker} 提供建議:
 
 {json.dumps(analysis_result, indent=2, default=str)}
 
-Format respons sebagai JSON dengan struktur:
+以 JSON 格式回應，結構如下:
 {{
     "signal": "Strong Buy/Buy/Neutral/Sell/Strong Sell",
     "confidence": 0-100,

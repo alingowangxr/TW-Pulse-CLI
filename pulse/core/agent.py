@@ -12,6 +12,7 @@ log = get_logger(__name__)
 @dataclass
 class AgentAction:
     """Represents an action the agent should take."""
+
     tool: str
     params: dict[str, Any]
     reason: str
@@ -20,6 +21,7 @@ class AgentAction:
 @dataclass
 class AgentResult:
     """Result from agent execution."""
+
     success: bool
     message: str
     data: dict[str, Any] | None = None
@@ -29,7 +31,7 @@ class AgentResult:
 class StockAgent:
     """
     Smart agent that can autonomously analyze stocks.
-    
+
     Capabilities:
     - Parse user intent
     - Fetch stock data
@@ -42,24 +44,27 @@ class StockAgent:
     # Intent patterns
     INTENT_PATTERNS = {
         "analyze": [
+            r"分析\s*(\d{4})",
             r"analis[ai]s?\s+(\w+)",
-            r"cek\s+(\w+)",
+            r"查看\s*(\d{4})",
             r"gimana\s+(\w+)",
-            r"bagaimana\s+(\w+)",
-            r"lihat\s+(\w+)",
+            r"看看\s*(\d{4})",
         ],
         "chart": [
+            r"圖表\s*(\d{4})",
             r"chart\s+(\w+)",
             r"grafik\s+(\w+)",
             r"graph\s+(\w+)",
         ],
         "forecast": [
+            r"預測\s*(\d{4})",
             r"prediksi\s+(\w+)",
             r"forecast\s+(\w+)",
             r"ramal\w*\s+(\w+)",
             r"target\s+(\w+)",
         ],
         "technical": [
+            r"技術\s*(\d{4})",
             r"teknikal\s+(\w+)",
             r"ta\s+(\w+)",
             r"rsi\s+(\w+)",
@@ -72,23 +77,55 @@ class StockAgent:
             r"asing\s+(\w+)",
         ],
         "compare": [
+            r"比較\s*(\d{4})\s*(?:和|與)\s*(\d{4})",
             r"bandingi?n?g?\s+(\w+)\s+(?:dan|vs|dengan)\s+(\w+)",
             r"(\w+)\s+vs\s+(\w+)",
         ],
     }
 
-    # Known tickers for validation
+    # Known tickers for validation (Taiwan stocks)
     KNOWN_TICKERS = [
-        "BBCA", "BBRI", "BMRI", "BBNI", "BRIS",  # Banks
-        "TLKM", "EXCL", "ISAT", "FREN",  # Telco
-        "ASII", "UNTR", "ASTRA",  # Automotive
-        "UNVR", "ICBP", "INDF", "MYOR",  # Consumer
-        "ANTM", "INCO", "PTBA", "ADRO", "ITMG",  # Mining
-        "PGAS", "AKRA", "MEDC",  # Energy
-        "GOTO", "BUKA", "EMTK",  # Tech
-        "ACES", "MAPI", "ERAA",  # Retail
-        "SMGR", "INTP", "WIKA", "WSKT",  # Infrastructure
-        "KLBF", "SIDO", "KAEF",  # Pharma
+        "2330",
+        "2454",
+        "2317",
+        "2881",
+        "2882",  # Top stocks
+        "2303",
+        "3711",
+        "2379",
+        "3034",
+        "2408",  # Semiconductor
+        "2382",
+        "2357",
+        "3231",
+        "2324",
+        "2356",  # Electronics
+        "2891",
+        "2886",
+        "2884",
+        "2892",
+        "2880",  # Finance
+        "2002",
+        "2006",
+        "2014",
+        "2027",  # Steel
+        "1301",
+        "1303",
+        "1326",
+        "6505",  # Plastic
+        "4736",
+        "4743",
+        "4746",
+        "6446",  # Biotech
+        "2412",
+        "3045",
+        "4904",  # Telecom
+        "1216",
+        "1227",
+        "1229",  # Food
+        "2603",
+        "2609",
+        "2615",  # Shipping
     ]
 
     def __init__(self):
@@ -109,10 +146,10 @@ class StockAgent:
     def parse_intent(self, message: str) -> AgentAction | None:
         """
         Parse user message to determine intent.
-        
+
         Args:
             message: User input message
-            
+
         Returns:
             AgentAction or None
         """
@@ -135,22 +172,20 @@ class StockAgent:
                         return AgentAction(
                             tool="compare",
                             params={"tickers": [ticker, ticker2]},
-                            reason=f"Membandingkan {ticker} vs {ticker2}"
+                            reason=f"Membandingkan {ticker} vs {ticker2}",
                         )
 
                     return AgentAction(
                         tool=self._intent_to_tool(intent),
                         params={"ticker": ticker},
-                        reason=f"{intent.capitalize()} {ticker}"
+                        reason=f"{intent.capitalize()} {ticker}",
                     )
 
         # Check for standalone ticker mention
         for ticker in self.KNOWN_TICKERS:
             if ticker.lower() in message_lower:
                 return AgentAction(
-                    tool="fetch_stock",
-                    params={"ticker": ticker},
-                    reason=f"Info saham {ticker}"
+                    tool="fetch_stock", params={"ticker": ticker}, reason=f"Info saham {ticker}"
                 )
 
         return None
@@ -168,48 +203,42 @@ class StockAgent:
         return mapping.get(intent, "fetch_stock")
 
     def _is_valid_ticker(self, ticker: str) -> bool:
-        """Check if ticker is valid."""
+        """Check if ticker is valid (Taiwan 4-6 digit codes)."""
         # Known tickers
         if ticker in self.KNOWN_TICKERS:
             return True
-        # Pattern: 4 uppercase letters
-        if re.match(r'^[A-Z]{4}$', ticker):
+        # Pattern: 4-6 digits
+        if re.match(r"^\d{4,6}$", ticker):
             return True
         return False
 
     async def execute(self, action: AgentAction) -> AgentResult:
         """
         Execute an agent action.
-        
+
         Args:
             action: The action to execute
-            
+
         Returns:
             AgentResult
         """
         tool_fn = self._tools.get(action.tool)
         if not tool_fn:
-            return AgentResult(
-                success=False,
-                message=f"Tool tidak ditemukan: {action.tool}"
-            )
+            return AgentResult(success=False, message=f"Tool tidak ditemukan: {action.tool}")
 
         try:
             return await tool_fn(**action.params)
         except Exception as e:
             log.error(f"Agent execution failed: {e}")
-            return AgentResult(
-                success=False,
-                message=f"Error: {str(e)}"
-            )
+            return AgentResult(success=False, message=f"Error: {str(e)}")
 
     async def run(self, message: str) -> AgentResult | None:
         """
         Run agent on user message.
-        
+
         Args:
             message: User input
-            
+
         Returns:
             AgentResult or None if no action detected
         """
@@ -228,22 +257,15 @@ class StockAgent:
         stock = await fetcher.fetch_stock(ticker)
 
         if not stock:
-            return AgentResult(
-                success=False,
-                message=f"Tidak dapat mengambil data {ticker}"
-            )
+            return AgentResult(success=False, message=f"Tidak dapat mengambil data {ticker}")
 
         change_symbol = "+" if stock.change >= 0 else ""
         message = f"""{stock.ticker} - {stock.name}
-Harga: {stock.current_price:,.0f}
-Change: {change_symbol}{stock.change:,.0f} ({change_symbol}{stock.change_percent:.2f}%)
-Volume: {stock.volume:,.0f}"""
+股價: {stock.current_price:,.2f}
+漲跌: {change_symbol}{stock.change:,.2f} ({change_symbol}{stock.change_percent:.2f}%)
+成交量: {stock.volume:,.0f}"""
 
-        return AgentResult(
-            success=True,
-            message=message,
-            data={"stock": stock.__dict__}
-        )
+        return AgentResult(success=True, message=message, data={"stock": stock.__dict__})
 
     async def _tool_technical(self, ticker: str) -> AgentResult:
         """Run technical analysis."""
@@ -266,13 +288,13 @@ Volume: {stock.volume:,.0f}"""
         summary = analyzer.get_indicator_summary(indicators)
 
         # Build message
-        lines = [f"Teknikal: {ticker}", ""]
+        lines = [f"技術分析: {ticker}", ""]
         for item in summary:
-            status = f" ({item.get('status', '')})" if item.get('status') else ""
+            status = f" ({item.get('status', '')})" if item.get("status") else ""
             lines.append(f"{item['name']}: {item['value']}{status}")
 
         # Add sparkline if we have price data
-        if hasattr(stock, 'history') and stock.history:
+        if hasattr(stock, "history") and stock.history:
             prices = [h.close for h in stock.history[-20:]]
             sparkline = generate_sparkline(prices)
             lines.append(f"\nTrend: {sparkline}")
@@ -280,7 +302,7 @@ Volume: {stock.volume:,.0f}"""
         return AgentResult(
             success=True,
             message="\n".join(lines),
-            data={"indicators": indicators.__dict__ if indicators else None}
+            data={"indicators": indicators.__dict__ if indicators else None},
         )
 
     async def _tool_fundamental(self, ticker: str) -> AgentResult:
@@ -291,48 +313,40 @@ Volume: {stock.volume:,.0f}"""
         data = await analyzer.analyze(ticker)
 
         if not data:
-            return AgentResult(success=False, message=f"Data fundamental tidak tersedia untuk {ticker}")
+            return AgentResult(
+                success=False, message=f"Data fundamental tidak tersedia untuk {ticker}"
+            )
 
         summary = analyzer.get_summary(data)
         score_data = analyzer.score_valuation(data)
 
-        lines = [f"Fundamental: {ticker}", f"Score: {score_data['score']}/100", ""]
+        lines = [f"基本面分析: {ticker}", f"評分: {score_data['score']}/100", ""]
 
         current_cat = ""
         for item in summary:
-            if item['category'] != current_cat:
-                current_cat = item['category']
+            if item["category"] != current_cat:
+                current_cat = item["category"]
                 lines.append(f"\n{current_cat}")
-            status = f" ({item.get('status', '')})" if item.get('status') else ""
+            status = f" ({item.get('status', '')})" if item.get("status") else ""
             lines.append(f"  {item['name']}: {item['value']}{status}")
 
-        return AgentResult(
-            success=True,
-            message="\n".join(lines),
-            data={"fundamental": data}
-        )
+        return AgentResult(success=True, message="\n".join(lines), data={"fundamental": data})
 
     async def _tool_broker_flow(self, ticker: str) -> AgentResult:
         """Get broker flow analysis."""
-        from pulse.core.analysis.broker_flow import BrokerFlowAnalyzer
+        from pulse.core.analysis.institutional_flow import InstitutionalFlowAnalyzer
 
-        analyzer = BrokerFlowAnalyzer()
-
-        if not analyzer.client.is_authenticated:
-            return AgentResult(
-                success=False,
-                message="Stockbit belum terautentikasi. Jalankan /auth dulu."
-            )
+        analyzer = InstitutionalFlowAnalyzer()
 
         result = await analyzer.analyze(ticker)
 
         if not result:
-            return AgentResult(success=False, message=f"Data broker tidak tersedia untuk {ticker}")
+            return AgentResult(success=False, message=f"無法取得 {ticker} 的法人資料")
 
         return AgentResult(
             success=True,
             message=analyzer.format_summary_table(result),
-            data={"broker_flow": result}
+            data={"broker_flow": result},
         )
 
     async def _tool_chart(self, ticker: str) -> AgentResult:
@@ -344,20 +358,18 @@ Volume: {stock.volume:,.0f}"""
         df = await fetcher.fetch_history(ticker, period="3mo")
 
         if df is None or df.empty:
-            return AgentResult(success=False, message=f"Data historis tidak tersedia untuk {ticker}")
+            return AgentResult(
+                success=False, message=f"Data historis tidak tersedia untuk {ticker}"
+            )
 
         chart = TerminalChart(width=60, height=15)
 
-        dates = df.index.strftime('%Y-%m-%d').tolist()
-        prices = df['Close'].tolist()
+        dates = df.index.strftime("%Y-%m-%d").tolist()
+        prices = df["Close"].tolist()
 
         chart_str = chart.price_chart(dates, prices, title=f"{ticker} - 3 Bulan")
 
-        return AgentResult(
-            success=True,
-            message=f"Chart {ticker}:",
-            chart=chart_str
-        )
+        return AgentResult(success=True, message=f"Chart {ticker}:", chart=chart_str)
 
     async def _tool_forecast(self, ticker: str) -> AgentResult:
         """Generate price forecast."""
@@ -371,8 +383,8 @@ Volume: {stock.volume:,.0f}"""
         if df is None or df.empty:
             return AgentResult(success=False, message=f"Data tidak cukup untuk forecast {ticker}")
 
-        prices = df['Close'].tolist()
-        dates = df.index.strftime('%Y-%m-%d').tolist()
+        prices = df["Close"].tolist()
+        dates = df.index.strftime("%Y-%m-%d").tolist()
 
         forecaster = PriceForecaster()
         result = await forecaster.forecast(ticker, prices, dates, days=7)
@@ -387,16 +399,13 @@ Volume: {stock.volume:,.0f}"""
             forecast=result.predictions,
             lower_bound=result.lower_bound,
             upper_bound=result.upper_bound,
-            title=f"{ticker} - Forecast 7 Hari"
+            title=f"{ticker} - Forecast 7 Hari",
         )
 
         message = forecaster.format_forecast(result)
 
         return AgentResult(
-            success=True,
-            message=message,
-            chart=chart_str,
-            data={"forecast": result.__dict__}
+            success=True, message=message, chart=chart_str, data={"forecast": result.__dict__}
         )
 
     async def _tool_compare(self, tickers: list[str]) -> AgentResult:
@@ -409,27 +418,25 @@ Volume: {stock.volume:,.0f}"""
         for ticker in tickers:
             stock = await fetcher.fetch_stock(ticker)
             if stock:
-                results.append({
-                    "ticker": stock.ticker,
-                    "name": stock.name,
-                    "price": stock.current_price,
-                    "change": stock.change_percent,
-                })
+                results.append(
+                    {
+                        "ticker": stock.ticker,
+                        "name": stock.name,
+                        "price": stock.current_price,
+                        "change": stock.change_percent,
+                    }
+                )
 
         if len(results) < 2:
             return AgentResult(success=False, message="Tidak cukup data untuk perbandingan")
 
         # Build comparison table
-        lines = ["Perbandingan:", ""]
-        lines.append(f"{'Ticker':<8} {'Harga':>12} {'Change':>10}")
+        lines = ["股票比較:", ""]
+        lines.append(f"{'代碼':<8} {'股價':>12} {'漲跌':>10}")
         lines.append("-" * 32)
 
         for r in results:
             change_str = f"{r['change']:+.2f}%"
             lines.append(f"{r['ticker']:<8} {r['price']:>12,.0f} {change_str:>10}")
 
-        return AgentResult(
-            success=True,
-            message="\n".join(lines),
-            data={"comparison": results}
-        )
+        return AgentResult(success=True, message="\n".join(lines), data={"comparison": results})

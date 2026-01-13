@@ -7,26 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Major Migration**: Migrated from Indonesian Stock Market (IDX) to Taiwan Stock Market (TWSE/TPEX)
+- **Data Sources**: Replaced Indonesian data sources with FinMind (primary) and Yahoo Finance (fallback)
+- **Language**: Updated UI and prompts to Traditional Chinese + English
+- **Stock Tickers**: Changed from 4-letter codes (BBCA) to 4-6 digit codes (2330, 2454)
+- **Currency**: Changed from Rupiah (Rp) to Taiwan Dollar (NT$)
+- **Lot Size**: Updated from 100 shares to 1000 shares per lot (Taiwan standard)
+- **Indices**: IHSG→TAIEX, LQ45→TW50, IDX30→Midcap
+- **Institutional Flow**: Integrated FinMind's institutional investor data (三大法人)
+
 ### Added
 - Initial public release preparation
 - Comprehensive README documentation
 - Contributing guidelines
 - License file (MIT)
 
-## [0.1.0] - 2024-01-15
+### Deprecated
+- Stockbit integration (Indonesian platform, not applicable for Taiwan market)
+- Indonesian language support (replaced with Traditional Chinese)
+
+## [0.1.0] - 2026-01-13
 
 ### Added
 
 #### Core Features
 - **TUI Application**: Beautiful terminal interface using Textual framework
-- **Smart Agent**: True agentic AI flow with data gathering before analysis
-- **Natural Language Support**: Indonesian and English language processing
+- **Smart Agent**: Agentic AI with real data gathering before analysis
+- **Natural Language Support**: Traditional Chinese and English language processing
 - **Command Palette**: Autocomplete for slash commands
 
 #### Analysis Modules
 - **Technical Analysis**: RSI, MACD, SMA, EMA, Bollinger Bands, Stochastic, ATR
 - **Fundamental Analysis**: PE, PB, ROE, ROA, Debt/Equity, Dividend Yield
-- **Broker Flow Analysis**: Stockbit integration for broker summary data
+- **Institutional Flow Analysis**: FinMind integration for Foreign/Trust/Dealer flow
 - **Sector Analysis**: Sector-level aggregation and comparison
 
 #### SAPTA Engine
@@ -44,11 +58,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Stock Screening
 - **Preset Screeners**: Oversold, Overbought, Bullish, Bearish, Breakout, Momentum
 - **Flexible Criteria**: Natural language to technical criteria parsing
-- **Multiple Universes**: LQ45, IDX80, Popular, All (955 stocks)
+- **Multiple Universes**: TW50, Midcap, Popular, All
 
 #### Data Sources
-- **Yahoo Finance**: Real-time and historical price data
-- **Stockbit Integration**: Broker flow and sentiment data
+- **FinMind**: Primary data source for Taiwan stock market
+- **Yahoo Finance**: Fallback for real-time and historical price data
 - **Disk Caching**: Reduce API calls with smart caching
 
 #### AI Integration
@@ -69,7 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Description |
 |---------|------|-------------|
-| 0.1.0 | 2024-01-15 | Initial alpha release |
+| 0.1.0 | 2026-01-13 | Initial release (Taiwan market) |
 
 ---
 

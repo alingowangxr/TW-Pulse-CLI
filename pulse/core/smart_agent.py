@@ -55,254 +55,202 @@ class SmartAgent:
     User Question -> Data Gathering -> AI Analysis with Context -> Response
     """
 
-    # Indonesian stock tickers (common ones)
+    # Taiwan stock tickers (common ones)
     KNOWN_TICKERS = {
-        # Banking
-        "BBCA",
-        "BBRI",
-        "BMRI",
-        "BBNI",
-        "BRIS",
-        "BTPS",
-        "MEGA",
-        "NISP",
-        # Telco
-        "TLKM",
-        "EXCL",
-        "ISAT",
-        "FREN",
-        "TOWR",
-        "TBIG",
-        # Consumer
-        "UNVR",
-        "ICBP",
-        "INDF",
-        "MYOR",
-        "KLBF",
-        "SIDO",
-        "HMSP",
-        "GGRM",
-        # Mining & Energy
-        "ANTM",
-        "INCO",
-        "PTBA",
-        "ADRO",
-        "ITMG",
-        "MEDC",
-        "PGAS",
-        "AKRA",
-        # Tech & E-commerce
-        "GOTO",
-        "BUKA",
-        "EMTK",
-        "MTDL",
-        # Infrastructure
-        "SMGR",
-        "INTP",
-        "WIKA",
-        "WSKT",
-        "JSMR",
-        "PNBN",
-        # Automotive
-        "ASII",
-        "UNTR",
-        "AUTO",
-        "SMSM",
-        # Property
-        "BSDE",
-        "CTRA",
-        "PWON",
-        "SMRA",
-        # Retail
-        "ACES",
-        "MAPI",
-        "ERAA",
-        "RALS",
-        # Others
-        "TKIM",
-        "INKP",
-        "BRPT",
-        "MDKA",
-        "AMRT",
-        "BNBR",
+        # Semiconductor (半導體)
+        "2330",  # 台積電
+        "2454",  # 聯發科
+        "2303",  # 聯電
+        "3711",  # 日月光投控
+        "2379",  # 瑞昱
+        "3034",  # 聯詠
+        "6415",  # 矽力KY
+        "2449",  # 京元電子
+        "3529",  # 力旺
+        "2408",  # 南亞科
+        # Electronics (電子)
+        "2317",  # 鴻海
+        "2382",  # 廣達
+        "2357",  # 華碩
+        "3231",  # 緯創
+        "2324",  # 仁寶
+        "2356",  # 英業達
+        "2301",  # 光寶科
+        "2308",  # 台達電
+        # Finance (金融)
+        "2881",  # 富邦金
+        "2882",  # 國泰金
+        "2891",  # 中信金
+        "2886",  # 兆豐金
+        "2884",  # 玉山金
+        "2892",  # 第一金
+        "2880",  # 華南金
+        "2883",  # 開發金
+        "2887",  # 台新金
+        "5880",  # 合庫金
+        # Steel (鋼鐵)
+        "2002",  # 中鋼
+        "2006",  # 東和鋼鐵
+        "2014",  # 中鴻
+        "2027",  # 大成鋼
+        # Plastic (塑化)
+        "1301",  # 台塑
+        "1303",  # 南亞
+        "1326",  # 台化
+        "6505",  # 台塑化
+        # Food (食品)
+        "1216",  # 統一
+        "1227",  # 佳格
+        "1229",  # 聯華
+        "1231",  # 聯華食
+        # Biotech (生技)
+        "4736",  # 泰博
+        "4743",  # 合一
+        "4746",  # 台耀
+        "6446",  # 藥華藥
+        # Telecom (電信)
+        "2412",  # 中華電
+        "3045",  # 台灣大
+        "4904",  # 遠傳
+        # Others (其他)
+        "2912",  # 統一超
+        "2801",  # 彰銀
+        "2603",  # 長榮
+        "2609",  # 陽明
     }
 
-    # Words that look like tickers but aren't
+    # Words that look like tickers but aren't (Taiwan context)
     TICKER_BLACKLIST = {
-        "NAIK",
-        "TURUN",
-        "BELI",
-        "JUAL",
-        "HOLD",
+        # Numbers that aren't tickers
+        "1000",
+        "2000",
+        "3000",
+        "5000",
+        "10000",
+        # Common Chinese/English words
         "STOP",
         "LOSS",
-        "BISA",
-        "AKAN",
-        "DARI",
-        "YANG",
-        "JADI",
-        "MANA",
-        "SAJA",
-        "BAIK",
-        "JELEK",
-        "MAHAL",
-        "MURAH",
-        "KUAT",
-        "LEMAH",
-        "HARI",
-        "BULAN",
-        "TAHUN",
-        "MINGGU",
-        "TIDAK",
-        "BUKAN",
-        "SUDAH",
-        "BELUM",
-        "MASIH",
-        "LAGI",
-        "SAMA",
-        "SATU",
-        "TIGA",
-        "LIMA",
-        "ENAM",
-        "TUJUH",
-        "DELAPAN",
-        "SEMBILAN",
-        "SEPULUH",
-        "HARGA",
-        "VOLUME",
+        "HOLD",
         "CHART",
-        "GRAFIK",
         "DATA",
-        "KENAPA",
-        "BAGAIMANA",
-        "GIMANA",
-        "KAPAN",
-        "DIMANA",
-        "DENGAN",
-        "UNTUK",
-        "KARENA",
-        "KALAU",
-        "JIKA",
-        "LEBIH",
-        "KURANG",
-        "SANGAT",
-        "SEKALI",
-        "TERUS",
     }
 
-    # Indonesian market indices
+    # Taiwan market indices
     KNOWN_INDICES = {
-        "IHSG": "^JKSE",
-        "LQ45": "^JKLQ45",
-        "IDX30": "^JKIDX30",
-        "JII": "^JKII",
+        "TAIEX": "^TWII",
+        "TWII": "^TWII",
+        "TPEX": "^TWOTCI",
+        "OTC": "^TWOTCI",
+        "TW50": "0050.TW",
     }
 
-    # Intent patterns - Indonesian & English
+    # Intent patterns - Traditional Chinese & English
     INTENT_PATTERNS = {
         "analyze": [
-            r"analis[ai]s?\s+(\w+)",
-            r"analisa\s+(\w+)",
-            r"cek\s+(\w+)",
-            r"gimana\s+(\w+)",
-            r"bagaimana\s+(\w+)",
+            r"分析\s*(\d{4})",
+            r"分析\s+(\w+)",
+            r"看看\s*(\d{4})",
+            r"查看\s*(\d{4})",
+            r"檢查\s*(\d{4})",
+            r"analyze\s+(\w+)",
             r"review\s+(\w+)",
         ],
         "price": [
-            r"harga\s+(\w+)",
+            r"價格\s*(\d{4})",
+            r"股價\s*(\d{4})",
+            r"多少\s*(\d{4})",
             r"price\s+(\w+)",
-            r"berapa\s+(\w+)",
         ],
         "chart": [
+            r"圖表\s*(\d{4})",
+            r"走勢\s*(\d{4})",
             r"chart\s+(\w+)",
-            r"grafik\s+(\w+)",
             r"graph\s+(\w+)",
-            r"lihat\s+chart\s+(\w+)",
-            r"tampilkan\s+(\w+)",
         ],
         "technical": [
-            r"teknikal\s+(\w+)",
+            r"技術\s*(\d{4})",
+            r"技術面\s*(\d{4})",
             r"technical\s+(\w+)",
             r"ta\s+(\w+)",
             r"rsi\s+(\w+)",
             r"macd\s+(\w+)",
-            r"indikator\s+(\w+)",
         ],
         "fundamental": [
+            r"基本面\s*(\d{4})",
             r"fundamental\s+(\w+)",
-            r"valuasi\s+(\w+)",
             r"valuation\s+(\w+)",
             r"pe\s+(\w+)",
             r"pbv\s+(\w+)",
         ],
         "forecast": [
-            r"prediksi\s+(\w+)",
+            r"預測\s*(\d{4})",
+            r"預估\s*(\d{4})",
             r"forecast\s+(\w+)",
             r"target\s+(\w+)",
-            r"proyeksi\s+(\w+)",
         ],
         "compare": [
-            r"banding(?:kan|ing)?\s+(\w+)\s+(?:dan|vs|dengan|sama)\s+(\w+)",
+            r"比較\s*(\d{4})\s*(?:和|與|跟)\s*(\d{4})",
+            r"(\d{4})\s+vs\.?\s+(\d{4})",
             r"(\w+)\s+vs\.?\s+(\w+)",
-            r"(\w+)\s+atau\s+(\w+)",
         ],
         "recommendation": [
-            r"rekomen(?:dasi)?\s+(\w+)",
-            r"beli\s+(\w+)\s+(?:gak|tidak|nggak)",
+            r"推薦\s*(\d{4})",
+            r"建議\s*(\d{4})",
+            r"可以買\s*(\d{4})",
             r"worth\s+(?:it)?\s+(\w+)",
-            r"layak\s+(\w+)",
-            r"bagus\s+(\w+)",
         ],
         "screen": [
-            r"cari\s+saham",
-            r"saham\s+(?:yang|apa)\s+(?:akan\s+)?(?:naik|turun|bagus|murah)",
+            r"找股票",
+            r"篩選股票",
+            r"尋找.*股票",
+            r"哪些股票",
+            r"什麼股票",
             r"screen\s+(.+)",
             r"filter\s+(.+)",
             r"rsi\s*[<>]\s*\d+",
             r"pe\s*[<>]\s*\d+",
             r"oversold",
             r"overbought",
+            r"超賣",
+            r"超買",
             r"bullish",
             r"bearish",
+            r"多頭",
+            r"空頭",
             r"breakout",
+            r"突破",
             r"undervalued",
-            r"multibagger",
-            r"multi\s*bagger",
-            r"saham\s+potensi",
-            r"rekomendasi\s+saham",
-            r"carikan\s+saham",
-            r"kasih\s+saham",
-            r"saham\s+apa\s+yang",
-            r"ada\s+saham",
-            r"small\\s*cap",
-            r"mid\\s*cap",
+            r"低估",
+            r"潛力股",
+            r"推薦.*股票",
+            r"small\s*cap",
+            r"mid\s*cap",
         ],
         "trading_plan": [
+            r"交易計畫\s*(\d{4})",
             r"trading\s*plan\s+(\w+)",
             r"plan\s+(\w+)",
             r"tp\s+sl\s+(\w+)",
-            r"tp\s+(\w+)",
-            r"sl\s+(\w+)",
+            r"停利停損\s*(\d{4})",
             r"stop\s*loss\s+(\w+)",
             r"take\s*profit\s+(\w+)",
-            r"cut\s*loss\s+(\w+)",
+            r"停損\s*(\d{4})",
+            r"停利\s*(\d{4})",
             r"rr\s+(\w+)",
             r"risk\s*reward\s+(\w+)",
             r"entry\s+(\w+)",
-            r"beli\s+dimana\s+(\w+)",
-            r"jual\s+dimana\s+(\w+)",
-            r"target\s+harga\s+(\w+)",
-            r"(\w+)\s+entry\s+dimana",
-            r"(\w+)\s+tp\s+sl",
+            r"進場\s*(\d{4})",
+            r"出場\s*(\d{4})",
+            r"目標價\s*(\d{4})",
         ],
         "sapta": [
             r"sapta\s+(\w+)",
+            r"預漲\s*(\d{4})",
+            r"準備突破\s*(\d{4})",
             r"pre[\s\-]?markup\s+(\w+)",
-            r"cek\s+pre[\s\-]?markup\s+(\w+)",
-            r"analisa\s+sapta\s+(\w+)",
-            r"(\w+)\s+pre[\s\-]?markup",
-            r"(\w+)\s+siap\s+breakout",
-            r"(\w+)\s+mau\s+breakout",
+            r"(\d{4})\s*準備突破",
+            r"(\d{4})\s*要突破",
+            r"(\w+)\s+breakout",
         ],
     }
 
@@ -320,17 +268,16 @@ class SmartAgent:
         return self.ai_client
 
     def _extract_tickers(self, message: str) -> list[str]:
-        """Extract stock tickers from message."""
+        """Extract stock tickers from message (Taiwan 4-6 digit codes)."""
         tickers = []
-        message_upper = message.upper()
 
-        # Check for known tickers
+        # Check for known tickers (4-digit codes)
         for ticker in self.KNOWN_TICKERS:
-            if ticker in message_upper:
+            if ticker in message:
                 tickers.append(ticker)
 
-        # Also check for 4-letter words that might be tickers
-        words = re.findall(r"\b([A-Z]{4})\b", message_upper)
+        # Also check for 4-6 digit numbers that might be tickers
+        words = re.findall(r"\b(\d{4,6})\b", message)
         for word in words:
             if word not in tickers and self._is_valid_ticker(word):
                 tickers.append(word)
@@ -338,15 +285,17 @@ class SmartAgent:
         return list(set(tickers))
 
     def _is_valid_ticker(self, ticker: str) -> bool:
-        """Validate ticker format."""
+        """Validate ticker format (Taiwan 4-6 digit codes)."""
         # Must be in known tickers OR not in blacklist
         if ticker in self.KNOWN_TICKERS:
             return True
         # Reject blacklisted words
         if ticker in self.TICKER_BLACKLIST:
             return False
-        # For unknown 4-letter words, be conservative - only accept if in known list
-        return False  # Changed: don't auto-accept unknown 4-letter words
+        # For Taiwan, accept 4-6 digit numbers
+        if re.match(r"^\d{4,6}$", ticker):
+            return True
+        return False
 
     def _detect_intent(self, message: str) -> tuple[str, list[str]]:
         """
@@ -357,9 +306,9 @@ class SmartAgent:
         """
         message_lower = message.lower().strip()
 
-        # Check for index intent first (IHSG, LQ45, etc)
-        # BUT NOT if there are screening keywords (lq45 as universe, not as index)
-        screen_context_keywords = ["screen", "cari", "carikan", "filter", "saham yang", "saham apa"]
+        # Check for index intent first (TAIEX, TW50, etc)
+        # BUT NOT if there are screening keywords
+        screen_context_keywords = ["screen", "篩選", "尋找", "找股票", "filter"]
         has_screen_context = any(kw in message_lower for kw in screen_context_keywords)
 
         if not has_screen_context:
@@ -367,24 +316,24 @@ class SmartAgent:
                 if index_name.lower() in message_lower:
                     return "index", [index_name]
 
-        # Check for market/pasar keywords
-        if any(
-            kw in message_lower for kw in ["kondisi pasar", "kondisi market", "market hari ini"]
-        ):
-            return "index", ["IHSG"]
+        # Check for market keywords
+        if any(kw in message_lower for kw in ["大盤", "市場", "指數", "market", "taiex"]):
+            return "index", ["TAIEX"]
 
         # Check for trading plan intent (check BEFORE screen)
         trading_plan_keywords = [
             "trading plan",
+            "交易計畫",
             "tp sl",
+            "停利停損",
             "stop loss",
+            "停損",
             "take profit",
-            "cut loss",
+            "停利",
             "risk reward",
-            "entry dimana",
-            "jual dimana",
-            "beli dimana",
-            "target harga",
+            "進場",
+            "出場",
+            "目標價",
             "rr ratio",
         ]
         # Only trigger if has ticker AND trading plan keyword
@@ -396,31 +345,26 @@ class SmartAgent:
         # Check for SAPTA/pre-markup intent (check BEFORE screen)
         sapta_keywords = [
             "sapta",
+            "預漲",
             "pre-markup",
             "premarkup",
             "pre markup",
-            "siap breakout",
-            "mau breakout",
-            "cek markup",
+            "準備突破",
+            "要突破",
+            "breakout",
         ]
         # Extended SAPTA scan keywords (natural language)
         sapta_scan_keywords = [
-            "carikan saham pre-markup",
-            "carikan pre-markup",
-            "cari pre-markup",
-            "saham pre-markup",
-            "saham premarkup",
-            "stock pre-markup",
-            "carikan saham siap breakout",
-            "saham siap breakout",
-            "carikan saham markup",
+            "找預漲股票",
+            "尋找預漲",
+            "預漲股票",
+            "找準備突破",
+            "準備突破的股票",
+            "即將突破",
             "scan pre-markup",
             "scan premarkup",
             "pre-markup scan",
-            "cari saham breakout",
-            "saham mau naik",
-            "saham siap naik",
-            "carikan saham siap naik",
+            "找突破股",
         ]
         # Check for SAPTA scan first (natural language screening)
         if any(kw in message_lower for kw in sapta_scan_keywords):
@@ -436,36 +380,31 @@ class SmartAgent:
 
         # Check for screen intent (doesn't require tickers)
         screen_keywords = [
-            "cari saham",
-            "saham apa",
-            "saham yang",
-            "saham mana",
+            "找股票",
+            "篩選股票",
+            "什麼股票",
+            "哪些股票",
+            "尋找股票",
             "oversold",
             "overbought",
+            "超賣",
+            "超買",
             "bullish",
             "bearish",
+            "多頭",
+            "空頭",
             "breakout",
+            "突破",
             "undervalued",
-            "murah",
+            "低估",
+            "便宜",
             "screen",
             "filter",
-            "multibagger",
-            "multi bagger",
-            "potensi besar",
-            "rekomendasi saham",
-            "carikan saham",
-            "kasih saham",
-            "ada saham",
-            "saham potensi",
+            "潛力股",
+            "推薦股票",
             "small cap",
             "mid cap",
-            "cuan besar",
-            "untung besar",
-            "10x",
-            "100x",
-            "tolong carikan",
-            "bantu cari",
-            "minta saham",
+            "大漲",
         ]
         if any(kw in message_lower for kw in screen_keywords):
             return "screen", []
@@ -716,122 +655,112 @@ class SmartAgent:
         parts = []
 
         # System context
-        parts.append("Kamu adalah analis saham Indonesia yang ahli.")
-        parts.append("Berikut adalah DATA REAL dari market yang sudah diambil:")
+        parts.append("你是專業的台灣股市分析師。")
+        parts.append("以下是從市場取得的真實數據：")
         parts.append("")
 
         # Stock data
         if context.stock_data:
             s = context.stock_data
             change_sign = "+" if s.get("change", 0) >= 0 else ""
-            parts.append(f"=== DATA SAHAM: {s.get('ticker')} ===")
-            parts.append(f"Nama: {s.get('name', 'N/A')}")
-            parts.append(f"Sektor: {s.get('sector', 'N/A')}")
-            parts.append(f"Harga: Rp {s.get('current_price', 0):,.0f}")
+            parts.append(f"=== 股票數據: {s.get('ticker')} ===")
+            parts.append(f"名稱: {s.get('name', 'N/A')}")
+            parts.append(f"產業: {s.get('sector', 'N/A')}")
+            parts.append(f"股價: NT$ {s.get('current_price', 0):,.2f}")
             parts.append(
-                f"Change: {change_sign}{s.get('change', 0):,.0f} ({change_sign}{s.get('change_percent', 0):.2f}%)"
+                f"漲跌: {change_sign}{s.get('change', 0):,.2f} ({change_sign}{s.get('change_percent', 0):.2f}%)"
             )
-            parts.append(f"Volume: {s.get('volume', 0):,.0f} (Avg: {s.get('avg_volume', 0):,.0f})")
+            parts.append(f"成交量: {s.get('volume', 0):,.0f} (均量: {s.get('avg_volume', 0):,.0f})")
+            parts.append(f"當日區間: {s.get('day_low', 0):,.2f} - {s.get('day_high', 0):,.2f}")
             parts.append(
-                f"Range Hari Ini: {s.get('day_low', 0):,.0f} - {s.get('day_high', 0):,.0f}"
-            )
-            parts.append(
-                f"52-Week Range: {s.get('week_52_low', 0):,.0f} - {s.get('week_52_high', 0):,.0f}"
+                f"52週區間: {s.get('week_52_low', 0):,.2f} - {s.get('week_52_high', 0):,.2f}"
             )
             if s.get("market_cap"):
                 mc = s["market_cap"]
                 if mc >= 1e12:
-                    mc_str = f"{mc / 1e12:.1f}T"
+                    mc_str = f"{mc / 1e12:.1f}兆"
                 else:
-                    mc_str = f"{mc / 1e9:.1f}B"
-                parts.append(f"Market Cap: Rp {mc_str}")
+                    mc_str = f"{mc / 1e9:.1f}億"
+                parts.append(f"市值: NT$ {mc_str}")
             parts.append("")
 
         # Technical data
         if context.technical_data:
             t = context.technical_data
-            parts.append("=== DATA TEKNIKAL ===")
+            parts.append("=== 技術指標 ===")
             if t.get("rsi_14"):
-                rsi_status = (
-                    "Oversold"
-                    if t["rsi_14"] < 30
-                    else "Overbought"
-                    if t["rsi_14"] > 70
-                    else "Netral"
-                )
+                rsi_status = "超賣" if t["rsi_14"] < 30 else "超買" if t["rsi_14"] > 70 else "中性"
                 parts.append(f"RSI(14): {t['rsi_14']:.1f} - {rsi_status}")
             if t.get("macd") is not None:
-                macd_status = "Bullish" if t["macd"] > t.get("macd_signal", 0) else "Bearish"
+                macd_status = "多頭" if t["macd"] > t.get("macd_signal", 0) else "空頭"
                 parts.append(
-                    f"MACD: {t['macd']:.2f} (Signal: {t.get('macd_signal', 0):.2f}) - {macd_status}"
+                    f"MACD: {t['macd']:.2f} (訊號: {t.get('macd_signal', 0):.2f}) - {macd_status}"
                 )
             if t.get("sma_20"):
-                parts.append(f"SMA20: {t['sma_20']:,.0f} | SMA50: {t.get('sma_50', 0):,.0f}")
+                parts.append(f"SMA20: {t['sma_20']:,.2f} | SMA50: {t.get('sma_50', 0):,.2f}")
             if t.get("bb_upper"):
                 parts.append(
-                    f"Bollinger: {t['bb_lower']:,.0f} - {t['bb_middle']:,.0f} - {t['bb_upper']:,.0f}"
+                    f"布林通道: {t['bb_lower']:,.2f} - {t['bb_middle']:,.2f} - {t['bb_upper']:,.2f}"
                 )
             if t.get("stoch_k"):
-                parts.append(f"Stochastic: K={t['stoch_k']:.1f}, D={t['stoch_d']:.1f}")
+                parts.append(f"隨機指標: K={t['stoch_k']:.1f}, D={t['stoch_d']:.1f}")
             if t.get("support_1"):
-                parts.append(
-                    f"Support: {t['support_1']:,.0f} | Resistance: {t.get('resistance_1', 0):,.0f}"
-                )
+                parts.append(f"支撐: {t['support_1']:,.2f} | 壓力: {t.get('resistance_1', 0):,.2f}")
             if t.get("trend"):
-                parts.append(f"Trend: {t['trend']} | Signal: {t.get('signal', 'N/A')}")
+                parts.append(f"趨勢: {t['trend']} | 訊號: {t.get('signal', 'N/A')}")
             parts.append("")
 
         # Fundamental data
         if context.fundamental_data:
             f = context.fundamental_data
-            parts.append("=== DATA FUNDAMENTAL ===")
+            parts.append("=== 基本面數據 ===")
             if f.get("pe_ratio"):
-                parts.append(f"P/E Ratio: {f['pe_ratio']:.2f}")
+                parts.append(f"本益比: {f['pe_ratio']:.2f}")
             if f.get("pb_ratio"):
-                parts.append(f"P/B Ratio: {f['pb_ratio']:.2f}")
+                parts.append(f"股價淨值比: {f['pb_ratio']:.2f}")
             if f.get("roe"):
-                parts.append(f"ROE: {f['roe']:.1f}%")
+                parts.append(f"股東權益報酬率: {f['roe']:.1f}%")
             if f.get("roa"):
-                parts.append(f"ROA: {f['roa']:.1f}%")
+                parts.append(f"資產報酬率: {f['roa']:.1f}%")
             if f.get("npm"):
-                parts.append(f"Net Profit Margin: {f['npm']:.1f}%")
+                parts.append(f"淨利率: {f['npm']:.1f}%")
             if f.get("debt_to_equity"):
-                parts.append(f"Debt to Equity: {f['debt_to_equity']:.2f}")
+                parts.append(f"負債權益比: {f['debt_to_equity']:.2f}")
             if f.get("dividend_yield"):
-                parts.append(f"Dividend Yield: {f['dividend_yield']:.2f}%")
+                parts.append(f"股利殖利率: {f['dividend_yield']:.2f}%")
             if f.get("revenue_growth"):
-                parts.append(f"Revenue Growth: {f['revenue_growth']:.1f}%")
+                parts.append(f"營收成長率: {f['revenue_growth']:.1f}%")
             if f.get("earnings_growth"):
-                parts.append(f"Earnings Growth: {f['earnings_growth']:.1f}%")
+                parts.append(f"獲利成長率: {f['earnings_growth']:.1f}%")
             parts.append("")
 
         # Comparison data
         if context.comparison_data:
-            parts.append("=== PERBANDINGAN ===")
-            parts.append(f"{'Ticker':<8} {'Harga':>12} {'Change':>10}")
+            parts.append("=== 股票比較 ===")
+            parts.append(f"{'代碼':<8} {'股價':>12} {'漲跌':>10}")
             parts.append("-" * 32)
             for stock in context.comparison_data:
                 change_str = f"{stock.get('change_percent', 0):+.2f}%"
                 parts.append(
-                    f"{stock['ticker']:<8} {stock.get('current_price', 0):>12,.0f} {change_str:>10}"
+                    f"{stock['ticker']:<8} {stock.get('current_price', 0):>12,.2f} {change_str:>10}"
                 )
             parts.append("")
 
         # User's actual question
-        parts.append("=== PERTANYAAN USER ===")
+        parts.append("=== 使用者問題 ===")
         parts.append(user_message)
         parts.append("")
 
         # Instructions
-        parts.append("=== INSTRUKSI ===")
-        parts.append("Berdasarkan DATA REAL di atas, berikan analisis yang:")
-        parts.append("1. Singkat dan langsung ke poin (max 3-4 paragraf)")
-        parts.append("2. Gunakan angka-angka dari data yang tersedia")
-        parts.append("3. Berikan insight yang actionable")
-        parts.append("4. Jika ditanya rekomendasi, jelaskan alasannya berdasarkan data")
-        parts.append("5. Sebutkan level support/resistance jika relevan")
+        parts.append("=== 指示 ===")
+        parts.append("根據上述真實數據，提供分析時請：")
+        parts.append("1. 簡潔直接（最多3-4段）")
+        parts.append("2. 使用數據中的實際數字")
+        parts.append("3. 提供可執行的洞察")
+        parts.append("4. 如被問及建議，請根據數據說明理由")
+        parts.append("5. 提及相關的支撐/壓力位")
         parts.append("")
-        parts.append("JANGAN membuat data yang tidak ada. Gunakan HANYA data di atas.")
+        parts.append("不要捏造數據。僅使用上述提供的數據。")
 
         return "\n".join(parts)
 

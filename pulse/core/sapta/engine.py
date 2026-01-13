@@ -21,7 +21,6 @@ from pulse.core.sapta.models import (
 from pulse.core.sapta.modules import (
     AntiDistributionModule,
     BBSqueezeModule,
-    BrokerFlowModule,
     CompressionModule,
     ElliottModule,
     SupplyAbsorptionModule,
@@ -58,7 +57,7 @@ class SaptaEngine:
         self.config = config or SaptaConfig()
         self.fetcher = YFinanceFetcher()
 
-        # Initialize all modules (7 modules including broker flow)
+        # Initialize all modules (6 modules)
         self.modules = {
             "absorption": SupplyAbsorptionModule(),
             "compression": CompressionModule(),
@@ -66,7 +65,6 @@ class SaptaEngine:
             "elliott": ElliottModule(),
             "time_projection": TimeProjectionModule(),
             "anti_distribution": AntiDistributionModule(),
-            "broker_flow": BrokerFlowModule(days=10),  # Module 7: Broker Flow
         }
 
         # Module weights (from config, can be learned by ML)
@@ -77,11 +75,7 @@ class SaptaEngine:
             "elliott": self.config.weight_elliott,
             "time_projection": self.config.weight_time_projection,
             "anti_distribution": self.config.weight_anti_distribution,
-            "broker_flow": getattr(self.config, "weight_broker_flow", 1.0),  # Default weight 1.0
         }
-
-        # Flag to enable/disable broker flow (requires Stockbit token)
-        self._broker_flow_enabled = True
 
         # ML model (will be loaded if available)
         self._ml_model = None
@@ -213,24 +207,8 @@ class SaptaEngine:
 
         for name, module in self.modules.items():
             try:
-                # Special handling for broker_flow module (requires async + ticker)
-                if name == "broker_flow":
-                    if self._broker_flow_enabled and ticker:
-                        score = await module.analyze_async(ticker)
-                    else:
-                        # Skip broker flow if disabled or no ticker
-                        score = ModuleScore(
-                            module_name=name,
-                            score=0.0,
-                            max_score=module.max_score,
-                            status=False,
-                            details="Broker flow disabled or no ticker",
-                            signals=[],
-                            raw_features={"broker_flow_available": False},
-                        )
-                else:
-                    # Standard sync modules
-                    score = module.analyze(df)
+                # Standard modules
+                score = module.analyze(df)
 
                 scores[name] = score
             except Exception as e:

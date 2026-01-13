@@ -20,7 +20,7 @@ from pulse.utils.logger import get_logger
 log = get_logger(__name__)
 
 # Path to tickers data
-TICKERS_FILE = Path(__file__).parent.parent.parent / "data" / "tickers.json"
+TICKERS_FILE = Path(__file__).parent.parent.parent / "data" / "tw_tickers.json"
 
 
 def load_all_tickers() -> list[str]:
@@ -51,10 +51,10 @@ class ScreenPreset(str, Enum):
 class StockUniverse(str, Enum):
     """Stock universe for screening."""
 
-    LQ45 = "lq45"  # ~45 stocks, fast
-    IDX80 = "idx80"  # ~80 stocks, medium
-    POPULAR = "popular"  # ~100 stocks, medium
-    ALL = "all"  # 900+ stocks, very slow
+    TW50 = "tw50"  # Taiwan 50 Index components
+    MIDCAP = "midcap"  # Mid-cap 100 stocks
+    POPULAR = "popular"  # Popular stocks
+    ALL = "all"  # All Taiwan stocks
 
 
 @dataclass
@@ -90,7 +90,7 @@ class ScreenResult:
     pb_ratio: float | None = None
     roe: float | None = None
     dividend_yield: float | None = None
-    market_cap: float | None = None  # in IDR
+    market_cap: float | None = None  # in TWD
     earnings_growth: float | None = None  # YoY %
     revenue_growth: float | None = None  # YoY %
 
@@ -164,136 +164,16 @@ class StockScreener:
         results = await screener.smart_screen("saham yang akan naik")
     """
 
-    # LQ45 stocks (most liquid)
-    LQ45 = [
-        "ACES",
-        "ADRO",
-        "AKRA",
-        "AMRT",
-        "ANTM",
-        "ASII",
-        "BBCA",
-        "BBNI",
-        "BBRI",
-        "BBTN",
-        "BMRI",
-        "BRPT",
-        "BUKA",
-        "CPIN",
-        "EMTK",
-        "ERAA",
-        "EXCL",
-        "GGRM",
-        "GOTO",
-        "HMSP",
-        "ICBP",
-        "INCO",
-        "INDF",
-        "INKP",
-        "INTP",
-        "ISAT",
-        "ITMG",
-        "JSMR",
-        "KLBF",
-        "MDKA",
-        "MEDC",
-        "MIKA",
-        "MNCN",
-        "PGAS",
-        "PTBA",
-        "SMGR",
-        "TBIG",
-        "TKIM",
-        "TLKM",
-        "TOWR",
-        "UNTR",
-        "UNVR",
-        "WIKA",
-    ]
-
-    # IDX80 = LQ45 + more liquid stocks
-    IDX80_EXTRA = [
-        "AALI",
-        "ADHI",
-        "ADMR",
-        "AGII",
-        "AKPI",
-        "ARTO",
-        "ASRI",
-        "ASSA",
-        "AUTO",
-        "BFIN",
-        "BIRD",
-        "BJBR",
-        "BJTM",
-        "BMTR",
-        "BRIS",
-        "BSDE",
-        "BTPS",
-        "CTRA",
-        "DMAS",
-        "DNET",
-        "DSNG",
-        "ELSA",
-        "ESSA",
-        "FILM",
-        "HRUM",
-        "IMJS",
-        "INDY",
-        "JPFA",
-        "LPPF",
-        "MAPI",
-        "MYOR",
-        "PTPP",
-        "PWON",
-        "SCMA",
-        "SIDO",
-        "SMRA",
-        "SRTG",
-        "TPIA",
-        "WSBP",
-        "WSKT",
-    ]
-
-    # Popular stocks (high retail interest)
-    # Removed delisted: FREN, MASA
-    POPULAR_EXTRA = [
-        "BNBR",
-        "BUKA",
-        "DEWA",
-        "DOID",
-        "ENRG",
-        "GEMS",
-        "GJTL",
-        "HOKI",
-        "KAEF",
-        "KPIG",
-        "LPKR",
-        "LSIP",
-        "MAIN",
-        "MBAP",
-        "NIKL",
-        "OKAS",
-        "PNLF",
-        "RALS",
-        "RAJA",
-        "SGER",
-        "SILO",
-        "SMBR",
-        "SSIA",
-        "TARA",
-        "TAXI",
-        "TOBA",
-        "TRAM",
-        "WTON",
-    ]
-
-    # Default universe - Use POPULAR for better coverage while keeping speed reasonable
-    # For ALL stocks, use StockUniverse.ALL explicitly
     @property
     def default_universe(self) -> list[str]:
-        """Get default universe (POPULAR = ~113 stocks)."""
-        return self.LQ45 + self.IDX80_EXTRA + self.POPULAR_EXTRA
+        """Get default universe (ALL Taiwan stocks)."""
+        return load_all_tickers()
+
+    def _get_universe(self, universe_type: StockUniverse) -> list[str]:
+        """Get stock universe based on type."""
+        if universe_type == StockUniverse.ALL:
+            return load_all_tickers()
+        return self.default_universe
 
     # Preset criteria definitions
     PRESETS = {
@@ -354,45 +234,45 @@ class StockScreener:
     def __init__(
         self,
         universe: list[str] | None = None,
-        universe_type: StockUniverse | None = None,
     ):
         """
         Initialize screener with stock universe.
 
         Args:
-            universe: Custom list of tickers
-            universe_type: Preset universe (LQ45, IDX80, POPULAR, ALL)
+            universe: Custom list of tickers. If None, uses all tickers from tw_tickers.json.
         """
         if universe:
             self.universe = universe
-        elif universe_type:
-            self.universe = self._get_universe(universe_type)
         else:
-            # Default to POPULAR for better coverage
-            self.universe = self.default_universe
+            self.universe = load_all_tickers()
 
     def _get_universe(self, universe_type: StockUniverse) -> list[str]:
-        """Get stock universe based on type."""
-        if universe_type == StockUniverse.LQ45:
-            return self.LQ45
-        elif universe_type == StockUniverse.IDX80:
-            return self.LQ45 + self.IDX80_EXTRA
-        elif universe_type == StockUniverse.POPULAR:
-            return self.LQ45 + self.IDX80_EXTRA + self.POPULAR_EXTRA
-        elif universe_type == StockUniverse.ALL:
-            return load_all_tickers() or self.default_universe
+        """Get stock universe based on type (only ALL supported now)."""
+        if universe_type == StockUniverse.ALL:
+            return load_all_tickers()
         return self.default_universe
 
     async def _fetch_stock_data(self, ticker: str) -> ScreenResult | None:
         """Fetch all data needed for screening."""
         try:
             from pulse.core.analysis.technical import TechnicalAnalyzer
-            from pulse.core.data.yfinance import YFinanceFetcher
+            from pulse.core.data.stock_data_provider import StockDataProvider
+            from datetime import datetime, timedelta
 
-            fetcher = YFinanceFetcher()
+            # Initialize StockDataProvider (token will be managed by config)
+            fetcher = StockDataProvider()
+
+            # Define date range for fetching data (e.g., 1 year history for screening)
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=365)
+            start_date_str = start_date.strftime("%Y-%m-%d")
+            end_date_str = end_date.strftime("%Y-%m-%d")
 
             # Fetch stock data
-            stock = await fetcher.fetch_stock(ticker)
+            # Assuming fetch_stock can handle both period and start/end dates
+            stock = await fetcher.fetch_stock(
+                ticker, period="1y", start_date=start_date_str, end_date=end_date_str
+            )
             if not stock:
                 return None
 
@@ -428,7 +308,10 @@ class StockScreener:
 
             # Fetch fundamental data (optional, may be slow)
             try:
-                fundamental = await fetcher.fetch_fundamentals(ticker)
+                # Assuming fetch_fundamentals also uses start_date/end_date for FinMind
+                fundamental = await fetcher.fetch_fundamentals(
+                    ticker, start_date=start_date_str, end_date=end_date_str
+                )
                 if fundamental:
                     result.pe_ratio = fundamental.pe_ratio
                     result.pb_ratio = fundamental.pb_ratio
@@ -905,7 +788,7 @@ class StockScreener:
                 macd_str = r.macd_status
 
                 lines.append(f"{i}. {r.ticker} - {r.name or 'N/A'}")
-                lines.append(f"   Price: Rp {r.price:,.0f} ({r.change_percent:+.2f}%)")
+                lines.append(f"   Price: NT$ {r.price:,.0f} ({r.change_percent:+.2f}%)")
                 lines.append(f"   RSI: {rsi_str} ({r.rsi_status}) | MACD: {macd_str}")
 
                 if r.support and r.resistance:
