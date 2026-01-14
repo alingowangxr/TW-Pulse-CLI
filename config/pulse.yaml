@@ -5,23 +5,28 @@ app_name: "Pulse CLI"
 version: "0.1.0"
 debug: false
 
-# AI Configuration (CLIProxyAPI)
+# AI Configuration (LiteLLM - Multi-Provider)
+# API keys are read from environment variables:
+#   ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY, GROQ_API_KEY
 ai:
-  base_url: "http://localhost:8317/v1"
-  api_key: "opencode"
-  default_model: "gemini-3-flash-preview"
+  default_model: "groq/llama-3.3-70b-versatile"
   temperature: 0.7
   max_tokens: 4096
   timeout: 120
-  
+
   available_models:
-    gemini-3-flash-preview: "Gemini 3 Flash Preview [Antigravity]"
-    gemini-2.5-flash: "Gemini 2.5 Flash [Antigravity]"
-    gemini-2.5-flash-lite: "Gemini 2.5 Flash Lite [Antigravity]"
-    gemini-claude-sonnet-4-5: "Claude Sonnet 4.5 [Antigravity]"
-    gemini-claude-sonnet-4-5-thinking: "Claude Sonnet 4.5 Thinking [Antigravity]"
-    gemini-claude-opus-4-5-thinking: "Claude Opus 4.5 Thinking [Antigravity]"
-    gpt-oss-120b-medium: "GPT OSS 120B Medium [Antigravity]"
+    # Anthropic
+    anthropic/claude-sonnet-4-20250514: "Claude Sonnet 4 (Anthropic)"
+    anthropic/claude-haiku-4-20250514: "Claude Haiku 4 (Anthropic)"
+    # OpenAI
+    openai/gpt-4o: "GPT-4o (OpenAI)"
+    openai/gpt-4o-mini: "GPT-4o Mini (OpenAI)"
+    # Google
+    gemini/gemini-2.0-flash: "Gemini 2.0 Flash (Google)"
+    gemini/gemini-2.5-flash-preview-05-20: "Gemini 2.5 Flash (Google)"
+    # Groq (Free tier)
+    groq/llama-3.3-70b-versatile: "Llama 3.3 70B (Groq)"
+    groq/llama-3.1-8b-instant: "Llama 3.1 8B (Groq)"
 
 # FinMind Configuration
 finmind:

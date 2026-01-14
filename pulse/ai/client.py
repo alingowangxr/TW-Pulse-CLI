@@ -1,45 +1,43 @@
-"""AI client using OpenAI SDK with CLIProxyAPI backend."""
+"""AI client using LiteLLM for multi-provider LLM support."""
 
 from collections.abc import AsyncIterator
 from typing import Any
 
-from openai import AsyncOpenAI
+import litellm
+from litellm import acompletion
 
 from pulse.ai.prompts import CHAT_SYSTEM_PROMPT
 from pulse.core.config import settings
 from pulse.utils.logger import get_logger
 
+# Suppress LiteLLM verbose logging
+litellm.suppress_debug_info = True
+
 log = get_logger(__name__)
 
 
 class AIClient:
-    """AI client for stock analysis using CLIProxyAPI."""
+    """AI client for stock analysis using LiteLLM (supports multiple providers)."""
 
     def __init__(
         self,
-        base_url: str | None = None,
-        api_key: str | None = None,
         model: str | None = None,
     ):
         """
         Initialize AI client.
 
         Args:
-            base_url: API base URL (default: from settings)
-            api_key: API key (default: from settings)
-            model: Default model to use (default: from settings)
+            model: Model to use in LiteLLM format (e.g., "anthropic/claude-sonnet-4-20250514")
+                   API keys are read from environment variables:
+                   - ANTHROPIC_API_KEY for Anthropic
+                   - OPENAI_API_KEY for OpenAI
+                   - GEMINI_API_KEY for Google
+                   - GROQ_API_KEY for Groq
         """
-        self.base_url = base_url or settings.ai.base_url
-        self.api_key = api_key or settings.ai.api_key
         self.model = model or settings.ai.default_model
         self.temperature = settings.ai.temperature
         self.max_tokens = settings.ai.max_tokens
-
-        self.client = AsyncOpenAI(
-            base_url=self.base_url,
-            api_key=self.api_key,
-            timeout=settings.ai.timeout,
-        )
+        self.timeout = settings.ai.timeout
 
         self._conversation_history: list[dict[str, str]] = []
 
@@ -104,17 +102,18 @@ class AIClient:
         is_greeting = message.lower().strip() in greetings
 
         if not self._conversation_history or is_greeting:
-            user_msg = f"[指示: 以 PULSE 台灣股市助理的身份回答。不是 Antigravity。不是程式設計助理。]\n\nUser: {message}"
+            user_msg = f"[指示: 以 PULSE 台灣股市助理的身份回答。不是程式設計助理。]\n\nUser: {message}"
 
         # Add current message
         messages.append({"role": "user", "content": user_msg})
 
         try:
-            response = await self.client.chat.completions.create(
+            response = await acompletion(
                 model=self.model,
                 messages=messages,
                 temperature=self.temperature,
                 max_tokens=self.max_tokens,
+                timeout=self.timeout,
             )
 
             assistant_message = response.choices[0].message.content or ""
@@ -160,17 +159,18 @@ class AIClient:
         messages.append({"role": "user", "content": message})
 
         try:
-            stream = await self.client.chat.completions.create(
+            response = await acompletion(
                 model=self.model,
                 messages=messages,
                 temperature=self.temperature,
                 max_tokens=self.max_tokens,
+                timeout=self.timeout,
                 stream=True,
             )
 
             full_response = ""
 
-            async for chunk in stream:
+            async for chunk in response:
                 if chunk.choices[0].delta.content:
                     content = chunk.choices[0].delta.content
                     full_response += content

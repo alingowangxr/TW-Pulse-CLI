@@ -9,12 +9,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class AISettings(BaseSettings):
-    """AI/LLM configuration."""
+    """AI/LLM configuration using LiteLLM for multi-provider support."""
 
-    base_url: str = Field(default="http://localhost:8317/v1", description="CLIProxyAPI base URL")
-    api_key: str = Field(default="opencode", description="API key for CLIProxyAPI")
+    # Default provider and model (uses LiteLLM format: provider/model)
     default_model: str = Field(
-        default="gemini-3-flash-preview", description="Default AI model to use"
+        default="groq/llama-3.3-70b-versatile",
+        description="Default AI model (format: provider/model)",
     )
     temperature: float = Field(
         default=0.7, ge=0.0, le=2.0, description="Temperature for AI responses"
@@ -24,16 +24,26 @@ class AISettings(BaseSettings):
     )
     timeout: int = Field(default=120, description="Request timeout in seconds")
 
-    # Available models from CLIProxyAPI
+    # Available models (LiteLLM format)
+    # Users can set API keys via environment variables:
+    # - ANTHROPIC_API_KEY for Anthropic models
+    # - OPENAI_API_KEY for OpenAI models
+    # - GEMINI_API_KEY for Google models
+    # - GROQ_API_KEY for Groq models
     available_models: dict[str, str] = Field(
         default={
-            "gemini-3-flash-preview": "Gemini 3 Flash Preview [Antigravity]",
-            "gemini-2.5-flash": "Gemini 2.5 Flash [Antigravity]",
-            "gemini-2.5-flash-lite": "Gemini 2.5 Flash Lite [Antigravity]",
-            "gemini-claude-sonnet-4-5": "Claude Sonnet 4.5 [Antigravity]",
-            "gemini-claude-sonnet-4-5-thinking": "Claude Sonnet 4.5 Thinking [Antigravity]",
-            "gemini-claude-opus-4-5-thinking": "Claude Opus 4.5 Thinking [Antigravity]",
-            "gpt-oss-120b-medium": "GPT OSS 120B Medium [Antigravity]",
+            # Anthropic
+            "anthropic/claude-sonnet-4-20250514": "Claude Sonnet 4 (Anthropic)",
+            "anthropic/claude-haiku-4-20250514": "Claude Haiku 4 (Anthropic)",
+            # OpenAI
+            "openai/gpt-4o": "GPT-4o (OpenAI)",
+            "openai/gpt-4o-mini": "GPT-4o Mini (OpenAI)",
+            # Google
+            "gemini/gemini-2.0-flash": "Gemini 2.0 Flash (Google)",
+            "gemini/gemini-2.5-flash-preview-05-20": "Gemini 2.5 Flash (Google)",
+            # Groq (free tier available)
+            "groq/llama-3.3-70b-versatile": "Llama 3.3 70B (Groq)",
+            "groq/llama-3.1-8b-instant": "Llama 3.1 8B (Groq)",
         }
     )
 

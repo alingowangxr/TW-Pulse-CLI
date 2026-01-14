@@ -26,7 +26,7 @@
 - **即時數據** 來自 FinMind (主要), Yahoo Finance (備用)
 - **技術分析** (RSI, MACD, 布林通道, 支撐/壓力)
 - **基本面分析** (本益比, 股價淨值比, 股東權益報酬率, 股利殖利率)
-- **AI/LLM 整合** 用於智慧分析和自然語言互動
+- **AI/LLM 整合** 支援多家 LLM (Groq/Gemini/Claude/GPT)
 - **SAPTA 引擎** - 基於機器學習的盤前預漲偵測系統
 - **交易計畫生成器** 包含停利/停損/風險報酬計算
 - **法人動向分析** 來自 FinMind 數據
@@ -526,17 +526,26 @@ Signals
 Create `.env` file in project root:
 
 ```env
-# AI Configuration (CLIProxyAPI)
-PULSE_AI__BASE_URL=http://localhost:8317/v1
-PULSE_AI__API_KEY=your_cliproxyapi_key
-PULSE_AI__DEFAULT_MODEL=gemini-3-flash-preview
+# AI API Key (選擇一個即可)
+GROQ_API_KEY=your_groq_key              # Groq (免費，推薦)
+# GEMINI_API_KEY=your_gemini_key        # Google Gemini
+# ANTHROPIC_API_KEY=your_anthropic_key  # Anthropic Claude
+# OPENAI_API_KEY=your_openai_key        # OpenAI GPT
 
-# Legacy Stockbit Authentication (Indonesian platform - optional)
-# STOCKBIT_TOKEN=eyJhbGciOiJSUzI1NiIs...
+# 預設 AI 模型 (可選)
+PULSE_AI__DEFAULT_MODEL=groq/llama-3.3-70b-versatile
+
+# FinMind API (用於法人動向，可選)
+FINMIND_TOKEN=your_finmind_token
 
 # Debug
 PULSE_DEBUG=false
 ```
+
+**取得免費 API Key:**
+- **Groq** (推薦): https://console.groq.com/keys
+- **Google**: https://aistudio.google.com/apikey
+- **FinMind**: https://finmindtrade.com/
 
 
 
@@ -545,11 +554,9 @@ PULSE_DEBUG=false
 Edit `config/pulse.yaml`:
 
 ```yaml
-# AI Settings (CLIProxyAPI)
+# AI Settings (LiteLLM - 支援多家 LLM)
 ai:
-  base_url: "http://localhost:8317/v1"
-  api_key: "opencode"
-  default_model: "gemini-3-flash-preview"
+  default_model: "groq/llama-3.3-70b-versatile"
   temperature: 0.7
   max_tokens: 4096
   timeout: 120
@@ -578,20 +585,20 @@ ui:
 
 ### Available AI Models
 
-| Model ID | Display Name |
-|----------|--------------|
-| `gemini-3-flash-preview` | Gemini 3 Flash Preview |
-| `gemini-2.5-flash` | Gemini 2.5 Flash |
-| `gemini-2.5-flash-lite` | Gemini 2.5 Flash Lite |
-| `gemini-claude-sonnet-4-5` | Claude Sonnet 4.5 |
-| `gemini-claude-sonnet-4-5-thinking` | Claude Sonnet 4.5 Thinking |
-| `gemini-claude-opus-4-5-thinking` | Claude Opus 4.5 Thinking |
-| `gpt-oss-120b-medium` | GPT OSS 120B Medium |
+| Model ID | Provider | 備註 |
+|----------|----------|------|
+| `groq/llama-3.3-70b-versatile` | Groq | 免費，推薦 |
+| `groq/llama-3.1-8b-instant` | Groq | 免費，快速 |
+| `gemini/gemini-2.0-flash` | Google | 免費額度有限 |
+| `gemini/gemini-2.5-flash-preview-05-20` | Google | 免費額度有限 |
+| `anthropic/claude-sonnet-4-20250514` | Anthropic | 付費 |
+| `anthropic/claude-haiku-4-20250514` | Anthropic | 付費 |
+| `openai/gpt-4o` | OpenAI | 付費 |
+| `openai/gpt-4o-mini` | OpenAI | 付費 |
 
 Switch model:
 ```
 /models              # Open model selector
-/models gemini-3-flash-preview
 ```
 
 ---
@@ -778,10 +785,11 @@ Solution: 請確認股票代號正確
 **2. "AI request failed"**
 
 ```
-Cause: AI backend not available
-Solution: 
-  - Make sure CLIProxyAPI is running on localhost:8317
-  - Or change PULSE_AI__BASE_URL in .env
+Cause: AI API key 未設定或無效
+Solution:
+  - 確認已設定 API key (GROQ_API_KEY, GEMINI_API_KEY 等)
+  - 檢查 API key 是否正確
+  - 嘗試切換到其他 Provider
 ```
 
 **3. "Insufficient data for SAPTA"**

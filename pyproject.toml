@@ -35,8 +35,8 @@ classifiers = [
 ]
 
 dependencies = [
-    # AI & LLM
-    "openai>=1.0.0",
+    # AI & LLM (LiteLLM supports multiple providers: Anthropic, OpenAI, Google, Groq, etc.)
+    "litellm>=1.55.0",
     
     # TUI Framework
     "textual>=0.50.0",
