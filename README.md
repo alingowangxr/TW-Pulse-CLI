@@ -11,7 +11,7 @@
 
 *台灣股市分析工具 (基於 AI 的終端介面)*
 
-[Features](#features) • [Installation](#installation) • [Usage](#usage) • [Commands](#commands) • [SAPTA Engine](#sapta-engine) • [Configuration](#configuration)
+[Features](#features) • [Installation](#installation) • [Usage](#usage) • [Commands](#commands) • [SAPTA Engine](#sapta-engine) • [Configuration](#configuration) • [Documentation](docs/)
 
 [![GitHub](https://img.shields.io/badge/GitHub-sukirman1901%2FPulse--CLI-181717?style=flat-square&logo=github)](https://github.com/sukirman1901/Pulse-CLI)
 
@@ -629,9 +629,13 @@ pulse-cli/
 │   ├── cli/                      # TUI Application
 │   │   ├── __init__.py
 │   │   ├── app.py                # Main Textual app
-│   │   └── commands/
+│   │   └── commands/             # Command handlers (refactored)
 │   │       ├── __init__.py
-│   │       └── registry.py       # Command handlers
+│   │       ├── registry.py       # Lightweight dispatcher
+│   │       ├── analysis.py       # Analysis commands
+│   │       ├── charts.py         # Chart commands
+│   │       ├── screening.py      # Screening commands
+│   │       └── advanced.py       # Advanced commands
 │   │
 │   ├── core/                     # Core Business Logic
 │   │   ├── __init__.py
@@ -646,7 +650,8 @@ pulse-cli/
 │   │   ├── data/                 # Data Layer
 │   │   │   ├── __init__.py
 │   │   │   ├── yfinance.py       # Yahoo Finance fetcher
-│   │   │   ├── stockbit.py       # Stockbit integration
+│   │   │   ├── finmind_data.py   # FinMind API integration
+│   │   │   ├── stockbit.py       # Stockbit integration (deprecated)
 │   │   │   └── cache.py          # Disk cache
 │   │   │
 │   │   ├── analysis/             # Analysis Modules
@@ -681,7 +686,7 @@ pulse-cli/
 │   │
 │   ├── ai/                       # AI Integration
 │   │   ├── __init__.py
-│   │   ├── client.py             # OpenAI-compatible client
+│   │   ├── client.py             # LiteLLM client
 │   │   └── prompts.py            # System prompts
 │   │
 │   └── utils/                    # Utilities
@@ -689,14 +694,24 @@ pulse-cli/
 │       ├── logger.py
 │       ├── formatters.py
 │       ├── validators.py
-│       └── constants.py
+│       ├── constants.py
+│       ├── retry.py              # Retry utilities
+│       └── error_handler.py      # Exception classes
 │
 ├── config/
 │   └── pulse.yaml                # Configuration file
 │
 ├── data/
 │   ├── tw_tickers.json           # Taiwan stock tickers
-│   └── cache/                    # Disk cache
+│   ├── twse_tickers.json         # TWSE listed stocks
+│   ├── otc_tickers.json          # OTC stocks
+│   ├── cache/                    # Disk cache
+│   └── logs/                     # Log files
+│
+├── docs/                         # Documentation
+│   ├── SAPTA_ALGORITHM.md        # SAPTA algorithm details
+│   ├── training_guide.md         # ML model training guide
+│   └── architecture.md           # System architecture
 │
 ├── tests/                        # Test suite
 │   └── ...
@@ -872,6 +887,26 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [TA-Lib](https://github.com/bukosabino/ta) - Technical analysis library
 - [Rich](https://github.com/Textualize/rich) - Beautiful terminal formatting
 - [FinMind](https://github.com/FinMind/FinMind) - Taiwan Financial Data Source
+
+---
+
+## Documentation
+
+### Core Documentation
+
+| Document | Description |
+|----------|-------------|
+| [README](README.md) | Main project documentation |
+| [SAPTA Algorithm](docs/SAPTA_ALGORITHM.md) | SAPTA algorithm details and modules |
+| [Training Guide](docs/training_guide.md) | ML model training documentation |
+| [Architecture](docs/architecture.md) | System architecture and design |
+
+### Key Topics
+
+- **SAPTA Engine**: [Algorithm](docs/SAPTA_ALGORITHM.md) | [Training](docs/training_guide.md)
+- **System Architecture**: [Overview](docs/architecture.md)
+- **API Integration**: [LiteLLM](https://docs.litellm.io/) | [Groq](https://console.groq.com/)
+- **Data Sources**: [FinMind](https://finmindtrade.com/) | [yfinance](https://github.com/ranaroussi/yfinance)
 
 ---
 

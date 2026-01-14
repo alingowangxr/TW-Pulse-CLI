@@ -32,6 +32,28 @@ class FinMindFetcher:
         "OTC": ("TPEx", "Taiwan OTC Index"),
     }
 
+    # Quota status tracking
+    _quota_exceeded: bool = False
+    _quota_error_message: str = ""
+
+    @classmethod
+    def is_quota_exceeded(cls) -> bool:
+        """Check if FinMind quota has been exceeded."""
+        return cls._quota_exceeded
+
+    @classmethod
+    def reset_quota_status(cls) -> None:
+        """Reset quota status (for testing or manual reset)."""
+        cls._quota_exceeded = False
+        cls._quota_error_message = ""
+
+    @classmethod
+    def set_quota_exceeded(cls, message: str = "FinMind API quota exceeded") -> None:
+        """Mark FinMind quota as exceeded."""
+        cls._quota_exceeded = True
+        cls._quota_error_message = message
+        log.warning(message)
+
     def __init__(self, token: str = ""):
         """
         Initialize FinMind fetcher.
@@ -100,6 +122,33 @@ class FinMindFetcher:
 
         return {"name": None, "industry": None, "type": None}
 
+    def _check_quota_error(self, error: Exception) -> bool:
+        """
+        Check if an error is a quota-related error.
+
+        Args:
+            error: The exception to check
+
+        Returns:
+            True if this is a quota error, False otherwise
+        """
+        error_str = str(error).lower()
+
+        # Common quota error indicators
+        quota_indicators = [
+            "quota",
+            "rate limit",
+            "too many requests",
+            "429",
+            "請求次數",
+            "配額",
+            "api limit",
+            "exceeded",
+            "limit exceeded",
+        ]
+
+        return any(indicator in error_str for indicator in quota_indicators)
+
     async def fetch_stock(
         self,
         ticker: str,
@@ -121,6 +170,11 @@ class FinMindFetcher:
             end_date = datetime.now().strftime("%Y-%m-%d")
 
         formatted_ticker = self._format_stock_id(ticker)
+
+        # Check if quota was exceeded previously
+        if self.__class__._quota_exceeded:
+            log.debug(f"Skipping FinMind fetch for {ticker} - quota exceeded")
+            return None
 
         try:
             log.debug(f"Fetching {formatted_ticker} from FinMind...")
@@ -202,7 +256,12 @@ class FinMindFetcher:
             )
 
         except Exception as e:
-            log.error(f"Error fetching {ticker} from FinMind: {e}")
+            # Check if this is a quota-related error
+            if self._check_quota_error(e):
+                self.__class__.set_quota_exceeded(f"FinMind quota exceeded: {e}")
+                log.warning(f"FinMind quota exceeded for {ticker}, will fallback to yfinance")
+            else:
+                log.error(f"Error fetching {ticker} from FinMind: {e}")
             return None
 
     async def fetch_fundamentals(

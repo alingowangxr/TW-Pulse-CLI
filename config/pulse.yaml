@@ -33,11 +33,18 @@ finmind:
   api_token: "" # Will be loaded from environment variable FINMIND_TOKEN
   api_url: "https://api.finmindtrade.com/api"
 
+# Fugle Market Data Configuration (Third-tier fallback)
+fugle:
+  api_key: "" # Will be loaded from environment variable FUGLE_API_KEY
+  api_url: "https://api.fugle.tw/v1"
+
 # Data Configuration
 data:
   cache_ttl: 3600  # 1 hour
   yfinance_suffix: ".TW"
   default_period: "3mo"
+  # Fallback order: finmind -> yfinance -> fugle
+  fallback_enabled: true
 
 # Analysis Configuration
 analysis:

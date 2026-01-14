@@ -1,12 +1,25 @@
 """yfinance data fetcher for Taiwan stocks (fallback)."""
 
+import asyncio
+from typing import Any
+
 import pandas as pd
 import yfinance as yf
 
 from pulse.core.models import OHLCV, FundamentalData, StockData
 from pulse.utils.logger import get_logger
+from pulse.utils.retry import RetryPolicy, retry_async_call
 
 log = get_logger(__name__)
+
+
+# Default retry policy for yfinance calls
+YFINANCE_RETRY_POLICY = RetryPolicy(
+    max_retries=2,
+    initial_delay=1.0,
+    max_delay=10.0,
+    exponential_base=2.0,
+)
 
 
 class YFinanceFetcher:
@@ -133,6 +146,12 @@ class YFinanceFetcher:
                 history=history,
             )
 
+        except TimeoutError:
+            log.error(f"Timeout fetching {ticker} from yfinance")
+            return None
+        except ConnectionError as e:
+            log.error(f"Connection error fetching {ticker}: {e}")
+            return None
         except Exception as e:
             log.error(f"Error fetching {ticker}: {e}")
             return None

@@ -1,6 +1,5 @@
 """Pulse CLI - Main TUI Application."""
 
-
 from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -14,6 +13,7 @@ from pulse.ai.client import AIClient
 from pulse.cli.commands.registry import CommandRegistry
 from pulse.core.smart_agent import SmartAgent
 from pulse.utils.logger import get_logger
+from pulse.utils.error_handler import format_error_response
 
 log = get_logger(__name__)
 
@@ -49,6 +49,7 @@ class CommandPalette(OptionList):
 
     class Selected(Message):
         """Command was selected."""
+
         def __init__(self, command: str) -> None:
             super().__init__()
             self.command = command
@@ -235,7 +236,7 @@ class PulseApp(App):
     """
 
     BINDINGS = [
-        Binding("ctrl+c", "quit", "Quit"),
+        Binding("ctrl+c", "exit", "Quit"),
         Binding("ctrl+l", "clear", "Clear"),
         Binding("escape", "close_palette", "Close", show=False),
     ]
@@ -361,26 +362,27 @@ class PulseApp(App):
         self.call_later(self._scroll_chat_end)
 
     def _remove_thinking(self) -> None:
+        """Remove thinking indicator from chat."""
         try:
             thinking = self.query_one("#thinking")
             thinking.remove()
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"Could not remove thinking indicator: {e}")
 
     def _refocus_input(self) -> None:
-        """Refocus input widget."""
+        """Refocus input widget after response."""
         try:
             self.query_one("#input", Input).focus()
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"Could not refocus input widget: {e}")
 
     def _scroll_chat_end(self) -> None:
-        """Scroll chat to end."""
+        """Scroll chat to end after adding content."""
         try:
             chat = self.query_one("#chat", VerticalScroll)
             chat.scroll_end(animate=False)
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"Could not scroll chat to end: {e}")
 
     @on(Input.Submitted, "#input")
     def on_submit(self, event: Input.Submitted) -> None:
@@ -413,7 +415,8 @@ class PulseApp(App):
                 self._add_response(result)
         except Exception as e:
             self._remove_thinking()
-            self._add_response(f"Error: {e}")
+            error_msg = format_error_response(e)
+            self._add_response(error_msg)
         finally:
             self._refocus_input()
 
@@ -421,7 +424,7 @@ class PulseApp(App):
     async def _handle_chat(self, msg: str) -> None:
         """
         Handle chat using SmartAgent - true agentic flow.
-        
+
         Flow:
         1. SmartAgent parses intent & extracts tickers
         2. SmartAgent fetches REAL data from yfinance
@@ -438,7 +441,8 @@ class PulseApp(App):
         except Exception as e:
             self._remove_thinking()
             log.error(f"Chat error: {e}")
-            self._add_response(f"Error: {e}")
+            error_msg = format_error_response(e)
+            self._add_response(error_msg)
         finally:
             # Always refocus input after response
             self._refocus_input()
@@ -449,7 +453,8 @@ class PulseApp(App):
         self.ai_client.clear_history()
         chat.mount(Static("Pulse - Type /help for commands", classes="welcome"))
 
-    def action_quit(self) -> None:
+    async def action_exit(self) -> None:
+        """Exit the application."""
         self.exit()
 
 
