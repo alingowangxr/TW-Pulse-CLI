@@ -23,6 +23,7 @@ log = get_logger(__name__)
 @dataclass
 class TrainingResult:
     """Result from training."""
+
     model_path: str
     thresholds_path: str
     model_info: MLModelInfo
@@ -33,7 +34,7 @@ class TrainingResult:
 class SaptaTrainer:
     """
     Train SAPTA ML model using walk-forward validation.
-    
+
     Walk-forward process:
     1. Split data into train/validation windows
     2. Train on window, validate on next period
@@ -48,7 +49,7 @@ class SaptaTrainer:
     ):
         """
         Initialize trainer.
-        
+
         Args:
             config: SAPTA configuration
             model_dir: Directory to save trained models
@@ -70,11 +71,11 @@ class SaptaTrainer:
     ) -> TrainingResult | None:
         """
         Train model on labeled samples.
-        
+
         Args:
             samples: List of labeled samples
             test_size: Fraction for test set
-            
+
         Returns:
             TrainingResult with model info and paths
         """
@@ -87,11 +88,14 @@ class SaptaTrainer:
                 roc_auc_score,
             )
             from sklearn.model_selection import train_test_split
+
             try:
                 import xgboost as xgb
+
                 use_xgboost = True
             except (ImportError, Exception):
                 from sklearn.ensemble import GradientBoostingClassifier
+
                 use_xgboost = False
                 log.info("XGBoost not available, using sklearn GradientBoosting")
             import joblib
@@ -123,13 +127,13 @@ class SaptaTrainer:
                 n_estimators=100,
                 max_depth=6,
                 learning_rate=0.1,
-                objective='binary:logistic',
-                eval_metric='auc',
-                use_label_encoder=False,
+                objective="binary:logistic",
+                eval_metric="auc",
                 random_state=42,
             )
             model.fit(
-                X_train, y_train,
+                X_train,
+                y_train,
                 eval_set=[(X_test, y_test)],
                 verbose=False,
             )
@@ -169,7 +173,7 @@ class SaptaTrainer:
 
         # Save thresholds
         thresholds_path = self.model_dir / "thresholds.json"
-        with open(thresholds_path, 'w') as f:
+        with open(thresholds_path, "w") as f:
             json.dump(thresholds, f, indent=2)
 
         # Create model info
@@ -208,21 +212,23 @@ class SaptaTrainer:
     ) -> TrainingResult | None:
         """
         Walk-forward training.
-        
+
         Args:
             samples: All labeled samples
             train_months: Months of training data
             test_months: Months of test data
-            
+
         Returns:
             TrainingResult from final combined model
         """
         try:
             try:
                 import xgboost as xgb
+
                 use_xgboost = True
             except (ImportError, Exception):
                 from sklearn.ensemble import GradientBoostingClassifier
+
                 use_xgboost = False
             import joblib
             from sklearn.metrics import (
@@ -287,8 +293,7 @@ class SaptaTrainer:
                     n_estimators=100,
                     max_depth=6,
                     learning_rate=0.1,
-                    objective='binary:logistic',
-                    use_label_encoder=False,
+                    objective="binary:logistic",
                     random_state=42,
                 )
                 model.fit(X_train, y_train, verbose=False)
@@ -337,8 +342,7 @@ class SaptaTrainer:
                 n_estimators=100,
                 max_depth=6,
                 learning_rate=0.1,
-                objective='binary:logistic',
-                use_label_encoder=False,
+                objective="binary:logistic",
                 random_state=42,
             )
             final_model.fit(X_all, y_all, verbose=False)
@@ -363,7 +367,7 @@ class SaptaTrainer:
         joblib.dump(final_model, model_path)
 
         thresholds_path = self.model_dir / "thresholds.json"
-        with open(thresholds_path, 'w') as f:
+        with open(thresholds_path, "w") as f:
             json.dump(thresholds, f, indent=2)
 
         model_info = MLModelInfo(
@@ -433,7 +437,7 @@ class SaptaTrainer:
     ) -> dict[str, float]:
         """
         Learn optimal thresholds from model predictions.
-        
+
         Uses predicted probabilities to find score thresholds
         that maximize precision at different recall levels.
         """

@@ -19,7 +19,7 @@ log = get_logger(__name__)
 class SaptaDataLoader:
     """
     Load data for SAPTA analysis.
-    
+
     Data sources:
     - Ticker list: data/tickers.json (955 IDX stocks)
     - Historical OHLCV: yfinance (live data)
@@ -28,20 +28,28 @@ class SaptaDataLoader:
     def __init__(self, tickers_path: str | None = None):
         """
         Initialize data loader.
-        
+
         Args:
             tickers_path: Path to tickers.json (auto-detect if None)
         """
-        # Find tickers.json
+        # Find tickers.json - search for common ticker file names
         if tickers_path is None:
             candidates = [
+                # Project root data directory (various naming conventions)
+                Path(__file__).parent.parent.parent.parent / "data" / "tw_tickers.json",
+                Path(__file__).parent.parent.parent.parent.parent / "data" / "tw_tickers.json",
+                Path.cwd() / "data" / "tw_tickers.json",
                 Path(__file__).parent.parent.parent.parent / "data" / "tickers.json",
                 Path(__file__).parent.parent.parent.parent.parent / "data" / "tickers.json",
                 Path.cwd() / "data" / "tickers.json",
+                # Legacy names
+                Path(__file__).parent.parent.parent.parent / "data" / "twse_tickers.json",
+                Path(__file__).parent.parent.parent.parent / "data" / "otc_tickers.json",
             ]
             for p in candidates:
                 if p.exists():
                     tickers_path = str(p)
+                    log.info(f"Found tickers file: {tickers_path}")
                     break
 
         self.tickers_path = tickers_path
@@ -52,6 +60,7 @@ class SaptaDataLoader:
         """Get yfinance fetcher lazily."""
         if self._yf_fetcher is None:
             from pulse.core.data.yfinance import YFinanceFetcher
+
             self._yf_fetcher = YFinanceFetcher()
         return self._yf_fetcher
 
@@ -76,6 +85,7 @@ class SaptaDataLoader:
         # Fallback to common tickers
         log.warning("tickers.json not found, using LQ45 fallback")
         from pulse.utils.constants import LQ45_TICKERS
+
         return LQ45_TICKERS
 
     def get_historical_df(
@@ -85,11 +95,11 @@ class SaptaDataLoader:
     ) -> pd.DataFrame | None:
         """
         Get historical OHLCV data from yfinance.
-        
+
         Args:
             ticker: Stock ticker (e.g., "BBCA")
             period: Period string (1mo, 3mo, 6mo, 1y, 2y)
-            
+
         Returns:
             DataFrame with columns: open, high, low, close, volume
             Index: DatetimeIndex
@@ -105,12 +115,12 @@ class SaptaDataLoader:
     ) -> dict[str, pd.DataFrame]:
         """
         Load historical data for multiple stocks from yfinance.
-        
+
         Args:
             tickers: List of stock tickers
             period: Period string
             min_rows: Minimum rows required
-            
+
         Returns:
             Dict of ticker -> DataFrame
         """
@@ -144,12 +154,12 @@ def load_training_data(
 ) -> dict[str, pd.DataFrame]:
     """
     Convenience function to load training data from yfinance.
-    
+
     Args:
         tickers: List of tickers (None = all from tickers.json)
         period: Period string for yfinance
         min_rows: Minimum rows required
-        
+
     Returns:
         Dict of ticker -> DataFrame
     """
