@@ -185,3 +185,10 @@ playwright/.cache/
 .pytest_cache/
 test-results/
 playwright-report/
+
+# Auto-generated files
+CODEBASE.md
+
+# Training reports
+pulse/core/sapta/data/training_report_*.json
+
