@@ -1,5 +1,8 @@
 """Pulse CLI - Main TUI Application."""
 
+import asyncio
+from functools import partial
+
 from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -357,15 +360,26 @@ class PulseApp(App):
         self.push_screen(ModelsModal(models, current), on_select)
 
     def _add_thinking(self) -> None:
+        """Add thinking indicator to chat if not already present."""
         chat = self.query_one("#chat", VerticalScroll)
+
+        # Remove any existing thinking indicators first (cleanup)
+        existing = list(chat.query(".thinking"))
+        for w in existing:
+            w.remove()
+
+        # Add new thinking indicator
         chat.mount(Static("thinking...", classes="thinking", id="thinking"))
         self.call_later(self._scroll_chat_end)
 
     def _remove_thinking(self) -> None:
         """Remove thinking indicator from chat."""
         try:
-            thinking = self.query_one("#thinking")
-            thinking.remove()
+            chat = self.query_one("#chat", VerticalScroll)
+            # Find all thinking widgets and remove them
+            thinking_widgets = list(chat.query(".thinking"))
+            for widget in thinking_widgets:
+                widget.remove()
         except Exception as e:
             log.debug(f"Could not remove thinking indicator: {e}")
 
@@ -407,14 +421,22 @@ class PulseApp(App):
 
     @work(exclusive=True)
     async def _run_command(self, cmd: str) -> None:
-        """Run command in background."""
+        """Run command in background with timeout safety."""
         try:
-            result = await self.command_registry.execute(cmd)
+            # Run with timeout (180 seconds)
+            async def run_with_timeout():
+                return await asyncio.wait_for(self.command_registry.execute(cmd), timeout=180.0)
+
+            result = await run_with_timeout()
             self._remove_thinking()
             if result:
                 self._add_response(result)
+        except asyncio.TimeoutError:
+            self._remove_thinking()
+            self._add_response("分析超時，請稍後再試")
         except Exception as e:
             self._remove_thinking()
+            log.error(f"Command error: {e}")
             error_msg = format_error_response(e)
             self._add_response(error_msg)
         finally:

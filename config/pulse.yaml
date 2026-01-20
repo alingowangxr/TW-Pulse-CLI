@@ -7,14 +7,16 @@ debug: false
 
 # AI Configuration (LiteLLM - Multi-Provider)
 # API keys are read from environment variables:
-#   ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY, GROQ_API_KEY
+#   ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY, GROQ_API_KEY, DEEPSEEK_API_KEY
 ai:
-  default_model: "groq/llama-3.3-70b-versatile"
+  default_model: "deepseek/deepseek-chat"
   temperature: 0.7
   max_tokens: 4096
-  timeout: 120
+  timeout: 180
 
   available_models:
+    # DeepSeek (Cost-effective, high performance)
+    deepseek/deepseek-chat: "DeepSeek Chat (DeepSeek)"
     # Anthropic
     anthropic/claude-sonnet-4-20250514: "Claude Sonnet 4 (Anthropic)"
     anthropic/claude-haiku-4-20250514: "Claude Haiku 4 (Anthropic)"

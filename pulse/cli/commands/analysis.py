@@ -30,11 +30,14 @@ async def analyze_command(app: "PulseApp", args: str) -> str:
     fundamental_analyzer = FundamentalAnalyzer()
     broker_analyzer = InstitutionalFlowAnalyzer()
 
-    technical, fundamental, broker = await asyncio.gather(
-        tech_analyzer.analyze(ticker),
-        fundamental_analyzer.analyze(ticker),
-        broker_analyzer.analyze(ticker),
-    )
+    try:
+        technical, fundamental, broker = await asyncio.gather(
+            tech_analyzer.analyze(ticker),
+            fundamental_analyzer.analyze(ticker),
+            broker_analyzer.analyze(ticker),
+        )
+    except Exception as e:
+        return f"分析資料時發生錯誤: {e}"
 
     data = {
         "stock": {
@@ -51,7 +54,10 @@ async def analyze_command(app: "PulseApp", args: str) -> str:
         "broker": broker if broker else None,
     }
 
-    response = await app.ai_client.analyze_stock(ticker, data)
+    try:
+        response = await app.ai_client.analyze_stock(ticker, data)
+    except Exception as e:
+        return f"AI 分析時發生錯誤: {e}\n\n請稍後再試或使用其他模型。"
 
     return response
 

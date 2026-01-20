@@ -70,28 +70,36 @@ pip install -e .
 cp .env.example .env
 ```
 
-編輯 `.env`（只需設定一個 AI API key）：
+編輯 `.env`（設定 AI API key）：
 
 ```env
-# AI API Key (選擇一個)
-GROQ_API_KEY=your_groq_key          # Groq (免費額度高，推薦)
-# GEMINI_API_KEY=your_gemini_key    # Google Gemini
-# ANTHROPIC_API_KEY=your_key        # Anthropic Claude
-# OPENAI_API_KEY=your_key           # OpenAI GPT
+# DeepSeek (預設 - 詳細分析，較慢)
+DEEPSEEK_API_KEY=your_deepseek_key
+
+# 或 Groq (免費 - 快速回應，精簡)
+# GROQ_API_KEY=your_groq_key
+
+# 或其他模型
+# GEMINI_API_KEY=your_gemini_key
+# ANTHROPIC_API_KEY=your_key
+# OPENAI_API_KEY=your_key
 
 # FinMind API (用於法人動向，可選)
 FINMIND_TOKEN=your_finmind_token
 ```
 
+> 💡 **提示**: 可同時填入多個 API Key，在 CLI 中自由切換模型
+
 ### 取得 API Key
 
-| Provider | 取得方式 | 備註 |
+| Provider | 取得方式 | 特性 |
 |----------|----------|------|
-| **Groq** | https://console.groq.com/keys | 免費，額度高，推薦 |
+| **DeepSeek** | https://platform.deepseek.com/api-keys | 詳細分析，較慢 (預設) |
+| **Groq** | https://console.groq.com/keys | 快速回應，免費 (推薦) |
 | **Google** | https://aistudio.google.com/apikey | 免費額度有限 |
-| **Anthropic** | https://console.anthropic.com/ | 付費 |
+| **Anthropic** | https://console.anthropic.com/ | 付費，高品質 |
 | **OpenAI** | https://platform.openai.com/api-keys | 付費 |
-| **FinMind** | https://finmindtrade.com/ | 免費註冊 |
+| **FinMind** | https://finmindtrade.com/ | 法人動向數據 |
 
 ---
 
@@ -100,18 +108,17 @@ FINMIND_TOKEN=your_finmind_token
 ### 啟動 CLI
 
 ```bash
-# 設定 API Key (以 Groq 為例)
-export GROQ_API_KEY="your_groq_key"
+# 設定 API Key (Windows PowerShell)
+$env:DEEPSEEK_API_KEY="your_key"
 
-# 啟動
+# 或使用 Groq
+# $env:GROQ_API_KEY="your_groq_key"
+
+# 啟動程式
 python -m pulse.cli.app
 ```
 
-Windows PowerShell:
-```powershell
-$env:GROQ_API_KEY="your_groq_key"
-python -m pulse.cli.app
-```
+> **注意**: 確保 `.env` 檔案中已填入 API Key，程式會自動載入
 
 ### 進入後輸入命令
 
@@ -268,12 +275,14 @@ ML 機率: 78%
 ```yaml
 # AI 設定 (LiteLLM)
 ai:
-  default_model: "groq/llama-3.3-70b-versatile"
+  default_model: "deepseek/deepseek-chat"
   temperature: 0.7
   max_tokens: 4096
   timeout: 120
 
   available_models:
+    # DeepSeek (Cost-effective, high performance)
+    deepseek/deepseek-chat: "DeepSeek Chat (DeepSeek)"
     # Groq (免費)
     groq/llama-3.3-70b-versatile: "Llama 3.3 70B (Groq)"
     groq/llama-3.1-8b-instant: "Llama 3.1 8B (Groq)"
@@ -283,44 +292,41 @@ ai:
     anthropic/claude-sonnet-4-20250514: "Claude Sonnet 4 (Anthropic)"
     # OpenAI
     openai/gpt-4o: "GPT-4o (OpenAI)"
-
-# 數據設定
-data:
-  cache_ttl: 3600  # 1 小時
-  yfinance_suffix: ".TW"
-  default_period: "3mo"
-
-# 分析設定
-analysis:
-  rsi_period: 14
-  rsi_oversold: 30.0
-  rsi_overbought: 70.0
-  macd_fast: 12
-  macd_slow: 26
-  macd_signal: 9
 ```
 
 ### 可用 AI 模型
 
-| 模型 ID | 名稱 | Provider |
-|---------|------|----------|
-| `groq/llama-3.3-70b-versatile` | Llama 3.3 70B | Groq (免費) |
-| `groq/llama-3.1-8b-instant` | Llama 3.1 8B | Groq (免費) |
-| `gemini/gemini-2.0-flash` | Gemini 2.0 Flash | Google |
-| `gemini/gemini-2.5-flash-preview-05-20` | Gemini 2.5 Flash | Google |
-| `anthropic/claude-sonnet-4-20250514` | Claude Sonnet 4 | Anthropic |
-| `anthropic/claude-haiku-4-20250514` | Claude Haiku 4 | Anthropic |
-| `openai/gpt-4o` | GPT-4o | OpenAI |
-| `openai/gpt-4o-mini` | GPT-4o Mini | OpenAI |
+| 模型 ID | 名稱 | Provider | 速度 | 風格 |
+|---------|------|----------|------|------|
+| `deepseek/deepseek-chat` | DeepSeek Chat | DeepSeek | 較慢 | 詳細 (預設) |
+| `groq/llama-3.3-70b-versatile` | Llama 3.3 70B | Groq | **很快** | 精簡 (免費) |
+| `groq/llama-3.1-8b-instant` | Llama 3.1 8B | Groq | 很快 | 精簡 (免費) |
+| `gemini/gemini-2.0-flash` | Gemini 2.0 Flash | Google | 快 | 平衡 |
+| `anthropic/claude-sonnet-4-20250514` | Claude Sonnet 4 | Anthropic | 中等 | 詳細 |
+| `openai/gpt-4o` | GPT-4o | OpenAI | 中等 | 詳細 |
 
-切換模型:
+#### 模型選擇建議
+
+| 使用場景 | 推薦模型 |
+|----------|----------|
+| 深度分析報告 ( `/analyze`) | **DeepSeek** |
+| 快速查詢 ( `/technical`, `/sapta`) | **Groq** |
+| 平衡速度與品質 | Gemini 2.0 Flash |
+
+#### 切換模型
+
 ```bash
-/models                    # 顯示模型選擇
+# 顯示模型選擇清單
+/models
+
+# 選擇模型
+/models groq/llama-3.3-70b-versatile
+/models deepseek/deepseek-chat
 ```
 
-或在 `.env` 設定:
+或在 `.env` 設定預設模型:
 ```env
-PULSE_AI__DEFAULT_MODEL=gemini/gemini-2.0-flash
+PULSE_AI__DEFAULT_MODEL=deepseek/deepseek-chat
 ```
 
 ---
@@ -404,10 +410,10 @@ export PULSE_AI__DEFAULT_MODEL="groq/llama-3.3-70b-versatile"
 /models
 
 # 方法2: 設定環境變數
-export PULSE_AI__DEFAULT_MODEL="gemini/gemini-2.0-flash"
+export PULSE_AI__DEFAULT_MODEL="deepseek/deepseek-chat"
 
 # 方法3: 編輯 .env 檔案
-PULSE_AI__DEFAULT_MODEL=groq/llama-3.3-70b-versatile
+PULSE_AI__DEFAULT_MODEL=deepseek/deepseek-chat
 ```
 
 ### Q4: 法人動向數據從哪裡來?

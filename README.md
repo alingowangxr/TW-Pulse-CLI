@@ -486,6 +486,23 @@ SAPTA 使用 6 個分析模組:
 /sapta scan all          # All stocks
 ```
 
+**Generate SAPTA Chart:**
+
+```
+/sapta chart 2330              # Generate SAPTA analysis chart
+/sapta chart 2454 --detailed   # Chart with detailed analysis
+```
+
+The chart includes:
+- Price chart with MA20/MA50 overlay
+- SAPTA status and score badges
+- Module scores bar chart (color-coded by performance)
+- Confidence level and ML probability
+- Elliott wave phase and Fibonacci retracement
+- Projected breakout window and countdown
+
+Saved to: `charts/sapta_{TICKER}_{YYYYMMDD}.png`
+
 **Natural Language:**
 
 ```
@@ -667,6 +684,7 @@ tw-pulse-cli/
 │   │   │   ├── __init__.py
 │   │   │   ├── technical.py      # Technical indicators
 │   │   │   ├── fundamental.py    # Fundamental analysis
+│   │   │   │   ├── fundamental_recovery.py  # Data recovery strategy
 │   │   │   ├── broker_flow.py    # Broker flow
 │   │   │   └── sector.py         # Sector analysis
 │   │   │
@@ -892,7 +910,8 @@ pulse/
 
 | Provider | Model | Notes |
 |----------|-------|-------|
-| **Groq** | llama-3.3-70b-versatile | Default, free tier available |
+| **DeepSeek** | deepseek-chat | Default, cost-effective |
+| **Groq** | llama-3.3-70b-versatile | Free tier available |
 | **Google** | gemini-2.0-flash | Requires GEMINI_API_KEY |
 | **Anthropic** | claude-sonnet-4 | Requires ANTHROPIC_API_KEY |
 | **OpenAI** | gpt-4o | Requires OPENAI_API_KEY |
@@ -925,11 +944,11 @@ pulse/
 - [ ] End-to-end tests (E2E)
 
 #### SAPTA Enhancements
-- [ ] SAPTA chart output (visual signals)
+- [x] SAPTA chart output (visual signals) - **DONE v0.1.7**
 - [ ] Model retraining with updated data
 
 #### Data Stability
-- [ ] Fundamental data fallback strategy (when PE/PB/ROE missing)
+- [x] Fundamental data fallback strategy (when PE/PB/ROE missing) - **DONE v0.1.7**
 - [ ] Multi-stock batch testing (verify data consistency)
 - [ ] FinMind API quota monitoring and graceful degradation
 
@@ -984,6 +1003,9 @@ pulse/
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.1.7 | 2026-01-20 | SAPTA chart output (`/sapta chart`), Fundamental data recovery, 150 new tests |
+| 0.1.6 | 2026-01-20 | DeepSeek model, test coverage (SmartAgent, TradingPlan, Technical) |
+| 0.1.5 | 2026-01-20 | Environment variables fix, Thinking Indicator fix, timeout handling |
 | 0.1.4 | 2026-01-16 | CSV export for `/screen`, Type hints, Ruff linting |
 | 0.1.3 | 2026-01-15 | SAPTA output optimization, broker flow fix, model retraining |
 | 0.1.2 | 2026-01-14 | Fugle integration, error handling, registry refactor |

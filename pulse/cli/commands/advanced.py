@@ -120,6 +120,7 @@ async def sapta_command(app: "PulseApp", args: str) -> str:
 Usage (用法):
   /sapta <TICKER>              - Analyze single stock (分析單一股票)
   /sapta scan [universe]       - Scan for PRE-MARKUP candidates (掃描預漲股)
+  /sapta chart <TICKER>        - Generate SAPTA chart (產生分析圖表)
 
 Universe Options (股票池選項):
   /sapta scan tw50             - Scan TW50 (台灣50, 50檔股票, 快速)
@@ -129,10 +130,12 @@ Universe Options (股票池選項):
 
 Options (選項):
   --detailed                   - Show module breakdown (顯示模組詳情)
+  --chart                      - Generate chart image (產生圖表)
 
 Examples (範例):
   /sapta 2330                  - Analyze TSMC (分析台積電)
   /sapta 2881 --detailed       - Detailed analysis (詳細分析國泰金)
+  /sapta chart 2330            - Generate SAPTA chart (產生分析圖表)
   /sapta scan all              - Scan all stocks for pre-markup (掃描全市場)
 
 Status Levels (狀態等級 - ML學習門檻):
@@ -149,15 +152,113 @@ Modules (分析模組):
   5. Time Projection - Fib time + planetary aspects (時間投影 - 費氏時間)
   6. Anti-Distribution - Filter distribution patterns (反派發 - 過濾出貨)
   7. Institutional Flow - Foreign/Trust flow analysis (法人動向分析)
-"""
+  """
 
     from pulse.core.sapta import SaptaEngine, SaptaStatus
     from pulse.core.screener import StockScreener, StockUniverse
 
     engine = SaptaEngine()
     args_lower = args.lower().strip()
+    generate_chart = "--chart" in args_lower
     detailed = "--detailed" in args_lower
-    args_clean = args_lower.replace("--detailed", "").strip()
+    args_clean = args_lower.replace("--chart", "").replace("--detailed", "").strip()
+
+    # Check for chart command
+    if args_clean.startswith("chart"):
+        chart_parts = args_clean.split()
+        if len(chart_parts) < 2:
+            return "請指定股票代碼。用法: /sapta chart 2330"
+
+        ticker = chart_parts[1].upper()
+
+        # Analyze the stock first
+        result = await engine.analyze(ticker)
+        if not result:
+            return f"無法分析 {ticker}，請確認股票代碼是否正確"
+
+        # Fetch price data for the chart
+        try:
+            from pulse.core.data.stock_data_provider import StockDataProvider
+            from pulse.core.chart_generator import create_sapta_chart
+
+            provider = StockDataProvider()
+            stock = await provider.fetch_stock(ticker, period="6mo")
+
+            if not stock or not stock.history:
+                return f"無法取得 {ticker} 的歷史資料"
+
+            # Extract data from StockData.history (list of OHLCV objects)
+            history = stock.history
+            dates = [h.date.strftime("%Y-%m-%d") for h in history]
+            prices = [h.close for h in history]
+            volumes = [h.volume for h in history]
+
+            # Prepare module scores for chart
+            module_scores = {}
+            if result.absorption:
+                module_scores["absorption"] = {
+                    "score": result.absorption.get("score", 0),
+                    "max_score": 20,
+                }
+            if result.compression:
+                module_scores["compression"] = {
+                    "score": result.compression.get("score", 0),
+                    "max_score": 15,
+                }
+            if result.bb_squeeze:
+                module_scores["bb_squeeze"] = {
+                    "score": result.bb_squeeze.get("score", 0),
+                    "max_score": 15,
+                }
+            if result.elliott:
+                module_scores["elliott"] = {
+                    "score": result.elliott.get("score", 0),
+                    "max_score": 20,
+                }
+            if result.time_projection:
+                module_scores["time_projection"] = {
+                    "score": result.time_projection.get("score", 0),
+                    "max_score": 15,
+                }
+            if result.anti_distribution:
+                module_scores["anti_distribution"] = {
+                    "score": result.anti_distribution.get("score", 0),
+                    "max_score": 15,
+                }
+
+            # Generate the chart
+            chart_path = create_sapta_chart(
+                ticker=ticker,
+                dates=dates,
+                prices=prices,
+                volumes=volumes,
+                sapta_status=result.status.value
+                if hasattr(result.status, "value")
+                else str(result.status),
+                sapta_score=result.final_score,
+                confidence=result.confidence.value
+                if hasattr(result.confidence, "value")
+                else str(result.confidence),
+                ml_probability=result.ml_probability,
+                module_scores=module_scores,
+                wave_phase=result.wave_phase,
+                fib_retracement=result.fib_retracement,
+                projected_window=result.projected_breakout_window,
+                days_to_window=result.days_to_window,
+                reasons=result.reasons,
+                notes=result.notes,
+            )
+
+            if chart_path:
+                return f"✅ SAPTA 圖表已儲存: {chart_path}\n\n狀態: {result.status.value if hasattr(result.status, 'value') else result.status} | 分數: {result.final_score:.1f} | 信心: {result.confidence.value if hasattr(result.confidence, 'value') else result.confidence}"
+            else:
+                return "產生圖表時發生錯誤"
+
+        except Exception as e:
+            import traceback
+
+            traceback.print_exc()
+            return f"產生 SAPTA 圖表失敗: {e}"
 
     # Check if it's a scan command
     if args_clean.startswith("scan"):

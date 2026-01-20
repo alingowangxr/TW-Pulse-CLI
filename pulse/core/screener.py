@@ -224,7 +224,7 @@ class StockScreener:
             universe: Custom list of tickers. If provided, overrides universe_type.
             universe_type: Predefined universe type (TW50, MIDCAP, POPULAR, ALL).
         """
-        if universe:
+        if universe is not None:
             self.universe = universe
         elif universe_type:
             self.universe = self._get_universe(universe_type)
@@ -472,7 +472,7 @@ class StockScreener:
         # RSI scoring
         if result.rsi_14 is not None:
             if result.rsi_14 < 30:
-                score += 20  # Oversold bonus
+                score += 25  # Oversold bonus (strong buying opportunity)
             elif result.rsi_14 > 70:
                 score -= 10  # Overbought penalty
             elif 40 <= result.rsi_14 <= 60:
@@ -480,12 +480,14 @@ class StockScreener:
 
         # MACD scoring
         if result.macd is not None and result.macd_signal is not None:
+            # Skip MACD penalty when RSI is oversold (oversold takes precedence as buy signal)
+            is_oversold = result.rsi_14 is not None and result.rsi_14 < 30
             if result.macd > result.macd_signal:
                 score += 15  # Bullish
                 if result.macd_histogram and result.macd_histogram > 0:
                     score += 5  # Increasing momentum
-            else:
-                score -= 10  # Bearish
+            elif not is_oversold:
+                score -= 10  # Bearish (skip if oversold)
 
         # Volume scoring
         if result.volume_ratio > 1.5:
@@ -496,7 +498,11 @@ class StockScreener:
         # Trend scoring
         if result.sma_20 and result.sma_50:
             if result.price > result.sma_20 > result.sma_50:
-                score += 15  # Strong uptrend
+                # Extra bonus for oversold + uptrend (high probability setup)
+                if result.rsi_14 is not None and result.rsi_14 < 30:
+                    score += 20  # Strong uptrend + oversold = high conviction
+                else:
+                    score += 15  # Strong uptrend
             elif result.price < result.sma_20 < result.sma_50:
                 score -= 10  # Strong downtrend
 
@@ -552,6 +558,15 @@ class StockScreener:
         if "breakout" in criteria_str:
             criteria["near_resistance"] = True
             criteria["volume_spike"] = True
+
+        # Smart screen criteria for growth/multibagger
+        if "multibagger" in criteria_str or "growth" in criteria_str:
+            criteria["high_growth"] = True
+            criteria["macd_above_signal"] = True
+
+        # Small cap criteria
+        if "small cap" in criteria_str:
+            criteria["market_cap_small"] = True
 
         if "volume" in criteria_str and "spike" in criteria_str:
             criteria["volume_spike"] = True

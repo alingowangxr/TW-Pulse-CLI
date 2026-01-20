@@ -618,13 +618,14 @@ NL_INTENTS = {
 
 ```bash
 # AI API Keys
+DEEPSEEK_API_KEY=your_deepseek_key    # DeepSeek (推薦)
 GROQ_API_KEY=your_groq_key           # Groq (推薦 - 免費)
 GEMINI_API_KEY=your_gemini_key       # Google Gemini
 ANTHROPIC_API_KEY=your_claude_key    # Anthropic Claude
 OPENAI_API_KEY=your_openai_key       # OpenAI GPT
 
 # 預設模型
-PULSE_AI__DEFAULT_MODEL=groq/llama-3.3-70b-versatile
+PULSE_AI__DEFAULT_MODEL=deepseek/deepseek-chat
 
 # Data API Keys
 FINMIND_TOKEN=your_finmind_token     # FinMind (法人動向)
@@ -641,7 +642,7 @@ PULSE_DEBUG=false
 
 # AI Settings
 ai:
-  default_model: "groq/llama-3.3-70b-versatile"
+  default_model: "deepseek/deepseek-chat"
   temperature: 0.7
   max_tokens: 4096
   timeout: 120

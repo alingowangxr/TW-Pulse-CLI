@@ -8,12 +8,25 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+# Load .env file early before settings initialization
+_env_loaded = False
+_env_path = Path(__file__).parent.parent.parent / ".env"
+if _env_path.exists():
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv(_env_path)
+        _env_loaded = True
+    except ImportError:
+        pass
+
+
 class AISettings(BaseSettings):
     """AI/LLM configuration using LiteLLM for multi-provider support."""
 
     # Default provider and model (uses LiteLLM format: provider/model)
     default_model: str = Field(
-        default="groq/llama-3.3-70b-versatile",
+        default="deepseek/deepseek-chat",
         description="Default AI model (format: provider/model)",
     )
     temperature: float = Field(
@@ -30,8 +43,11 @@ class AISettings(BaseSettings):
     # - OPENAI_API_KEY for OpenAI models
     # - GEMINI_API_KEY for Google models
     # - GROQ_API_KEY for Groq models
+    # - DEEPSEEK_API_KEY for DeepSeek models
     available_models: dict[str, str] = Field(
         default={
+            # DeepSeek (Cost-effective, high performance)
+            "deepseek/deepseek-chat": "DeepSeek Chat (DeepSeek)",
             # Anthropic
             "anthropic/claude-sonnet-4-20250514": "Claude Sonnet 4 (Anthropic)",
             "anthropic/claude-haiku-4-20250514": "Claude Haiku 4 (Anthropic)",
@@ -105,7 +121,6 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="PULSE_",
         env_nested_delimiter="__",
-        env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -129,6 +144,10 @@ class Settings(BaseSettings):
     log_file: Path | None = Field(default=Path("data/logs/pulse.log"), description="Log file path")
 
     def __init__(self, **data: Any) -> None:
+        # Set env_file to absolute path before initialization
+        if "env_file" not in data:
+            base = data.get("base_dir", Path(__file__).parent.parent.parent)
+            data["env_file"] = str(base / ".env")
         super().__init__(**data)
         self._load_config_file()
         self._ensure_directories()

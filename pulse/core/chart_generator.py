@@ -423,6 +423,311 @@ class ChartGenerator:
             plt.close("all")
             return None
 
+    def sapta_chart(
+        self,
+        ticker: str,
+        dates: list[str],
+        prices: list[float],
+        volumes: list[float] | None = None,
+        sapta_status: str = "WATCHLIST",
+        sapta_score: float = 50.0,
+        confidence: str = "MEDIUM",
+        ml_probability: float | None = None,
+        module_scores: dict[str, dict[str, Any]] | None = None,
+        wave_phase: str | None = None,
+        fib_retracement: float | None = None,
+        projected_window: str | None = None,
+        days_to_window: int | None = None,
+        reasons: list[str] | None = None,
+        notes: list[str] | None = None,
+    ) -> str | None:
+        """
+        Generate SAPTA analysis chart with signals visualization.
+
+        Args:
+            ticker: Stock ticker
+            dates: List of date strings
+            prices: List of closing prices
+            volumes: Optional volume data
+            sapta_status: SAPTA status (PRE-MARKUP, SIAP, WATCHLIST, ABAIKAN)
+            sapta_score: SAPTA score (0-100)
+            confidence: Confidence level (HIGH, MEDIUM, LOW)
+            ml_probability: ML model probability if available
+            module_scores: Dict of module name -> score details
+            wave_phase: Elliott wave phase if available
+            fib_retracement: Fibonacci retracement level if available
+            projected_window: Projected breakout window
+            days_to_window: Days to projected window
+            reasons: List of reasons for status
+            notes: Additional notes
+
+        Returns:
+            Path to saved chart file, or None if failed
+        """
+        if not self._plt:
+            return None
+
+        plt = self._plt
+
+        try:
+            plt.style.use("dark_background")
+
+            # Create figure with multiple subplots
+            fig = plt.figure(figsize=(14, 12))
+            fig.patch.set_facecolor("#0d1117")
+
+            # Grid layout: price chart (top), module scores (bottom left), info (bottom right)
+            gs = fig.add_gridspec(
+                3, 2, height_ratios=[2, 1, 1], width_ratios=[1.5, 1], hspace=0.3, wspace=0.2
+            )
+
+            # === Price Chart (top, spanning both columns) ===
+            ax_price = fig.add_subplot(gs[0, :])
+            ax_price.set_facecolor("#0d1117")
+
+            x = range(len(prices))
+            ax_price.plot(x, prices, color="#58a6ff", linewidth=2, label="Price")
+            ax_price.fill_between(x, prices, alpha=0.1, color="#58a6ff")
+
+            # Add moving averages
+            if len(prices) >= 20:
+                ma20 = self._moving_average(prices, 20)
+                ax_price.plot(
+                    x, ma20, color="#f0883e", linewidth=1, label="MA20", linestyle="--", alpha=0.7
+                )
+
+            if len(prices) >= 50:
+                ma50 = self._moving_average(prices, 50)
+                ax_price.plot(
+                    x, ma50, color="#a371f7", linewidth=1, label="MA50", linestyle="--", alpha=0.7
+                )
+
+            # Current price annotation
+            current_price = prices[-1]
+            prev_price = prices[-2] if len(prices) > 1 else current_price
+            change = current_price - prev_price
+            change_pct = (change / prev_price * 100) if prev_price else 0
+
+            color = "#3fb950" if change >= 0 else "#f85149"
+            ax_price.annotate(
+                f"{current_price:,.0f} ({change_pct:+.2f}%)",
+                xy=(len(prices) - 1, current_price),
+                xytext=(10, 0),
+                textcoords="offset points",
+                fontsize=11,
+                color=color,
+                fontweight="bold",
+                bbox=dict(boxstyle="round", facecolor="#21262d", edgecolor=color),
+            )
+
+            # SAPTA status overlay box
+            status_colors = {
+                "PRE-MARKUP": "#3fb950",  # Green
+                "SIAP": "#f0883e",  # Orange
+                "WATCHLIST": "#a371f7",  # Purple
+                "ABAIKAN": "#8b949e",  # Gray
+            }
+            status_color = status_colors.get(sapta_status, "#8b949e")
+
+            # Add status badge
+            ax_price.annotate(
+                f"SAPTA: {sapta_status}",
+                xy=(0.98, 0.95),
+                xycoords="axes fraction",
+                fontsize=12,
+                color=status_color,
+                fontweight="bold",
+                ha="right",
+                va="top",
+                bbox=dict(boxstyle="round,pad=0.3", facecolor="#21262d", edgecolor=status_color),
+            )
+
+            # Add score badge
+            score_color = (
+                "#3fb950" if sapta_score >= 65 else "#f0883e" if sapta_score >= 50 else "#f85149"
+            )
+            ax_price.annotate(
+                f"Score: {sapta_score:.0f}",
+                xy=(0.98, 0.88),
+                xycoords="axes fraction",
+                fontsize=11,
+                color=score_color,
+                fontweight="bold",
+                ha="right",
+                va="top",
+                bbox=dict(boxstyle="round,pad=0.3", facecolor="#21262d", edgecolor=score_color),
+            )
+
+            # Volume subplot
+            if volumes:
+                ax_vol = fig.add_subplot(gs[1, 0], sharex=ax_price)
+                ax_vol.set_facecolor("#0d1117")
+                vol_colors = [
+                    "#3fb950" if prices[i] >= prices[i - 1] else "#f85149"
+                    for i in range(1, len(prices))
+                ]
+                vol_colors.insert(0, "#3fb950")
+                ax_vol.bar(x, volumes, color=vol_colors, alpha=0.7)
+                ax_vol.set_ylabel("Volume", fontsize=10, color="#8b949e")
+                ax_vol.grid(True, alpha=0.2, color="#30363d")
+                ax_vol.tick_params(colors="#8b949e")
+                for spine in ax_vol.spines.values():
+                    spine.set_color("#30363d")
+
+            # === Module Scores Bar Chart ===
+            ax_modules = fig.add_subplot(gs[1, 1])
+            ax_modules.set_facecolor("#0d1117")
+
+            if module_scores:
+                module_names = []
+                module_values = []
+                module_max = []
+
+                for name, data in module_scores.items():
+                    module_names.append(name.replace("_", "\n").title())
+                    module_values.append(data.get("score", 0))
+                    module_max.append(data.get("max_score", 10))
+
+                bars = ax_modules.barh(module_names, module_values, color="#58a6ff", alpha=0.8)
+
+                # Color bars based on score
+                for bar, val, max_val in zip(bars, module_values, module_max):
+                    pct = val / max_val if max_val > 0 else 0
+                    if pct >= 0.7:
+                        bar.set_color("#3fb950")
+                    elif pct >= 0.4:
+                        bar.set_color("#f0883e")
+                    else:
+                        bar.set_color("#f85149")
+
+                    # Add value label
+                    ax_modules.annotate(
+                        f"{val:.1f}/{max_val:.0f}",
+                        xy=(val, bar.get_y() + bar.get_height() / 2),
+                        xytext=(5, 0),
+                        textcoords="offset points",
+                        fontsize=9,
+                        color="#c9d1d9",
+                        va="center",
+                    )
+
+            ax_modules.set_xlabel("Score", fontsize=10, color="#8b949e")
+            ax_modules.set_title("Module Scores", fontsize=12, color="#c9d1d9", pad=10)
+            ax_modules.set_xlim(0, 25)
+            ax_modules.grid(True, alpha=0.2, color="#30363d", axis="x")
+            ax_modules.tick_params(colors="#8b949e")
+            for spine in ax_modules.spines.values():
+                spine.set_color("#30363d")
+
+            # === Key Information Panel ===
+            ax_info = fig.add_subplot(gs[2, :])
+            ax_info.set_facecolor("#0d1117")
+            ax_info.axis("off")
+
+            # Build info text
+            info_lines = []
+
+            # Confidence & ML
+            conf_color = {"HIGH": "#3fb950", "MEDIUM": "#f0883e", "LOW": "#f85149"}.get(
+                confidence, "#8b949e"
+            )
+            info_lines.append(("Confidence:", conf_color, f"{confidence}"))
+            if ml_probability:
+                info_lines.append(("ML Probability:", "#58a6ff", f"{ml_probability * 100:.1f}%"))
+
+            # Wave info
+            if wave_phase:
+                info_lines.append(("Wave:", "#a371f7", wave_phase.replace("wave", "Wave ").upper()))
+            if fib_retracement:
+                info_lines.append(("Fib Retracement:", "#a371f7", f"{fib_retracement:.1f}%"))
+
+            # Projection
+            if projected_window:
+                info_lines.append(("Breakout Window:", "#f0883e", projected_window))
+            if days_to_window is not None:
+                info_lines.append(("Days to Window:", "#f0883e", f"{days_to_window} days"))
+
+            # Draw info boxes
+            n_items = len(info_lines)
+            box_width = 0.9 / max(n_items, 1)
+
+            for i, (label, label_color, value) in enumerate(info_lines):
+                x_pos = 0.05 + i * box_width
+                ax_info.text(
+                    x_pos,
+                    0.7,
+                    label,
+                    fontsize=10,
+                    color=label_color,
+                    transform=ax_info.transAxes,
+                    fontweight="bold",
+                )
+                ax_info.text(
+                    x_pos,
+                    0.35,
+                    value,
+                    fontsize=12,
+                    color="#c9d1d9",
+                    transform=ax_info.transAxes,
+                    fontweight="bold",
+                )
+
+            # === Reasons/Notes at bottom ===
+            if reasons or notes:
+                all_items = []
+                if reasons:
+                    all_items.extend([f"• {r}" for r in reasons[:3]])
+                if notes:
+                    all_items.extend([f"• {n}" for n in notes[:3]])
+
+                if all_items:
+                    info_text = " | ".join(all_items[:5])
+                    ax_info.text(
+                        0.5,
+                        0.1,
+                        info_text,
+                        fontsize=9,
+                        color="#8b949e",
+                        transform=ax_info.transAxes,
+                        ha="center",
+                        va="bottom",
+                    )
+
+            # Style price chart
+            ax_price.set_title(f"{ticker} - SAPTA Analysis", fontsize=16, color="#c9d1d9", pad=20)
+            ax_price.set_ylabel("Price", fontsize=12, color="#8b949e")
+            ax_price.legend(loc="upper left", facecolor="#21262d", edgecolor="#30363d")
+            ax_price.grid(True, alpha=0.2, color="#30363d")
+            ax_price.tick_params(colors="#8b949e")
+
+            for spine in ax_price.spines.values():
+                spine.set_color("#30363d")
+
+            # X-axis labels
+            n = max(1, len(dates) // 6)
+            tick_positions = list(range(0, len(dates), n))
+            tick_labels = [dates[i] for i in tick_positions]
+            ax_price.set_xticks(tick_positions)
+            ax_price.set_xticklabels(tick_labels, rotation=45, ha="right")
+
+            plt.tight_layout()
+
+            # Save chart
+            ensure_charts_dir()
+            filename = generate_filename(ticker, "sapta")
+            filepath = CHARTS_DIR / filename
+
+            plt.savefig(filepath, dpi=150, facecolor="#0d1117", edgecolor="none")
+            plt.close(fig)
+
+            log.info(f"SAPTA chart saved: {filepath}")
+            return str(filepath)
+
+        except Exception as e:
+            log.error(f"Error generating SAPTA chart: {e}")
+            plt.close("all")
+            return None
+
     def _moving_average(self, data: list[float], window: int) -> list[float]:
         """Calculate simple moving average."""
         result = []
@@ -459,3 +764,41 @@ def create_forecast_chart(
     """Create and save a forecast chart."""
     gen = ChartGenerator()
     return gen.forecast_chart(ticker, dates, historical, forecast, lower, upper, days)
+
+
+def create_sapta_chart(
+    ticker: str,
+    dates: list[str],
+    prices: list[float],
+    volumes: list[float] | None = None,
+    sapta_status: str = "WATCHLIST",
+    sapta_score: float = 50.0,
+    confidence: str = "MEDIUM",
+    ml_probability: float | None = None,
+    module_scores: dict[str, dict] | None = None,
+    wave_phase: str | None = None,
+    fib_retracement: float | None = None,
+    projected_window: str | None = None,
+    days_to_window: int | None = None,
+    reasons: list[str] | None = None,
+    notes: list[str] | None = None,
+) -> str | None:
+    """Create and save a SAPTA analysis chart."""
+    gen = ChartGenerator()
+    return gen.sapta_chart(
+        ticker=ticker,
+        dates=dates,
+        prices=prices,
+        volumes=volumes,
+        sapta_status=sapta_status,
+        sapta_score=sapta_score,
+        confidence=confidence,
+        ml_probability=ml_probability,
+        module_scores=module_scores,
+        wave_phase=wave_phase,
+        fib_retracement=fib_retracement,
+        projected_window=projected_window,
+        days_to_window=days_to_window,
+        reasons=reasons,
+        notes=notes,
+    )
