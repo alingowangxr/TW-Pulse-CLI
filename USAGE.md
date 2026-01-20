@@ -1,37 +1,17 @@
 # TW-Pulse-CLI 使用說明
 
-> 台灣股票市場分析 CLI 工具 (Taiwan Stock Market Analysis CLI)
-
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub Stars](https://img.shields.io/github/stars/alingowangxr/TW-Pulse-CLI)](https://github.com/alingowangxr/TW-Pulse-CLI)
+> 台灣股票市場分析 CLI 工具 - 安裝與使用指南
 
 ---
 
 ## 目錄
 
-1. [簡介](#簡介)
-2. [安裝](#安裝)
-3. [快速開始](#快速開始)
-4. [命令參考](#命令參考)
-5. [使用範例](#使用範例)
-6. [配置說明](#配置說明)
-7. [程式架構](#程式架構)
-8. [常見問題](#常見問題)
-
----
-
-## 簡介
-
-TW-Pulse-CLI 是一個專為台灣股票市場設計的 AI 驅動命令列分析工具，提供：
-
-- **技術分析** - RSI、MACD、均線、布林通道、ATR 等指標
-- **基本面分析** - PER、PBR、ROE、EPS、股利資料
-- **法人動向** - 外資、投信、自營商買賣超
-- **股票篩選** - 依技術指標篩選股票
-- **SAPTA 預測** - 基於機器學習的預漲信號檢測
-- **AI 智能分析** - 支援多家 LLM (Groq/Gemini/Claude/GPT)
-- **交易計畫** - 自動生成停利/停損/風險報酬計算
+1. [安裝](#安裝)
+2. [設定](#設定)
+3. [啟動](#啟動)
+4. [命令](#命令)
+5. [範例](#範例)
+6. [常見問題](#常見問題)
 
 ---
 
@@ -39,7 +19,7 @@ TW-Pulse-CLI 是一個專為台灣股票市場設計的 AI 驅動命令列分析
 
 ### 環境需求
 
-- Python 3.11 或更高版本
+- Python 3.11+
 - Git
 
 ### 安裝步驟
@@ -52,406 +32,285 @@ cd TW-Pulse-CLI
 # 2. 建立虛擬環境
 python -m venv .venv
 
-# Windows
-.venv\Scripts\activate
+# 3. 啟動虛擬環境
+.venv\Scripts\activate     # Windows
+source .venv/bin/activate  # Linux/macOS
 
-# Linux/macOS
-source .venv/bin/activate
-
-# 3. 安裝依賴
+# 4. 安裝
 pip install -e .
 ```
 
-### 環境變數設定
+### 使用 uv (更快速)
 
-複製 `.env.example` 為 `.env` 並填入 API 金鑰：
+```bash
+pip install uv
+uv pip install -e .
+```
 
+---
+
+## 設定
+
+### 環境變數
+
+複製範例檔案：
 ```bash
 cp .env.example .env
 ```
 
-編輯 `.env`（設定 AI API key）：
+編輯 `.env` 填入 API Key：
 
 ```env
-# DeepSeek (預設 - 詳細分析，較慢)
-DEEPSEEK_API_KEY=your_deepseek_key
-
-# 或 Groq (免費 - 快速回應，精簡)
-# GROQ_API_KEY=your_groq_key
-
-# 或其他模型
-# GEMINI_API_KEY=your_gemini_key
+# AI API Key (選擇一個或多個)
+DEEPSEEK_API_KEY=your_key          # 預設，詳細分析
+# GROQ_API_KEY=your_key            # 免費，快速
+# GEMINI_API_KEY=your_key
 # ANTHROPIC_API_KEY=your_key
 # OPENAI_API_KEY=your_key
 
-# FinMind API (用於法人動向，可選)
-FINMIND_TOKEN=your_finmind_token
-```
+# FinMind API (法人動向)
+FINMIND_TOKEN=your_token
 
-> 💡 **提示**: 可同時填入多個 API Key，在 CLI 中自由切換模型
+# 預設模型
+PULSE_AI__DEFAULT_MODEL=deepseek/deepseek-chat
+```
 
 ### 取得 API Key
 
-| Provider | 取得方式 | 特性 |
-|----------|----------|------|
-| **DeepSeek** | https://platform.deepseek.com/api-keys | 詳細分析，較慢 (預設) |
-| **Groq** | https://console.groq.com/keys | 快速回應，免費 (推薦) |
-| **Google** | https://aistudio.google.com/apikey | 免費額度有限 |
-| **Anthropic** | https://console.anthropic.com/ | 付費，高品質 |
-| **OpenAI** | https://platform.openai.com/api-keys | 付費 |
-| **FinMind** | https://finmindtrade.com/ | 法人動向數據 |
+| Provider | 網址 | 特性 |
+|----------|------|------|
+| DeepSeek | https://platform.deepseek.com/api-keys | 預設，詳細分析 |
+| Groq | https://console.groq.com/keys | 免費額度，快速 |
+| Google | https://aistudio.google.com/apikey | 免費額度有限 |
+| Anthropic | https://console.anthropic.com/ | 付費，高品質 |
+| OpenAI | https://platform.openai.com/api-keys | 付費 |
+| FinMind | https://finmindtrade.com/ | 法人動向數據 |
 
 ---
 
-## 快速開始
-
-### 啟動 CLI
+## 啟動
 
 ```bash
-# 設定 API Key (Windows PowerShell)
-$env:DEEPSEEK_API_KEY="your_key"
+# 進入虛擬環境後
+pulse
+```
 
-# 或使用 Groq
-# $env:GROQ_API_KEY="your_groq_key"
-
-# 啟動程式
+或直接執行：
+```bash
 python -m pulse.cli.app
 ```
 
-> **注意**: 確保 `.env` 檔案中已填入 API Key，程式會自動載入
+### 快捷鍵
 
-### 進入後輸入命令
-
-```
-/help              - 顯示所有命令
-/analyze 2330      - 台積電完整分析
-/technical 2330    - 技術分析
-/fundamental 2330  - 基本面分析
-/institutional 2330 - 法人動向
-/sapta 2330        - SAPTA 預漲分析
-/screen oversold   - 篩選超賣股
-/exit              - 退出程式
-```
+| 快捷鍵 | 功能 |
+|--------|------|
+| `Enter` | 送出訊息 |
+| `Ctrl+C` | 退出程式 |
+| `Ctrl+L` | 清除對話 |
+| `Escape` | 關閉命令面板 |
+| `Tab` | 導航命令選擇 |
+| `↑` `↓` | 上下選擇 |
 
 ---
 
-## 命令參考
+## 命令
 
 ### 分析命令
 
 | 命令 | 別名 | 說明 | 用法 |
 |------|------|------|------|
-| `/analyze` | `/a`, `/stock` | 完整股票分析 | `/analyze 2330` |
-| `/technical` | `/ta`, `/tech` | 技術指標分析 | `/technical 2330` |
+| `/analyze` | `/a`, `/stock` | 完整分析 | `/analyze 2330` |
+| `/technical` | `/ta`, `/tech` | 技術分析 | `/technical 2330` |
 | `/fundamental` | `/fa`, `/fund` | 基本面分析 | `/fundamental 2330` |
-| `/institutional` | `/inst`, `/flow` | 法人動向分析 | `/institutional 2330` |
-| `/chart` | `/c`, `/kline` | K線圖 (PNG) | `/chart 2330 6mo` |
-| `/forecast` | `/fc`, `/predict` | 價格預測 | `/forecast 2330` |
-| `/compare` | `/cmp`, `/vs` | 股票比較 | `/compare 2330 2454` |
-| `/plan` | `/tp`, `/sl` | 交易計劃 | `/plan 2330` |
-| `/sapta` | `/premarkup` | SAPTA 預漲偵測 | `/sapta 2330` |
+| `/institutional` | `/inst`, `/flow` | 法人動向 | `/institutional 2330` |
+| `/chart` | `/c` | 產生圖表 | `/chart 2330 3mo` |
+| `/forecast` | `/fc` | 價格預測 | `/forecast 2330 14` |
+| `/compare` | `/cmp`, `/vs` | 比較股票 | `/compare 2330 2454` |
+| `/plan` | `/tp` | 交易計畫 | `/plan 2330` |
+| `/sapta` | `/premarkup` | 預漲偵測 | `/sapta 2330` |
+| `/index` | `/market` | 大盤指數 | `/index` |
+| `/sector` | `/sec` | 產業分析 | `/sector` |
 
 ### 篩選命令
 
 | 命令 | 別名 | 說明 | 用法 |
 |------|------|------|------|
-| `/screen` | `/scan`, `/filter` | 股票篩選 | `/screen oversold` |
+| `/screen` | `/s`, `/filter` | 股票篩選 | `/screen oversold` |
 | `/smart-money` | `/tvb`, `/主力` | 主力足跡選股 | `/smart-money --tw50` |
-
-**篩選條件:**
-- `oversold` - RSI < 30
-- `overbought` - RSI > 70
-- `bullish` - MACD 多頭 + 價格站上 SMA20
-- `bearish` - MACD 空頭
-- `breakout` - 突破壓力位
-- `momentum` - 動能股
-
-**Universe 選項:**
-```bash
-/screen oversold --universe=tw50     # 台灣50
-/screen bullish --universe=midcap    # 中型股
-/screen momentum --universe=all      # 全部
-```
-
-**匯出 CSV:**
-```bash
-/screen oversold --export             # 自動產生檔名
-/screen rsi<30 --export=my_results.csv  # 自訂檔名
-```
-
-CSV 會儲存到 `data/reports/` 目錄，包含 18 個欄位：ticker, name, sector, price, change_percent, volume, rsi_14, macd, sma_20, sma_50, pe_ratio, pb_ratio, roe, dividend_yield, market_cap, score, signals。
-
-#### `/smart-money` - 主力足跡選股
-
-**主力足跡選股器** - 基於 Trend/Volume/Bias 三維度的主力吸籌選股
-
-**評分邏輯 (總分100分):**
-
-| 維度 | 權重 | 評分項目 | 分數 |
-|------|------|----------|------|
-| 趨勢型態 | 40% | 極致壓縮 (BB寬度<15%+10天) | +25 |
-| | | 帶量突破 (突破上軌+紅棒) | +15 |
-| 量能K線 | 35% | OBV先行創高 | +15 |
-| | | 純粹攻擊量 (>2倍MV5) | +10 |
-| | | K線霸氣 (實體>70%) | +10 |
-| 乖離位階 | 25% | 黃金起漲點 (乖離5-10%) | +15 |
-| | | 長線保護短線 (站上年線) | +10 |
-
-**使用方式:**
-
-```bash
-/smart-money              # TW50 (預設, 50檔, ~10秒)
-/smart-money --tw50       # 同上
-/smart-money --listed     # 上市公司 (1,067檔, ~2分鐘)
-/smart-money --otc        # 上櫃公司 (874檔, ~90秒)
-/smart-money --all        # 全部市場 (1,941檔, ~4分鐘)
-/smart-money --fast       # 快速模式 (跳過OBV歷史比對)
-/smart-money --min=60     # 高分篩選
-/smart-money --limit=10   # 限制結果數量
-```
-
-**股票清單來源:**
-
-| 檔案 | 股票數量 | 說明 |
-|------|----------|------|
-| `data/tw_codes_tw50.json` | 50 | 台灣50成分股 |
-| `data/tw_codes_listed.json` | 1,067 | 上市公司 |
-| `data/tw_codes_otc.json` | 874 | 上櫃公司 |
-
-**輸出範例:**
-
-```
-主力足跡選股 (台灣50 (TW50), min_score=40)
----
-找到 3 檔符合條件的股票:
-
-[★  ] 2317    48.0/100  Hon Hai Precision
-    NT$224 (-2.61%)  乖離MA20:-2.8%  量比:1.4x
-    信號: 布林收縮 BB:7.5 | OBV整理 | 長紅100%
-
-圖例: ★★★=80+強勢  ★★=60-79吸籌  ★=40-59觀察
-```
-
-**別名:** `/tvb`, `/主力`
 
 ### 系統命令
 
 | 命令 | 別名 | 說明 |
 |------|------|------|
 | `/models` | `/model`, `/m` | 切換 AI 模型 |
-| `/clear` | `/cls` | 清除對話歷史 |
-| `/help` | `/h`, `/?` | 顯示說明 |
-| `/exit` | `/quit`, `/q` | 退出程式 |
+| `/clear` | `/cls` | 清除對話 |
+| `/help` | `/h`, `/?` | 說明 |
+| `/exit` | `/quit`, `/q` | 退出 |
+
+### 篩選條件
+
+| 條件 | 說明 |
+|------|------|
+| `oversold` | RSI < 30 |
+| `overbought` | RSI > 70 |
+| `bullish` | MACD 多頭 + 站上 SMA20 |
+| `bearish` | MACD 空頭 |
+| `breakout` | 突破壓力位 + 量增 |
+| `momentum` | RSI 50-70 + MACD 多頭 |
+| `undervalued` | PE < 15 + ROE > 10% |
+| `rsi<30` | 自訂條件 |
+| `pe<15 and roe>10` | 複合條件 |
+
+### Universe 選項
+
+```bash
+/screen oversold --universe=tw50     # 台灣50 (50檔)
+/screen oversold --universe=listed   # 上市公司 (1,067檔)
+/screen oversold --universe=otc      # 上櫃公司 (874檔)
+/screen oversold --universe=all      # 全部 (1,941檔)
+```
+
+### 匯出 CSV
+
+```bash
+/screen oversold --export             # 自動產生檔名
+/screen rsi<30 --export=my_data.csv   # 自訂檔名
+```
+
+匯出位置：`data/reports/screen_YYYYMMDD_HHMMSS.csv`
 
 ---
 
-## 使用範例
+## Smart Money Screener
 
-### 技術分析
+### `/smart-money` - 主力足跡選股
 
-```bash
-/technical 2330
+基於 **Trend/Volume/Bias** 三維度的主力吸籌選股。
 
-# 輸出範例：
-技術分析: 2330 (台積電)
+### 評分邏輯 (100分制)
 
-  RSI(14): 58.3 (中性)
-  MACD: 12.5 (多頭)
-  SMA20: 820 | SMA50: 795 | SMA200: 750
-  布林通道: 780 - 820 - 860
-  支撐: 800 | 壓力: 850
-  趨勢: 多頭 | 訊號: 買進
-```
+| 維度 | 權重 | 條件 | 分數 |
+|------|------|------|------|
+| 趨勢型態 | 40% | 極致壓縮 (BB寬度<15%+10天) | +25 |
+| | | 帶量突破 | +15 |
+| 量能K線 | 35% | OBV 先行創高 | +15 |
+| | | 攻擊量 (>2x MV5) | +10 |
+| | | K線霸氣 (實體>70%) | +10 |
+| 乖離位階 | 25% | 黃金起漲 (乖離5-10%) | +15 |
+| | | 站上年線 | +10 |
 
-### 法人動向
-
-```bash
-/institutional 2330
-
-# 輸出範例：
-法人動向: 2330 (台積電)
-
-  外資: +125 億 (買超)
-  投信: +8 億 (買超)
-  自營商: -3 億 (賣超)
-
-  淨流量: +130 億
-  訊號: 強力買進
-```
-
-### SAPTA 預漲分析
+### 使用方式
 
 ```bash
-/sapta 2330
-
-# 輸出範例：
-SAPTA 分析: 2330
-========================================
-狀態: [PRE-MARKUP]
-分數: 68.5/100
-信心度: 高
-ML 機率: 78%
-
-模組明細:
-  吸籌偵測: 22.5/25
-  波動收縮: 18.0/20
-  布林擠壓: 12.0/15
-  波浪分析: 10.5/15
-  時間投影: 5.5/15
-  反出貨: 0.0/10
+/smart-money              # TW50 (50檔, ~10秒)
+/smart-money --tw50       # 台灣50
+/smart-money --listed     # 上市公司 (1,067檔, ~2分鐘)
+/smart-money --otc        # 上櫃公司 (874檔, ~90秒)
+/smart-money --all        # 全部市場 (1,941檔, ~4分鐘)
+/smart-money --fast       # 快速模式 (跳過OBV)
+/smart-money --min=60     # 高分篩選
+/smart-money --limit=10   # 限制數量
 ```
 
-### 交易計畫
+### 輸出範例
 
-```bash
-/plan 2330
-
-# 輸出範例：
-交易計畫: 2330
-========================================
-進場價: NT$ 820
-停損: NT$ 800 (-2.44%)
-停利1: NT$ 840 (+2.44%)
-停利2: NT$ 860 (+4.88%)
-
-風險報酬: 1:2.0
-建議部位: 10 張
 ```
+主力足跡選股 (台灣50, min_score=40)
+---
+找到 3 檔符合條件的股票:
+
+[★  ] 2317    48.0/100  鴻海
+    NT$224 (-2.61%)  乖離MA20:-2.8%  量比:1.4x
+    信號: 布林收縮 BB:7.5 | OBV整理 | 長紅100%
+
+圖例: ★★★=80+強勢  ★★=60-79吸籌  ★=40-59觀察
+```
+
+別名：`/tvb`, `/主力`
 
 ---
 
-## 配置說明
+## SAPTA 預漲偵測
 
-### 配置文件
+### `/sapta` - 預漲信號檢測
 
-主配置文件：`config/pulse.yaml`
+**SAPTA** (System for Analyzing Pre-markup Technical Accumulation) - 基於機器學習的預漲偵測引擎。
 
-```yaml
-# AI 設定 (LiteLLM)
-ai:
-  default_model: "deepseek/deepseek-chat"
-  temperature: 0.7
-  max_tokens: 4096
-  timeout: 120
+### 狀態等级
 
-  available_models:
-    # DeepSeek (Cost-effective, high performance)
-    deepseek/deepseek-chat: "DeepSeek Chat (DeepSeek)"
-    # Groq (免費)
-    groq/llama-3.3-70b-versatile: "Llama 3.3 70B (Groq)"
-    groq/llama-3.1-8b-instant: "Llama 3.1 8B (Groq)"
-    # Google
-    gemini/gemini-2.0-flash: "Gemini 2.0 Flash (Google)"
-    # Anthropic
-    anthropic/claude-sonnet-4-20250514: "Claude Sonnet 4 (Anthropic)"
-    # OpenAI
-    openai/gpt-4o: "GPT-4o (OpenAI)"
-```
+| 狀態 | 分數 | 意義 |
+|------|------|------|
+| **PRE-MARKUP** | >= 47 | 準備突破 |
+| **SIAP** | >= 35 | 接近就緒 |
+| **WATCHLIST** | >= 24 | 早期吸籌 |
+| **SKIP** | < 24 | 無信號 |
 
-### 可用 AI 模型
-
-| 模型 ID | 名稱 | Provider | 速度 | 風格 |
-|---------|------|----------|------|------|
-| `deepseek/deepseek-chat` | DeepSeek Chat | DeepSeek | 較慢 | 詳細 (預設) |
-| `groq/llama-3.3-70b-versatile` | Llama 3.3 70B | Groq | **很快** | 精簡 (免費) |
-| `groq/llama-3.1-8b-instant` | Llama 3.1 8B | Groq | 很快 | 精簡 (免費) |
-| `gemini/gemini-2.0-flash` | Gemini 2.0 Flash | Google | 快 | 平衡 |
-| `anthropic/claude-sonnet-4-20250514` | Claude Sonnet 4 | Anthropic | 中等 | 詳細 |
-| `openai/gpt-4o` | GPT-4o | OpenAI | 中等 | 詳細 |
-
-#### 模型選擇建議
-
-| 使用場景 | 推薦模型 |
-|----------|----------|
-| 深度分析報告 ( `/analyze`) | **DeepSeek** |
-| 快速查詢 ( `/technical`, `/sapta`) | **Groq** |
-| 平衡速度與品質 | Gemini 2.0 Flash |
-
-#### 切換模型
+### 使用方式
 
 ```bash
-# 顯示模型選擇清單
-/models
-
-# 選擇模型
-/models groq/llama-3.3-70b-versatile
-/models deepseek/deepseek-chat
+/sapta 2330                 # 單一股票
+/sapta 2330 --detailed      # 詳細分析
+/sapta chart 2330           # 產生圖表
+/sapta scan                 # 掃描 TW50
+/sapta scan --listed        # 掃描上市公司
 ```
 
-或在 `.env` 設定預設模型:
-```env
-PULSE_AI__DEFAULT_MODEL=deepseek/deepseek-chat
+### 圖表輸出
+
+```bash
+/sapta chart 2330           # 基本圖表
+/sapta chart 2330 --detailed # 詳細分析圖
 ```
+
+圖表儲存：`charts/sapta_{TICKER}_{YYYYMMDD}.png`
 
 ---
 
-## 程式架構
+## 範例
+
+### 基本分析
 
 ```
-TW-Pulse-CLI/
-├── pulse/
-│   ├── ai/                    # AI 整合 (LiteLLM)
-│   │   ├── client.py          # AI 客戶端
-│   │   └── prompts.py         # 提示詞模板
-│   ├── cli/
-│   │   ├── app.py             # Textual TUI 應用
-│   │   └── commands/
-│   │       ├── registry.py    # 命令註冊中心
-│   │       ├── analysis.py    # 分析命令
-│   │       ├── screening.py   # 篩選命令 (含 CSV 匯出)
-│   │       └── advanced.py    # 進階命令
-│   ├── core/
-│   │   ├── config.py          # 設定管理
-│   │   ├── smart_agent.py     # 智能 Agent
-│   │   ├── screener.py        # 股票篩選器
-│   │   ├── trading_plan.py    # 交易計畫生成
-│   │   ├── forecasting.py     # 價格預測
-│   │   ├── analysis/          # 分析模組
-│   │   │   ├── technical.py
-│   │   │   ├── fundamental.py
-│   │   │   └── institutional_flow.py
-│   │   ├── data/              # 數據層
-│   │   │   ├── yfinance.py
-│   │   │   ├── finmind_data.py
-│   │   │   └── fugle.py       # Fugle 整合
-│   │   └── sapta/             # SAPTA 引擎
-│   │       ├── engine.py
-│   │       ├── modules/       # 6 個分析模組
-│   │       └── ml/            # 機器學習
-│   └── utils/
-│       ├── constants.py       # 股票清單
-│       └── formatters.py      # 輸出格式化
-├── config/
-│   └── pulse.yaml             # 配置文件
-├── data/
-│   ├── tw_codes_tw50.json     # TW50 股票清單 (50檔)
-│   ├── tw_codes_listed.json   # 上市公司清單 (1,067檔)
-│   ├── tw_codes_otc.json      # 上櫃公司清單 (874檔)
-│   ├── cache/                 # 快取目錄
-│   └── reports/               # 匯出報告 (CSV)
-└── .env.example               # 環境變數範例
+> 分析 2330
+> 台積電技術面如何？
+> 比較 2330 和 2317
 ```
 
-### 數據流程
+### 篩選股票
 
 ```
-用戶輸入 → CommandRegistry → Data Provider → Analysis Module → AI Agent → 輸出
-              (命令解析)      (FinMind/Yahoo)    (技術/基本面)    (LLM分析)
+> 找出超賣的股票
+> 找 RSI < 30 的股票
+> 篩選突破股票
+```
+
+### 交易相關
+
+```
+> 幫 2330 建立交易計畫
+> 檢查 2303 的潛在買點
+```
+
+### SAPTA
+
+```
+> 找預漲股票
+> 找準備突破的股票
+> 掃描全市場預漲股
 ```
 
 ---
 
 ## 常見問題
 
-### Q1: 如何取得免費 AI API Key?
+### Q1: 沒有 API Key 怎麼辦？
 
-**推薦使用 Groq (免費額度最高):**
+**推薦 Groq (免費且快速)：**
 1. 訪問 https://console.groq.com/keys
-2. 註冊帳號
-3. 建立 API Key
-4. 設定環境變數: `export GROQ_API_KEY="your_key"`
+2. 註冊並建立 API Key
+3. 設定 `GROQ_API_KEY` 環境變數
 
-### Q2: 出現 Rate Limit 錯誤怎麼辦?
+### Q2: Rate Limit 怎麼辦？
 
 ```bash
 # 切換到其他 Provider
@@ -459,72 +318,40 @@ export GROQ_API_KEY="your_groq_key"
 export PULSE_AI__DEFAULT_MODEL="groq/llama-3.3-70b-versatile"
 ```
 
-### Q3: 如何切換 AI 模型?
+### Q3: 如何切換 AI 模型？
 
 ```bash
 # 方法1: 使用命令
 /models
 
-# 方法2: 設定環境變數
-export PULSE_AI__DEFAULT_MODEL="deepseek/deepseek-chat"
+# 方法2: 環境變數
+export PULSE_AI__DEFAULT_MODEL="groq/llama-3.3-70b-versatile"
 
-# 方法3: 編輯 .env 檔案
+# 方法3: 編輯 .env
 PULSE_AI__DEFAULT_MODEL=deepseek/deepseek-chat
 ```
 
-### Q4: 法人動向數據從哪裡來?
+### Q4: 法人動向沒有數據？
 
-法人動向數據來自 [FinMind](https://finmindtrade.com/)。
-- 免費註冊即可使用
-- 設定 `FINMIND_TOKEN` 可提高 API 配額
+確認已設定 `FINMIND_TOKEN`：
+- 訪問 https://finmindtrade.com/ 註冊
+- 取得 Token 填入 `.env`
 
-### Q5: CLI 沒有回應怎麼辦?
+### Q5: CLI 沒有回應？
 
 1. 檢查網路連線
 2. 確認 API Key 正確
-3. 使用 `/clear` 清除對話歷史
+3. 使用 `/clear` 清除對話
 4. 檢查日誌：`data/logs/pulse.log`
 
-### Q6: 支援哪些數據源?
+### Q6: 數據源
 
-| 數據源 | 用途 | 備註 |
-|--------|------|------|
-| **FinMind** | 法人動向、融資融券 | 主要來源 |
-| **Yahoo Finance** | 股價、技術指標 | 備援來源 |
-
----
-
-## 測試
-
-```bash
-# 執行所有測試
-pytest
-
-# 執行特定測試
-pytest tests/test_core/test_data/test_yfinance.py -v
-
-# 顯示覆蓋率
-pytest --cov=pulse --cov-report=term-missing
-```
+| 數據源 | 用途 |
+|--------|------|
+| **FinMind** | 法人動向、融資融券、基本面 |
+| **Yahoo Finance** | 股價、技術指標 |
+| **Fugle** | 即時報價、52週高低 |
 
 ---
 
-## 貢獻
-
-歡迎提交 Issue 和 Pull Request！
-
-1. Fork 本專案
-2. 建立 Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. 提交變更 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到 Branch (`git push origin feature/AmazingFeature`)
-5. 建立 Pull Request
-
----
-
-## 授權
-
-本專案採用 MIT License 授權。
-
----
-
-**TW-Pulse-CLI 台灣股票市場分析工具**
+**最後更新**: 2026-01-20
