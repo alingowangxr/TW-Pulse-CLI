@@ -937,7 +937,7 @@ PULSE_DEBUG=true
 
 ## Project Summary
 
-**TW-Pulse-CLI** (v0.1.4) is an AI-powered Taiwan Stock Market Analysis CLI tool built with Python 3.11+. It provides comprehensive stock analysis through a terminal user interface (TUI), integrating real-time data, technical/fundamental analysis, institutional flow data, and ML-powered predictions.
+**TW-Pulse-CLI** (v0.1.8) is an AI-powered Taiwan Stock Market Analysis CLI tool built with Python 3.11+. It provides comprehensive stock analysis through a terminal user interface (TUI), integrating real-time data, technical/fundamental analysis, institutional flow data, and ML-powered predictions.
 
 ### Core Capabilities
 
@@ -947,6 +947,7 @@ PULSE_DEBUG=true
 | **Fundamental Analysis** | P/E, P/B, ROE/ROA, Dividend Yield, Revenue Growth, Profit Margins |
 | **Institutional Flow** | Foreign Investors, Trust Funds, Dealer proprietary/dealer hedging |
 | **ML Predictions** | SAPTA Engine (6 modules) for pre-markup detection |
+| **Smart Money Screener** | Trend/Volume/Bias based accumulation detection |
 | **Trading Tools** | Trading plans, Position sizing, Price forecasts, Chart generation |
 | **Stock Screening** | Preset + flexible criteria with CSV export |
 
@@ -993,10 +994,10 @@ pulse/
 | Features | 9.5/10 |
 | Code Structure | 9.5/10 |
 | Documentation | 9/10 |
-| Test Coverage | 8.5/10 (85+ tests) |
+| Test Coverage | 9.2/10 (439 tests) |
 | Error Handling | 9/10 |
 | Data Redundancy | 9/10 (3 sources) |
-| **Overall** | **9.4/10** |
+| **Overall** | **9.5/10** |
 
 ---
 
@@ -1005,12 +1006,12 @@ pulse/
 ### High Priority
 
 #### Testing & Coverage (Target: 80%+)
-- [ ] SmartAgent complete tests (`pulse/core/smart_agent.py`)
-- [ ] Trading plan generator tests (`pulse/core/trading_plan.py`)
-- [ ] Technical analyzer tests (`pulse/core/analysis/technical.py`)
-- [ ] Screener tests (`pulse/core/screener.py`)
-- [ ] AI client tests (`pulse/ai/client.py`)
-- [ ] Command handler integration tests (`pulse/cli/commands/`)
+- [x] SmartAgent complete tests (`pulse/core/smart_agent.py`) - **DONE v0.1.6 (99 tests)**
+- [x] Trading plan generator tests (`pulse/core/trading_plan.py`) - **DONE v0.1.6 (77 tests)**
+- [x] Technical analyzer tests (`pulse/core/analysis/technical.py`) - **DONE v0.1.6 (46 tests)**
+- [x] Screener tests (`pulse/core/screener.py`) - **DONE v0.1.6 (92 tests)**
+- [x] AI client tests (`pulse/ai/client.py`) - **DONE v0.1.6 (29 tests)**
+- [x] Command handler integration tests (`pulse/cli/commands/`) - **DONE v0.1.6 (29 tests)**
 - [ ] End-to-end tests (E2E)
 
 #### SAPTA Enhancements
