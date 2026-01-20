@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![TW-Pulse-CLI](https://img.shields.io/badge/TW-Pulse--CLI-58a6ff?style=for-the-badge&logo=python&logoColor=white)
+![TW-Pulse-CLI](https://img.shields.io/badge/TW--Pulse--CLI-58a6ff?style=for-the-badge&logo=python&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.11+-3776ab?style=for-the-badge&logo=python&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-Beta-yellow?style=for-the-badge)
@@ -11,7 +11,7 @@
 
 *台灣股市分析工具 (基於 AI 的終端介面)*
 
-[Features](#features) • [Installation](#installation) • [Usage](#usage) • [Commands](#commands) • [SAPTA Engine](#sapta-engine) • [Configuration](#configuration) • [Documentation](docs/)
+[Features](#features) • [Installation](#installation) • [Usage](USAGE.md) • [Roadmap](TODO.md)
 
 [![GitHub](https://img.shields.io/badge/GitHub-alingowangxr%2FTW--Pulse--CLI-181717?style=flat-square&logo=github)](https://github.com/alingowangxr/TW-Pulse-CLI)
 
@@ -19,1143 +19,120 @@
 
 ---
 
-## Overview
+## About
 
-**TW-Pulse-CLI** 是一個強大的終端使用者介面 (TUI) 應用程式，用於台灣股市分析。它整合了：
+**TW-Pulse-CLI** 是基於 [Pulse-CLI](https://github.com/alingowangxr/Pulse-CLI) 借鑑並重新改寫的台灣股市分析 CLI 工具。
 
-- **即時數據** 來自 FinMind (主要), Yahoo Finance (備用)
-- **技術分析** (RSI, MACD, 布林通道, 支撐/壓力)
-- **基本面分析** (本益比, 股價淨值比, 股東權益報酬率, 股利殖利率)
-- **AI/LLM 整合** 支援多家 LLM (Groq/Gemini/Claude/GPT)
-- **SAPTA 引擎** - 基於機器學習的盤前預漲偵測系統
-- **交易計畫生成器** 包含停利/停損/風險報酬計算
-- **法人動向分析** 來自 FinMind 數據
+原 Pulse-CLI 專注於印尼股市，本專案針對台灣市場進行優化，整合 FinMind、Yahoo Finance 等數據源，提供技術分析、基本面分析、法人動向、機器學習預測等功能。
 
 ---
 
 ## Features
 
-### Core Features
-
 | Feature | Description |
 |---------|-------------|
 | **Smart Agent** | AI 代理會在分析前獲取真實數據 |
 | **Natural Language** | 支援繁體中文或英文提問 |
-| **Stock Screening** | 使用多種條件篩選台灣股票 |
-| **Technical Analysis** | 15+ 種技術指標自動分析 |
-| **Trading Plan** | 生成包含停利/停損/風險報酬的交易計畫 |
-| **SAPTA Detection** | 使用機器學習偵測預漲階段 |
-| **Price Forecast** | 價格預測含信賴區間 |
-| **Chart Generation** | 匯出圖表為 PNG 格式 |
-
-### Supported Analysis
-
-```
-Technical Indicators        Fundamental Metrics       SAPTA Modules
-─────────────────────      ──────────────────────    ─────────────────────
-• RSI (14)                 • P/E Ratio               • Supply Absorption
-• MACD + Signal + Hist     • P/B Ratio               • Compression
-• SMA (20, 50, 200)        • ROE / ROA               • BB Squeeze
-• EMA (9, 21, 55)          • Net Profit Margin       • Elliott Wave
-• Bollinger Bands          • Debt to Equity          • Time Projection
-• Stochastic K/D           • Dividend Yield          • Anti-Distribution
-• ATR (14)                 • Revenue Growth
-• Support/Resistance       • Earnings Growth
-• Volume Analysis          • Market Cap
-```
+| **Technical Analysis** | RSI, MACD, 布林通道, SMA/EMA 等 15+ 指標 |
+| **Fundamental Analysis** | PE, PB, ROE/ROA, 股息率, 營收成長 |
+| **Institutional Flow** | 外資、投信、自營商買賣超分析 |
+| **Stock Screening** | 多條件篩選股票，支援 CSV 匯出 |
+| **Trading Plan** | 自動生成停利/停損/風險報酬計算 |
+| **SAPTA Engine** | 機器學習預漲偵測 (6 模組 + XGBoost) |
+| **Smart Money Screener** | 主力足跡選股 (Trend/Volume/Bias) |
+| **Chart Generation** | 匯出價格圖表為 PNG 格式 |
 
 ---
 
-## Installation
+## Quick Start
 
-### Prerequisites
-
-- **Python 3.11+** (required)
-- **pip** or **uv** package manager
-- **Git** (for cloning)
-
-### Quick Install
+### Installation
 
 ```bash
-# Clone repository
 git clone https://github.com/alingowangxr/TW-Pulse-CLI.git
 cd TW-Pulse-CLI
-
-# Create virtual environment (recommended)
 python -m venv .venv
+.venv\Scripts\activate  # Windows
 source .venv/bin/activate  # Linux/macOS
-# or
-.venv\Scripts\activate     # Windows
-
-# Install package
 pip install -e .
-
-# Install Playwright browsers (optional - for legacy Stockbit integration)
-playwright install chromium
 ```
 
-### Install with Development Dependencies
+### Configuration
+
+複製環境變數範例並設定 API Key：
 
 ```bash
-pip install -e ".[dev]"
+cp .env.example .env
 ```
 
-### Using uv (Faster)
+編輯 `.env`：
 
-```bash
-# Install uv if not installed
-pip install uv
-
-# Install with uv
-uv pip install -e .
+```env
+DEEPSEEK_API_KEY=your_key          # 預設 AI 模型
+FINMIND_TOKEN=your_token           # 法人動向數據
 ```
 
-### Verify Installation
+### Launch
 
 ```bash
-# Check if pulse is installed
-pulse --help
-
-# Or run directly
-python -m pulse.cli.app
-```
-
----
-
-## Usage
-
-### Starting Pulse CLI
-
-```bash
-# Simply run
 pulse
 ```
-
-You'll see the TUI interface:
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ Pulse - Type /help for commands                                 │
-│                                                                 │
-│                                                                 │
-│                                                                 │
-├─────────────────────────────────────────────────────────────────┤
-│ > Message Pulse...                                              │
-│                                                           pulse │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Basic Interactions
-
-#### Natural Language (Traditional Chinese / 繁體中文)
-
-```
-> 分析 2330
-> 台灣股市今天狀況如何?
-> 比較 2330 和 2317
-> 找出超賣的股票
-> 幫 2454 建立交易計畫
-> 檢查 2303 的潛在買點
-```
-
-#### Natural Language (English)
-
-```
-> analyze 2330
-> what's the technical outlook for 2317?
-> compare tech stocks 2330 2454 2303
-> find undervalued stocks
-> generate trading plan for 2881
-```
-
-#### Slash Commands
-
-```
-> /analyze 2330
-> /technical 2317
-> /fundamental 2454
-> /chart 2330 6mo
-> /forecast 2454 14
-> /plan 2317
-> /sapta 2303
-> /screen oversold
-```
-
-### Keyboard Shortcuts
-
-| Shortcut | Action |
-|----------|--------|
-| `Enter` | Submit message/command |
-| `Ctrl+C` | Quit application |
-| `Ctrl+L` | Clear chat history |
-| `Escape` | Close command palette |
-| `Tab` | Navigate command palette |
-| `↑` `↓` | Navigate options |
-
----
-
-## Commands
-
-### Quick Reference
-
-| Command | Aliases | Description |
-|---------|---------|-------------|
-| `/help` | `/h`, `/?` | Show available commands |
-| `/analyze` | `/a`, `/stock` | Complete stock analysis |
-| `/technical` | `/ta`, `/tech` | Technical analysis only |
-| `/fundamental` | `/fa`, `/fund` | Fundamental analysis only |
-| `/institutional` | `/inst`, `/flow` | Institutional investor flow analysis |
-| `/chart` | `/c` | Generate price chart |
-| `/forecast` | `/fc` | Price prediction |
-| `/screen` | `/s`, `/filter` | Stock screening |
-| `/smart-money` | `/tvb`, `/主力` | Smart Money Screener (Trend/Volume/Bias) |
-| `/sector` | `/sec` | Sector analysis |
-| `/compare` | `/cmp`, `/vs` | Compare multiple stocks |
-| `/plan` | `/tp`, `/sl` | Trading plan generator |
-| `/sapta` | `/premarkup` | SAPTA pre-markup detection |
-| `/index` | `/market` | Market index status |
-| `/models` | `/model`, `/m` | Switch AI model |
-| `/clear` | `/cls` | Clear chat history |
-
-### Command Details
-
-#### `/analyze <TICKER>` - Complete Analysis
-
-完整分析包括價格、技術面和 AI 洞察。
-
-```
-/analyze 2330
-```
-
-Output:
-```
-2330 - 台積電 (Taiwan Semiconductor Manufacturing Company)
-
-Price: NT$ 820 (+5, +0.61%)
-Volume: 15,234,500 (Avg: 12,456,000)
-Range: 815 - 825
-52W: 500 - 850
-
-Technical:
-  RSI(14): 58.3 - Neutral
-  MACD: Bullish crossover
-  Trend: Bullish
-  Signal: Buy
-
-AI Insight:
-台積電顯示出積極的動能，RSI 位於中性區間...
-```
-
-#### `/technical <TICKER>` - Technical Analysis
-
-```
-/technical 2317
-```
-
-Output:
-```
-Technical Analysis: 2317
-
-  RSI(14): 45.2 (Neutral)
-  MACD: -12.5 (Signal: -15.3) - Bullish
-  SMA20: 5,425 | SMA50: 5,380
-  Bollinger: 5,200 - 5,400 - 5,600
-  Stochastic: K=35.2, D=38.5
-  Support: 5,200 | Resistance: 5,600
-  Trend: Sideways | Signal: Neutral
-```
-
-#### `/chart <TICKER> [period]` - Price Chart
-
-生成並儲存圖表為 PNG。
-
-```
-/chart 2330 3mo
-/chart 2317 1y
-```
-
-Periods: `1mo`, `3mo`, `6mo`, `1y`, `2y`
-
-#### `/forecast <TICKER> [days]` - Price Forecast
-
-```
-/forecast 2454 14
-```
-
-Output:
-```
-Forecast: 2454 (14 days)
-
-Current: NT$ 750
-Target: NT$ 770 (+2.67%)
-Trend: UP
-Support: NT$ 730
-Resistance: NT$ 780
-Confidence: 72%
-
-Chart saved: charts/2454_forecast_20240115.png
-```
-
-#### `/screen <criteria>` - Stock Screening
-
-**Preset Screeners:**
-
-```
-/screen oversold      # RSI < 30
-/screen overbought    # RSI > 70
-/screen bullish       # MACD bullish + price > SMA20
-/screen bearish       # MACD bearish + price < SMA20
-/screen breakout      # Near resistance + volume spike
-/screen momentum      # RSI 50-70 + MACD bullish
-/screen undervalued   # PE < 15 + ROE > 10%
-```
-
-**Flexible Criteria:**
-
-```
-/screen rsi<30
-/screen pe<15
-/screen rsi>70 and pe<20
-```
-
-**Universe Options:**
-
-```
-/screen oversold --universe=all       # All Taiwan stocks
-```
-
-**Export to CSV:**
-
-```
-/screen oversold --export             # Export to data/reports/screen_YYYYMMDD_HHMMSS.csv
-/screen rsi<30 --export=my_results.csv  # Export with custom filename
-```
-
-The CSV export includes 18 columns: ticker, name, sector, price, change_percent, volume, rsi_14, macd, sma_20, sma_50, pe_ratio, pb_ratio, roe, dividend_yield, market_cap, score, signals.
-
-#### `/plan <TICKER> [account_size]` - Trading Plan
-
-```
-/plan 2330
-/plan 2317 5000000
-```
-
-Output:
-```
-TRADING PLAN: 2330
-Generated: 2024-01-15 14:30
-
-=== ENTRY ===
-Price: NT$ 820 (current)
-Type: Market
-Trend: Bullish | Signal: Buy
-
-=== TAKE PROFIT ===
-TP1: NT$ 840 (+2.44%) - Conservative
-TP2: NT$ 860 (+4.88%) - Moderate
-TP3: NT$ 880 (+7.32%) - Aggressive
-
-=== STOP LOSS ===
-SL: NT$ 800 (-2.44%)
-Method: Hybrid
-
-=== RISK/REWARD ===
-Risk: NT$ 20 per share (2.44%)
-Reward (TP1): NT$ 20 (2.44%)
-R:R to TP1: 1:1.0 [FAIR]
-R:R to TP2: 1:2.0 [GOOD]
-
-Trade Quality: FAIR
-Confidence: 65%
-
-=== POSITION SIZING (2% Risk) ===
-Account: NT$ 10,000,000
-Max Risk: NT$ 200,000
-Suggested: 10 units (10,000 shares)
-Position Value: NT$ 8,200,000 (82.0% of account)
-
-=== EXECUTION STRATEGY ===
-1. Entry: Buy at market or limit NT$ 820
-2. Set stop loss immediately at NT$ 800
-3. TP1: Sell 50% position at NT$ 840
-4. After TP1 hit: Move SL to breakeven
-5. TP2: Sell remaining 50% at NT$ 860
-```
-
-#### `/compare <TICKER1> <TICKER2> ...` - Compare Stocks
-
-```
-/compare 2330 2317 2454
-```
-
-Output:
-```
-Stock Comparison
-
-Ticker   Price        Change      Volume
-------------------------------------------------
-2330       820        +0.61%      15,234,500
-2317       120        +1.23%      45,678,900
-2454       750        +0.65%      23,456,700
-```
-
-#### `/institutional <TICKER>` - Institutional Investor Flow Analysis
-
-```
-/institutional 2330
-```
-
-Output:
-```
-═══ 機構法人動向: 2330 (2024-01-01 至 2024-01-15) ═══
-
-總體訊號: BUY (評分: 70/100)
-
-─── 機構法人淨買賣超 ───
-總計淨流量: NT$ 500,000,000
-外資淨流量: NT$ 300,000,000
-投信淨流量: NT$ 150,000,000
-自營商淨流量: NT$ 50,000,000
-
-─── 洞察報告 ───
-🟢 機構法人總計淨買超 NT$ 500,000,000 (過去 20 個交易日)
-🟢 外資淨買超 NT$ 300,000,000
-🟢 投信淨買超 NT$ 150,000,000
-🟢 自營商淨買超 NT$ 50,000,000
-```
-
-#### `/auth` - Stockbit Authentication (Deprecated)
-
-⚠️ **Note**: Stockbit is an Indonesian platform. This feature is deprecated for Taiwan market.
-For Taiwan institutional flow analysis, use `/institutional` command instead.
-
-```
-# Legacy Stockbit auth commands (not recommended for Taiwan market)
-/auth                              # Check auth status
-/auth status                       # Detailed token info
-/auth set-token <JWT_TOKEN>        # Set token manually
-```
-
-
-
----
-
-## SAPTA Engine
-
-### Overview
-
-**SAPTA** (System for Analyzing Pre-markup Technical Accumulation) 是基於機器學習的引擎，用於偵測股票是否處於 **預漲階段** - 即價格突破前的吸籌階段。
-
-### How It Works
-
-SAPTA 使用 6 個分析模組:
-
-| Module | Weight | Description |
-|--------|--------|-------------|
-| **Supply Absorption** | 25% | 透過成交量和價格行為偵測主力吸籌 |
-| **Compression** | 20% | 波動收縮 - 價格區間縮窄 |
-| **BB Squeeze** | 15% | 布林通道擠壓偵測 |
-| **Elliott Wave** | 15% | 波浪位置和費波那契回撤 |
-| **Time Projection** | 15% | 費波那契時間窗口 + 行星相位 |
-| **Anti-Distribution** | 10% | 過濾出貨階段 |
-
-### Status Levels
-
-| Status | Score | Meaning |
-|--------|-------|---------|
-| **PRE-MARKUP** | >= 47 | 準備在短期內突破 |
-| **SIAP** | >= 35 | 接近就緒，需密切監控 |
-| **WATCHLIST** | >= 24 | 仍處於早期吸籌階段 |
-| **SKIP** | < 24 | 尚未顯示預漲訊號 |
-
-### Usage
-
-**Single Stock Analysis:**
-
-```
-/sapta 2330
-/sapta 2454 --detailed
-```
-
-**Scan Multiple Stocks:**
-
-```
-/sapta scan              # Scan TW50 (default)
-/sapta scan tw50         # 50 stocks
-/sapta scan midcap       # 100 stocks
-/sapta scan popular      # Popular stocks
-/sapta scan all          # All stocks
-```
-
-**Generate SAPTA Chart:**
-
-```
-/sapta chart 2330              # Generate SAPTA analysis chart
-/sapta chart 2454 --detailed   # Chart with detailed analysis
-```
-
-The chart includes:
-- Price chart with MA20/MA50 overlay
-- SAPTA status and score badges
-- Module scores bar chart (color-coded by performance)
-- Confidence level and ML probability
-- Elliott wave phase and Fibonacci retracement
-- Projected breakout window and countdown
-
-Saved to: `charts/sapta_{TICKER}_{YYYYMMDD}.png`
-
-**Natural Language:**
-
-```
-> 找預漲股票
-> 找準備突破的股票
-> 掃描全市場預漲股
-```
-
-### Example Output
-
-```
-SAPTA Analysis: 2330
-========================================
-Status: [PRE-MARKUP]
-Score: 68.5/100
-Confidence: HIGH
-ML Probability: 78%
-Wave Phase: Wave 3 (Impulse)
-Fib Retracement: 61.8%
-Projected Window: 5-8 days
-Days to Window: 3
-
-Module Breakdown
-------------------------------
-  [+] Absorption: 22.5/25
-  [+] Compression: 18.0/20
-  [+] BB Squeeze: 12.0/15
-  [+] Elliott: 10.5/15
-  [-] Time Projection: 5.5/15
-  [+] Anti-Distribution: 0.0/10
-
-Signals
-------------------------------
-  - High volume accumulation detected
-  - Volatility compression 15 days
-  - Bollinger squeeze active
-  - Wave 3 position confirmed
-  - Near Fibonacci time cluster
-```
-
----
-
-## Smart Money Screener
-
-### Overview
-
-**Smart Money Screener** (主力足跡選股器) 是一個基於 **Trend/Volume/Bias** 三維度的選股工具，專為「無籌碼數據」環境優化，利用技術分析捕捉主力吸籌行為。
-
-### Scoring Logic (100 points total)
-
-| Dimension | Weight | Condition | Points |
-|-----------|--------|-----------|--------|
-| **Trend & Pattern** | 40% | Perfect Squeeze (BB Width < 15%, 10+ days) | +25 |
-| | | Breakout (Price > BB Upper + Green Candle) | +15 |
-| **Volume & Candle** | 35% | OBV Breaks High (Smart Money) | +15 |
-| | | Attack Volume (>2x MV5) | +10 |
-| | | Strong Candle (Body > 70%) | +10 |
-| **Bias & Position** | 25% | Golden Launch (Bias 5-10%) | +15 |
-| | | Above Annual MA | +10 |
-
-### Usage
-
-```bash
-/smart-money                    # TW50 (default, 50 stocks, ~10s)
-/smart-money --tw50             # Same as above
-/smart-money --listed           # Listed companies (1,067, ~2min)
-/smart-money --otc              # OTC stocks (874, ~90s)
-/smart-money --all              # All market (1,941, ~4min)
-/smart-money --fast             # Fast mode (skip OBV history)
-/smart-money --min=60           # High score filter
-/smart-money --limit=10         # Limit results
-```
-
-### Stock Universe Data
-
-| File | Count | Description |
-|------|-------|-------------|
-| `data/tw_codes_tw50.json` | 50 | TW50 components |
-| `data/tw_codes_listed.json` | 1,067 | Listed companies |
-| `data/tw_codes_otc.json` | 874 | OTC stocks |
-
-### Example Output
-
-```
-主力足跡選股 (台灣50 (TW50), min_score=40)
----
-找到 3 檔符合條件的股票:
-
-[★  ] 2317    48.0/100  Hon Hai Precision
-    NT$224 (-2.61%)  乖離MA20:-2.8%  量比:1.4x
-    信號: 布林收縮 BB:7.5 | OBV整理 | 長紅100%
-
-[★  ] 2330    35.0/100  TSMC
-    NT$1,775 (+0.85%)  乖離MA20:+8.8%  量比:0.9x
-    信號: 長紅 實體:100% | 黃金起漲 乖離:8.8 | 站上年線
-
-圖例: ★★★=80+強勢  ★★=60-79吸籌  ★=40-59觀察
-```
-
-### Aliases
-
-- `/smart-money` - Main command
-- `/tvb` - Short alias
-- `/主力` - Chinese alias
-
----
-
-## Configuration
-
-### Environment Variables
-
-Create `.env` file in project root:
-
-```env
-# AI API Key (選擇一個即可)
-GROQ_API_KEY=your_groq_key              # Groq (免費，推薦)
-# GEMINI_API_KEY=your_gemini_key        # Google Gemini
-# ANTHROPIC_API_KEY=your_anthropic_key  # Anthropic Claude
-# OPENAI_API_KEY=your_openai_key        # OpenAI GPT
-
-# 預設 AI 模型 (可選)
-PULSE_AI__DEFAULT_MODEL=groq/llama-3.3-70b-versatile
-
-# FinMind API (用於法人動向，可選)
-FINMIND_TOKEN=your_finmind_token
-
-# Debug
-PULSE_DEBUG=false
-```
-
-**取得免費 API Key:**
-- **Groq** (推薦): https://console.groq.com/keys
-- **Google**: https://aistudio.google.com/apikey
-- **FinMind**: https://finmindtrade.com/
-
-
-
-### Configuration File
-
-Edit `config/pulse.yaml`:
-
-```yaml
-# AI Settings (LiteLLM - 支援多家 LLM)
-ai:
-  default_model: "groq/llama-3.3-70b-versatile"
-  temperature: 0.7
-  max_tokens: 4096
-  timeout: 120
-
-# Data Settings
-data:
-  cache_ttl: 3600  # 1 hour
-  default_period: "3mo"
-
-# Analysis Settings
-analysis:
-  rsi_period: 14
-  rsi_oversold: 30
-  rsi_overbought: 70
-  macd_fast: 12
-  macd_slow: 26
-  macd_signal: 9
-
-# UI Settings
-ui:
-  theme: "dark"
-  chart_width: 60
-  chart_height: 15
-  max_results: 50
-```
-
-### Available AI Models
-
-| Model ID | Provider | 備註 |
-|----------|----------|------|
-| `groq/llama-3.3-70b-versatile` | Groq | 免費，推薦 |
-| `groq/llama-3.1-8b-instant` | Groq | 免費，快速 |
-| `gemini/gemini-2.0-flash` | Google | 免費額度有限 |
-| `gemini/gemini-2.5-flash-preview-05-20` | Google | 免費額度有限 |
-| `anthropic/claude-sonnet-4-20250514` | Anthropic | 付費 |
-| `anthropic/claude-haiku-4-20250514` | Anthropic | 付費 |
-| `openai/gpt-4o` | OpenAI | 付費 |
-| `openai/gpt-4o-mini` | OpenAI | 付費 |
-
-Switch model:
-```
-/models              # Open model selector
-```
-
----
-
-## Stock Universe
-
-### Preset Universes
-
-| Universe | Count | Description | Data Source |
-|----------|-------|-------------|-------------|
-| `tw50` | 50 | TW50 components | `data/tw_codes_tw50.json` |
-| `listed` | 1,067 | Listed companies | `data/tw_codes_listed.json` |
-| `otc` | 874 | OTC stocks | `data/tw_codes_otc.json` |
-| `all` | 1,941 | All Taiwan stocks | Listed + OTC |
-
-### Data Source
-
-Stock data primarily from [FinMind](https://finmindtrade.com/), with Yahoo Finance as fallback. Stock universe from local JSON files in `data/` directory.
-
-Supported indices:
-- **TAIEX** (^TWII) - Taiwan Weighted Index
-
----
-
-## Project Structure
-
-```
-tw-pulse-cli/
-├── pulse/
-│   ├── __init__.py
-│   ├── cli/                      # TUI Application
-│   │   ├── __init__.py
-│   │   ├── app.py                # Main Textual app
-│   │   └── commands/             # Command handlers (refactored)
-│   │       ├── __init__.py
-│   │       ├── registry.py       # Lightweight dispatcher
-│   │       ├── analysis.py       # Analysis commands
-│   │       ├── charts.py         # Chart commands
-│   │       ├── screening.py      # Screening commands
-│   │       └── advanced.py       # Advanced commands
-│   │
-│   ├── core/                     # Core Business Logic
-│   │   ├── __init__.py
-│   │   ├── config.py             # Settings (Pydantic)
-│   │   ├── models.py             # Data models
-│   │   ├── smart_agent.py        # Agentic AI orchestrator
-│   │   ├── screener.py           # Stock screening
-│   │   ├── trading_plan.py       # TP/SL generator
-│   │   ├── chart_generator.py    # PNG charts
-│   │   ├── forecasting.py        # Price prediction
-│   │   │
-│   │   ├── data/                 # Data Layer
-│   │   │   ├── __init__.py
-│   │   │   ├── yfinance.py       # Yahoo Finance fetcher
-│   │   │   ├── finmind_data.py   # FinMind API integration
-│   │   │   ├── fugle.py          # Fugle API integration
-│   │   │   └── cache.py          # Disk cache
-│   │   │
-│   │   ├── analysis/             # Analysis Modules
-│   │   │   ├── __init__.py
-│   │   │   ├── technical.py      # Technical indicators
-│   │   │   ├── fundamental.py    # Fundamental analysis
-│   │   │   │   ├── fundamental_recovery.py  # Data recovery strategy
-│   │   │   ├── broker_flow.py    # Broker flow
-│   │   │   └── sector.py         # Sector analysis
-│   │   │
-│   │   └── sapta/                # SAPTA Engine
-│   │       ├── __init__.py
-│   │       ├── engine.py         # Main orchestrator
-│   │       ├── models.py         # SAPTA models
-│   │       ├── modules/          # 6 Analysis modules
-│   │       │   ├── __init__.py
-│   │       │   ├── base.py
-│   │       │   ├── absorption.py
-│   │       │   ├── compression.py
-│   │       │   ├── bb_squeeze.py
-│   │       │   ├── elliott.py
-│   │       │   ├── time_projection.py
-│   │       │   └── anti_distribution.py
-│   │       ├── ml/               # Machine Learning
-│   │       │   ├── __init__.py
-│   │       │   ├── trainer.py
-│   │       │   ├── features.py
-│   │       │   ├── labeling.py
-│   │       │   └── data_loader.py
-│   │       └── data/             # Trained models
-│   │           ├── sapta_model.pkl
-│   │           └── thresholds.json
-│   │
-│   ├── ai/                       # AI Integration
-│   │   ├── __init__.py
-│   │   ├── client.py             # LiteLLM client
-│   │   └── prompts.py            # System prompts
-│   │
-│   └── utils/                    # Utilities
-│       ├── __init__.py
-│       ├── logger.py
-│       ├── formatters.py
-│       ├── validators.py
-│       ├── constants.py
-│       ├── retry.py              # Retry utilities
-│       └── error_handler.py      # Exception classes
-│
-├── config/
-│   └── pulse.yaml                # Configuration file
-│
-├── data/
-│   ├── tw_tickers.json           # Taiwan stock tickers (5,868 stocks)
-│   ├── twse_tickers.json         # TWSE listed stocks
-│   ├── otc_tickers.json          # OTC stocks
-│   ├── cache/                    # Disk cache
-│   ├── logs/                     # Log files
-│   └── reports/                  # Export reports (CSV)
-│
-├── docs/                         # Documentation
-│   ├── SAPTA_ALGORITHM.md        # SAPTA algorithm details
-│   ├── training_guide.md         # ML model training guide
-│   └── architecture.md           # System architecture
-│
-├── tests/                        # Test suite
-│   └── ...
-│
-├── pyproject.toml                # Project config & dependencies
-├── README.md                     # This file
-├── .env.example                  # Environment template
-└── .gitignore
-```
-
----
-
-## Development
-
-### Setup Development Environment
-
-```bash
-# Clone and install
-git clone https://github.com/alingowangxr/TW-Pulse-CLI.git
-cd TW-Pulse-CLI
-
-# Create venv
-python -m venv .venv
-source .venv/bin/activate
-
-# Install with dev dependencies
-pip install -e ".[dev]"
-
-# Install pre-commit hooks (optional)
-pre-commit install
-```
-
-### Running Tests
-
-```bash
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=pulse --cov-report=html
-
-# Run specific test
-pytest tests/test_core/test_screener.py -v
-```
-
-### Code Quality
-
-```bash
-# Linting with ruff
-ruff check pulse/
-
-# Type checking with mypy
-mypy pulse/
-
-# Format code
-ruff format pulse/
-```
-
-### Training SAPTA Model
-
-```bash
-# Train new model with historical data
-python -m pulse.core.sapta.ml.train_model
-
-# This will:
-# 1. Load historical price data
-# 2. Generate features from 6 modules
-# 3. Label data based on forward returns
-# 4. Train XGBoost classifier
-# 5. Save model to pulse/core/sapta/data/
-```
-
----
-
-## Troubleshooting
-
-### Common Issues
-
-**1. "No data found for XXXX"**
-
-```
-Cause: Ticker 無效或 FinMind/Yahoo Finance 無資料
-Solution: 請確認股票代號正確
-```
-
-**2. "AI request failed"**
-
-```
-Cause: AI API key 未設定或無效
-Solution:
-  - 確認已設定 API key (GROQ_API_KEY, GEMINI_API_KEY 等)
-  - 檢查 API key 是否正確
-  - 嘗試切換到其他 Provider
-```
-
-**3. "Insufficient data for SAPTA"**
-
-```
-Cause: Newly listed stock or historical data < 100 days
-Solution: SAPTA requires at least 100 days of historical data
-```
-
-**4. "Stockbit not authenticated" (Legacy)**
-
-```
-Cause: Stockbit is an Indonesian platform, not applicable for Taiwan market
-Solution: 
-  - For Taiwan market, use /institutional command instead
-  - Stockbit features are deprecated for Taiwan stocks
-```
-
-### Debug Mode
-
-Enable debug logging:
-
-```bash
-PULSE_DEBUG=true pulse
-```
-
-Or in `.env`:
-```env
-PULSE_DEBUG=true
-```
-
----
-
-## Project Summary
-
-**TW-Pulse-CLI** (v0.1.8) is an AI-powered Taiwan Stock Market Analysis CLI tool built with Python 3.11+. It provides comprehensive stock analysis through a terminal user interface (TUI), integrating real-time data, technical/fundamental analysis, institutional flow data, and ML-powered predictions.
-
-### Core Capabilities
-
-| Category | Features |
-|----------|----------|
-| **Technical Analysis** | RSI, MACD, Bollinger Bands, SMA/EMA, Stochastic, ATR, Support/Resistance |
-| **Fundamental Analysis** | P/E, P/B, ROE/ROA, Dividend Yield, Revenue Growth, Profit Margins |
-| **Institutional Flow** | Foreign Investors, Trust Funds, Dealer proprietary/dealer hedging |
-| **ML Predictions** | SAPTA Engine (6 modules) for pre-markup detection |
-| **Smart Money Screener** | Trend/Volume/Bias based accumulation detection |
-| **Trading Tools** | Trading plans, Position sizing, Price forecasts, Chart generation |
-| **Stock Screening** | Preset + flexible criteria with CSV export |
-
-### Architecture
-
-```
-pulse/
-├── ai/               # LiteLLM multi-provider AI client
-├── cli/              # Textual TUI + command handlers
-│   └── commands/     # Analysis, charts, screening, advanced commands
-├── core/
-│   ├── analysis/     # Technical, fundamental, broker flow analysis
-│   ├── data/         # FinMind, Yahoo Finance, Fugle providers
-│   ├── sapta/        # ML prediction engine (6 modules + XGBoost)
-│   │   ├── modules/  # Absorption, Compression, BB Squeeze, Elliott, Time, Anti-Distribution
-│   │   └── ml/       # XGBoost trainer and features
-│   ├── screener.py   # Stock screening engine
-│   └── smart_money_screener.py  # Smart Money Screener (Trend/Volume/Bias)
-└── utils/            # Formatters, retry, error handling
-```
-
-### Data Sources (3-tier fallback)
-
-| Priority | Source | Purpose |
-|----------|--------|---------|
-| 1 (Primary) | **FinMind** | Institutional flow, margin trading, fundamentals |
-| 2 (Fallback) | **Yahoo Finance** | Price data, technical indicators |
-| 3 (Backup) | **Fugle** | Real-time quotes, 52-week highs/lows |
-
-### AI Providers (via LiteLLM)
-
-| Provider | Model | Notes |
-|----------|-------|-------|
-| **DeepSeek** | deepseek-chat | Default, cost-effective |
-| **Groq** | llama-3.3-70b-versatile | Free tier available |
-| **Google** | gemini-2.0-flash | Requires GEMINI_API_KEY |
-| **Anthropic** | claude-sonnet-4 | Requires ANTHROPIC_API_KEY |
-| **OpenAI** | gpt-4o | Requires OPENAI_API_KEY |
-
-### Code Quality
-
-| Metric | Score |
-|--------|-------|
-| Features | 9.5/10 |
-| Code Structure | 9.5/10 |
-| Documentation | 9/10 |
-| Test Coverage | 9.2/10 (439 tests) |
-| Error Handling | 9/10 |
-| Data Redundancy | 9/10 (3 sources) |
-| **Overall** | **9.5/10** |
-
----
-
-## TODO / Roadmap
-
-### High Priority
-
-#### Testing & Coverage (Target: 80%+)
-- [x] SmartAgent complete tests (`pulse/core/smart_agent.py`) - **DONE v0.1.6 (99 tests)**
-- [x] Trading plan generator tests (`pulse/core/trading_plan.py`) - **DONE v0.1.6 (77 tests)**
-- [x] Technical analyzer tests (`pulse/core/analysis/technical.py`) - **DONE v0.1.6 (46 tests)**
-- [x] Screener tests (`pulse/core/screener.py`) - **DONE v0.1.6 (92 tests)**
-- [x] AI client tests (`pulse/ai/client.py`) - **DONE v0.1.6 (29 tests)**
-- [x] Command handler integration tests (`pulse/cli/commands/`) - **DONE v0.1.6 (29 tests)**
-- [ ] End-to-end tests (E2E)
-
-#### SAPTA Enhancements
-- [x] SAPTA chart output (visual signals) - **DONE v0.1.7**
-- [ ] Model retraining with updated data
-
-#### Data Stability
-- [x] Fundamental data fallback strategy (when PE/PB/ROE missing) - **DONE v0.1.7**
-- [ ] Multi-stock batch testing (verify data consistency)
-- [ ] FinMind API quota monitoring and graceful degradation
-
-#### Performance
-- [ ] Large-scale screening with concurrent processing (`asyncio.gather`)
-- [ ] Data cache optimization (diskcache TTL tuning)
-- [ ] Progress bar display improvement (Rich progress)
-
----
-
-### Medium Priority
-
-#### Feature Enhancements
-- [ ] Batch scanning optimization (concurrent multi-stock download)
-- [ ] Chart customization options (colors, styles, time ranges)
-- [ ] Additional technical indicators (OBV, ADX, CCI, Ichimoku)
-
-#### Documentation
-- [ ] Complete API documentation (all public function docstrings)
-- [ ] Detailed contributing guide (`CONTRIBUTING.md`)
-- [ ] Deployment guide (Docker, pip install)
-- [ ] Extended usage examples (`USAGE.md`)
-
-#### Code Quality
-- [x] Type hints complete (mypy strict) - DONE v0.1.4
-- [x] Ruff linting fully passing (217→0 errors) - DONE v0.1.4
-- [ ] Remove unused code and dependencies
-
----
-
-### Low Priority (Future Versions)
-
-#### v0.2.0 - Personalization
-- [ ] Watchlist management (local JSON storage)
-- [ ] Portfolio tracking (cost basis, P&L)
-- [ ] Price alerts (breakout/breakdown notifications)
-
-#### v0.3.0 - Backtesting & Strategy
-- [ ] Backtesting framework (historical simulation)
-- [ ] Strategy builder (custom entry/exit rules)
-- [ ] Performance reports (win rate, max drawdown, Sharpe ratio)
-
-#### v0.4.0+ - Extended Features
-- [ ] Real-time WebSocket support (live quotes)
-- [ ] Multi-market support (US, Hong Kong)
-- [ ] Cryptocurrency support (BTC, ETH)
-- [ ] Options analysis
-
----
-
-### Version History
-
-| Version | Date | Changes |
-|---------|------|---------|
-| 0.1.8 | 2026-01-20 | Smart Money Screener (Trend/Volume/Bias), JSON stock lists |
-| 0.1.7 | 2026-01-20 | SAPTA chart output (`/sapta chart`), Fundamental data recovery, 150 new tests |
-| 0.1.6 | 2026-01-20 | DeepSeek model, test coverage (SmartAgent, TradingPlan, Technical) |
-| 0.1.5 | 2026-01-20 | Environment variables fix, Thinking Indicator fix, timeout handling |
-| 0.1.4 | 2026-01-16 | CSV export for `/screen`, Type hints, Ruff linting |
-| 0.1.3 | 2026-01-15 | SAPTA output optimization, broker flow fix, model retraining |
-| 0.1.2 | 2026-01-14 | Fugle integration, error handling, registry refactor |
-| 0.1.1 | 2026-01-14 | Taiwan market migration (FinMind, TWSE/TPEX) |
-| 0.1.0 | 2026-01-13 | Initial release |
-
----
-
-## Contributing
-
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
-
----
-
-## Contributing
-
-Contributions are welcome! Please read our [contributing guidelines](CONTRIBUTING.md) first.
-
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
-
-## Disclaimer
-
-**IMPORTANT:** Pulse CLI is for **educational and informational purposes only**. 
-
-- Not financial advice
-- Past performance doesn't guarantee future results
-- Always do your own research (DYOR)
-- Invest responsibly
-
-The developers are not responsible for any financial losses incurred from using this tool.
-
----
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## Acknowledgments
-
-- [Textual](https://github.com/Textualize/textual) - Amazing TUI framework
-- [yfinance](https://github.com/ranaroussi/yfinance) - Yahoo Finance API wrapper
-- [TA-Lib](https://github.com/bukosabino/ta) - Technical analysis library
-- [Rich](https://github.com/Textualize/rich) - Beautiful terminal formatting
-- [FinMind](https://github.com/FinMind/FinMind) - Taiwan Financial Data Source
 
 ---
 
 ## Documentation
 
-### Core Documentation
-
 | Document | Description |
 |----------|-------------|
-| [README](README.md) | Main project documentation |
-| [TODO](TODO.md) | Detailed roadmap and task tracker |
-| [USAGE.md](USAGE.md) | Usage examples and command reference |
-| [SAPTA Algorithm](docs/SAPTA_ALGORITHM.md) | SAPTA algorithm details and modules |
-| [Training Guide](docs/training_guide.md) | ML model training documentation |
-| [Architecture](docs/architecture.md) | System architecture and design |
+| [USAGE.md](USAGE.md) | 完整安裝與使用說明 |
+| [TODO.md](TODO.md) | 未來改進計劃與路線圖 |
+| [docs/SAPTA_ALGORITHM.md](docs/SAPTA_ALGORITHM.md) | SAPTA 算法詳解 |
+| [docs/training_guide.md](docs/training_guide.md) | ML 模型訓練文檔 |
+| [docs/architecture.md](docs/architecture.md) | 系統架構與設計 |
 
-### Key Topics
+---
 
-- **SAPTA Engine**: [Algorithm](docs/SAPTA_ALGORITHM.md) | [Training](docs/training_guide.md)
-- **System Architecture**: [Overview](docs/architecture.md)
-- **API Integration**: [LiteLLM](https://docs.litellm.io/) | [Groq](https://console.groq.com/)
-- **Data Sources**: [FinMind](https://finmindtrade.com/) | [yfinance](https://github.com/ranaroussi/yfinance)
+## Tech Stack
+
+- **Language**: Python 3.11+
+- **TUI**: Textual + Rich
+- **AI**: LiteLLM (DeepSeek/Groq/Gemini/Claude/GPT)
+- **Data**: FinMind, Yahoo Finance, Fugle
+- **ML**: XGBoost, scikit-learn
+- **Analysis**: pandas, numpy, ta
+
+---
+
+## Version History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 0.1.8 | 2026-01-20 | Smart Money Screener, JSON 股票清單 |
+| 0.1.7 | 2026-01-20 | SAPTA 圖表、基本面數據補救 |
+| 0.1.6 | 2026-01-20 | DeepSeek 模型、測試覆蓋率提升 |
+| 0.1.5 | 2026-01-20 | 環境變數修復、超時處理 |
+| 0.1.4 | 2026-01-16 | CSV 匯出、類型提示 |
+| 0.1.3 | 2026-01-15 | SAPTA 輸出優化 |
+| 0.1.2 | 2026-01-14 | Fugle 整合 |
+| 0.1.1 | 2026-01-14 | 台灣市場遷移 |
+| 0.1.0 | 2026-01-13 | Initial release |
+
+---
+
+## Acknowledgments
+
+- [Pulse-CLI](https://github.com/alingowangxr/Pulse-CLI) - 原始專案啟發
+- [Textual](https://github.com/Textualize/textual) - TUI 框架
+- [yfinance](https://github.com/ranaroussi/yfinance) - Yahoo Finance API
+- [FinMind](https://github.com/FinMind/FinMind) - 台灣金融數據
+- [TA-Lib](https://github.com/bukosabino/ta) - 技術分析庫
+- [Rich](https://github.com/Textualize/rich) - 終端格式化
+
+---
+
+## License
+
+MIT License - see [LICENSE](LICENSE) file for details.
 
 ---
 
