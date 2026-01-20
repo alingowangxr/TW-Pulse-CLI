@@ -251,3 +251,92 @@ def export_results_to_csv(results: list["ScreenResult"], filename: str | None = 
             writer.writerow(row)
 
     return str(filepath)
+
+
+async def smart_money_command(app: "PulseApp", args: str) -> str:
+    """
+    Smart Money Screener - 主力足跡選股 (Trend/Volume/Bias 三維度)
+
+    針對「無籌碼數據」環境優化，利用技術分析捕捉主力行為。
+
+    評分邏輯 (總分100分):
+    1. 趨勢與型態 (40分): 極致壓縮(+25)、帶量突破(+15)
+    2. 量能K線 (35分): OBV創高(+15)、攻擊量(+10)、長紅(+10)
+    3. 乖離位階 (25分): 黃金起漲點(+15)、站上年線(+10)
+
+    Usage: /smart-money [--tw50|--listed|--otc|--all] [--fast] [--min=N] [--limit=N]
+
+    Market Options:
+      --tw50     台灣50成分股 (51檔, 預設)
+      --listed   上市公司 (1,067檔)
+      --otc      上櫃公司 (874檔)
+      --all      全部市場 (1,941檔)
+
+    Options:
+      --fast     快速模式，跳過OBV歷史比對
+      --min=N    Minimum score (0-100), default: 40
+      --limit=N  Maximum results, default: 20
+
+    Example:
+      /smart-money              # TW50, min 40
+      /smart-money --tw50       # 同上
+      /smart-money --listed     # 上市公司
+      /smart-money --otc        # 上櫃公司
+      /smart-money --all        # 全部市場
+      /smart-money --listed --fast   # 上市公司，快速模式
+      /smart-money --min=60 --limit=10  # 高分篩選
+    """
+    import re
+
+    # Parse market type (mutually exclusive)
+    market = "tw50"  # default
+    if "--listed" in args.lower():
+        market = "listed"
+    elif "--otc" in args.lower():
+        market = "otc"
+    elif "--all" in args.lower():
+        market = "all"
+
+    # Parse other options
+    fast_mode = "--fast" in args.lower()
+    min_score = 40.0
+    limit = 20
+
+    if "--min=" in args.lower():
+        match = re.search(r"--min=(\d+\.?\d*)", args.lower())
+        if match:
+            min_score = float(match.group(1))
+
+    if "--limit=" in args.lower():
+        match = re.search(r"--limit=(\d+)", args.lower())
+        if match:
+            limit = int(match.group(1))
+
+    from pulse.core.smart_money_screener import SmartMoneyScreener
+
+    screener = SmartMoneyScreener()
+    results = await screener.screen(
+        min_score=min_score, limit=limit, market=market, fast_mode=fast_mode
+    )
+
+    # Market name mapping
+    market_names = {
+        "tw50": "台灣50 (TW50)",
+        "listed": "上市公司",
+        "otc": "上櫃公司",
+        "all": "全部市場",
+    }
+
+    if not results:
+        return f"""主力足跡選股 ({market_names[market]}, min_score={min_score})
+---
+未找到符合條件的股票
+
+評分維度:
+  趨勢型態 (40分): 極致壓縮(+25)、帶量突破(+15)
+  量能K線 (35分): OBV創高(+15)、攻擊量(+10)、長紅(+10)
+  乖離位階 (25分): 黃金起漲點(+15)、站上年線(+10)"""
+
+    return screener.format_results(
+        results, f"主力足跡選股 ({market_names[market]}, min_score={min_score})"
+    )

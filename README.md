@@ -208,6 +208,7 @@ You'll see the TUI interface:
 | `/chart` | `/c` | Generate price chart |
 | `/forecast` | `/fc` | Price prediction |
 | `/screen` | `/s`, `/filter` | Stock screening |
+| `/smart-money` | `/tvb`, `/主力` | Smart Money Screener (Trend/Volume/Bias) |
 | `/sector` | `/sec` | Sector analysis |
 | `/compare` | `/cmp`, `/vs` | Compare multiple stocks |
 | `/plan` | `/tp`, `/sl` | Trading plan generator |
@@ -545,6 +546,71 @@ Signals
 
 ---
 
+## Smart Money Screener
+
+### Overview
+
+**Smart Money Screener** (主力足跡選股器) 是一個基於 **Trend/Volume/Bias** 三維度的選股工具，專為「無籌碼數據」環境優化，利用技術分析捕捉主力吸籌行為。
+
+### Scoring Logic (100 points total)
+
+| Dimension | Weight | Condition | Points |
+|-----------|--------|-----------|--------|
+| **Trend & Pattern** | 40% | Perfect Squeeze (BB Width < 15%, 10+ days) | +25 |
+| | | Breakout (Price > BB Upper + Green Candle) | +15 |
+| **Volume & Candle** | 35% | OBV Breaks High (Smart Money) | +15 |
+| | | Attack Volume (>2x MV5) | +10 |
+| | | Strong Candle (Body > 70%) | +10 |
+| **Bias & Position** | 25% | Golden Launch (Bias 5-10%) | +15 |
+| | | Above Annual MA | +10 |
+
+### Usage
+
+```bash
+/smart-money                    # TW50 (default, 50 stocks, ~10s)
+/smart-money --tw50             # Same as above
+/smart-money --listed           # Listed companies (1,067, ~2min)
+/smart-money --otc              # OTC stocks (874, ~90s)
+/smart-money --all              # All market (1,941, ~4min)
+/smart-money --fast             # Fast mode (skip OBV history)
+/smart-money --min=60           # High score filter
+/smart-money --limit=10         # Limit results
+```
+
+### Stock Universe Data
+
+| File | Count | Description |
+|------|-------|-------------|
+| `data/tw_codes_tw50.json` | 50 | TW50 components |
+| `data/tw_codes_listed.json` | 1,067 | Listed companies |
+| `data/tw_codes_otc.json` | 874 | OTC stocks |
+
+### Example Output
+
+```
+主力足跡選股 (台灣50 (TW50), min_score=40)
+---
+找到 3 檔符合條件的股票:
+
+[★  ] 2317    48.0/100  Hon Hai Precision
+    NT$224 (-2.61%)  乖離MA20:-2.8%  量比:1.4x
+    信號: 布林收縮 BB:7.5 | OBV整理 | 長紅100%
+
+[★  ] 2330    35.0/100  TSMC
+    NT$1,775 (+0.85%)  乖離MA20:+8.8%  量比:0.9x
+    信號: 長紅 實體:100% | 黃金起漲 乖離:8.8 | 站上年線
+
+圖例: ★★★=80+強勢  ★★=60-79吸籌  ★=40-59觀察
+```
+
+### Aliases
+
+- `/smart-money` - Main command
+- `/tvb` - Short alias
+- `/主力` - Chinese alias
+
+---
+
 ## Configuration
 
 ### Environment Variables
@@ -633,13 +699,16 @@ Switch model:
 
 ### Preset Universes
 
-| Universe | Count | Description |
-|----------|-------|-------------|
-| `ALL` | All | All Taiwan listed stocks (from FinMind) |
+| Universe | Count | Description | Data Source |
+|----------|-------|-------------|-------------|
+| `tw50` | 50 | TW50 components | `data/tw_codes_tw50.json` |
+| `listed` | 1,067 | Listed companies | `data/tw_codes_listed.json` |
+| `otc` | 874 | OTC stocks | `data/tw_codes_otc.json` |
+| `all` | 1,941 | All Taiwan stocks | Listed + OTC |
 
 ### Data Source
 
-股票數據主要從 [FinMind](https://finmindtrade.com/) 獲取，輔以 Yahoo Finance 作為備用。
+Stock data primarily from [FinMind](https://finmindtrade.com/), with Yahoo Finance as fallback. Stock universe from local JSON files in `data/` directory.
 
 Supported indices:
 - **TAIEX** (^TWII) - Taiwan Weighted Index
@@ -894,7 +963,8 @@ pulse/
 │   ├── sapta/        # ML prediction engine (6 modules + XGBoost)
 │   │   ├── modules/  # Absorption, Compression, BB Squeeze, Elliott, Time, Anti-Distribution
 │   │   └── ml/       # XGBoost trainer and features
-│   └── screener/     # Stock screening engine
+│   ├── screener.py   # Stock screening engine
+│   └── smart_money_screener.py  # Smart Money Screener (Trend/Volume/Bias)
 └── utils/            # Formatters, retry, error handling
 ```
 
@@ -1003,6 +1073,7 @@ pulse/
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.1.8 | 2026-01-20 | Smart Money Screener (Trend/Volume/Bias), JSON stock lists |
 | 0.1.7 | 2026-01-20 | SAPTA chart output (`/sapta chart`), Fundamental data recovery, 150 new tests |
 | 0.1.6 | 2026-01-20 | DeepSeek model, test coverage (SmartAgent, TradingPlan, Technical) |
 | 0.1.5 | 2026-01-20 | Environment variables fix, Thinking Indicator fix, timeout handling |

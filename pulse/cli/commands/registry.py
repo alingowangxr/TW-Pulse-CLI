@@ -154,6 +154,14 @@ class CommandRegistry:
         )
 
         self.register(
+            "smart-money",
+            self._cmd_smart_money,
+            "Smart Money Screener (主力足跡選股)",
+            "/smart-money [--min-score=N] [--limit=N]",
+            aliases=["tvb", "主力", "smartmoney"],
+        )
+
+        self.register(
             "sector",
             self._cmd_sector,
             "Sector analysis (產業分析)",
@@ -284,6 +292,12 @@ class CommandRegistry:
         from pulse.cli.commands.screening import screen_command
 
         return await screen_command(self.app, args)
+
+    async def _cmd_smart_money(self, args: str) -> str:
+        """Smart Money Screener command handler."""
+        from pulse.cli.commands.screening import smart_money_command
+
+        return await smart_money_command(self.app, args)
 
     async def _cmd_sector(self, args: str) -> str:
         """Sector analysis command handler."""

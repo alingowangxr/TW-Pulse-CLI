@@ -156,6 +156,7 @@ python -m pulse.cli.app
 | 命令 | 別名 | 說明 | 用法 |
 |------|------|------|------|
 | `/screen` | `/scan`, `/filter` | 股票篩選 | `/screen oversold` |
+| `/smart-money` | `/tvb`, `/主力` | 主力足跡選股 | `/smart-money --tw50` |
 
 **篩選條件:**
 - `oversold` - RSI < 30
@@ -179,6 +180,59 @@ python -m pulse.cli.app
 ```
 
 CSV 會儲存到 `data/reports/` 目錄，包含 18 個欄位：ticker, name, sector, price, change_percent, volume, rsi_14, macd, sma_20, sma_50, pe_ratio, pb_ratio, roe, dividend_yield, market_cap, score, signals。
+
+#### `/smart-money` - 主力足跡選股
+
+**主力足跡選股器** - 基於 Trend/Volume/Bias 三維度的主力吸籌選股
+
+**評分邏輯 (總分100分):**
+
+| 維度 | 權重 | 評分項目 | 分數 |
+|------|------|----------|------|
+| 趨勢型態 | 40% | 極致壓縮 (BB寬度<15%+10天) | +25 |
+| | | 帶量突破 (突破上軌+紅棒) | +15 |
+| 量能K線 | 35% | OBV先行創高 | +15 |
+| | | 純粹攻擊量 (>2倍MV5) | +10 |
+| | | K線霸氣 (實體>70%) | +10 |
+| 乖離位階 | 25% | 黃金起漲點 (乖離5-10%) | +15 |
+| | | 長線保護短線 (站上年線) | +10 |
+
+**使用方式:**
+
+```bash
+/smart-money              # TW50 (預設, 50檔, ~10秒)
+/smart-money --tw50       # 同上
+/smart-money --listed     # 上市公司 (1,067檔, ~2分鐘)
+/smart-money --otc        # 上櫃公司 (874檔, ~90秒)
+/smart-money --all        # 全部市場 (1,941檔, ~4分鐘)
+/smart-money --fast       # 快速模式 (跳過OBV歷史比對)
+/smart-money --min=60     # 高分篩選
+/smart-money --limit=10   # 限制結果數量
+```
+
+**股票清單來源:**
+
+| 檔案 | 股票數量 | 說明 |
+|------|----------|------|
+| `data/tw_codes_tw50.json` | 50 | 台灣50成分股 |
+| `data/tw_codes_listed.json` | 1,067 | 上市公司 |
+| `data/tw_codes_otc.json` | 874 | 上櫃公司 |
+
+**輸出範例:**
+
+```
+主力足跡選股 (台灣50 (TW50), min_score=40)
+---
+找到 3 檔符合條件的股票:
+
+[★  ] 2317    48.0/100  Hon Hai Precision
+    NT$224 (-2.61%)  乖離MA20:-2.8%  量比:1.4x
+    信號: 布林收縮 BB:7.5 | OBV整理 | 長紅100%
+
+圖例: ★★★=80+強勢  ★★=60-79吸籌  ★=40-59觀察
+```
+
+**別名:** `/tvb`, `/主力`
 
 ### 系統命令
 
@@ -370,7 +424,9 @@ TW-Pulse-CLI/
 ├── config/
 │   └── pulse.yaml             # 配置文件
 ├── data/
-│   ├── tw_tickers.json        # 股票清單 (5,868 檔)
+│   ├── tw_codes_tw50.json     # TW50 股票清單 (50檔)
+│   ├── tw_codes_listed.json   # 上市公司清單 (1,067檔)
+│   ├── tw_codes_otc.json      # 上櫃公司清單 (874檔)
 │   ├── cache/                 # 快取目錄
 │   └── reports/               # 匯出報告 (CSV)
 └── .env.example               # 環境變數範例
