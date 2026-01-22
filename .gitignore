@@ -192,3 +192,6 @@ CODEBASE.md
 # Training reports
 pulse/core/sapta/data/training_report_*.json
 
+# Knowledge analysis files
+knowledge_20260122_Pulse-CLI_Deep_Analysis/
+
