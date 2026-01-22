@@ -34,6 +34,9 @@ class FinMindFetcher:
     # Quota status tracking
     _quota_exceeded: bool = False
     _quota_error_message: str = ""
+    _request_count: int = 0
+    _quota_limit: int = 1000  # Default quota limit per day
+    _last_request_time: datetime | None = None
 
     @classmethod
     def is_quota_exceeded(cls) -> bool:
@@ -41,10 +44,26 @@ class FinMindFetcher:
         return cls._quota_exceeded
 
     @classmethod
+    def get_quota_status(cls) -> dict:
+        """Get current quota status.
+
+        Returns:
+            Dictionary with quota information
+        """
+        return {
+            "exceeded": cls._quota_exceeded,
+            "request_count": cls._request_count,
+            "quota_limit": cls._quota_limit,
+            "remaining": max(0, cls._quota_limit - cls._request_count),
+            "error_message": cls._quota_error_message,
+        }
+
+    @classmethod
     def reset_quota_status(cls) -> None:
         """Reset quota status (for testing or manual reset)."""
         cls._quota_exceeded = False
         cls._quota_error_message = ""
+        cls._request_count = 0
 
     @classmethod
     def set_quota_exceeded(cls, message: str = "FinMind API quota exceeded") -> None:
@@ -52,6 +71,22 @@ class FinMindFetcher:
         cls._quota_exceeded = True
         cls._quota_error_message = message
         log.warning(message)
+
+    @classmethod
+    def increment_request_count(cls) -> None:
+        """Increment the request counter for quota tracking."""
+        cls._request_count += 1
+        cls._last_request_time = datetime.now()
+
+    @classmethod
+    def set_quota_limit(cls, limit: int) -> None:
+        """Set the daily quota limit.
+
+        Args:
+            limit: Maximum number of requests per day
+        """
+        cls._quota_limit = limit
+        log.info(f"FinMind quota limit set to {limit} requests/day")
 
     def __init__(self, token: str = ""):
         """
@@ -177,6 +212,7 @@ class FinMindFetcher:
 
         try:
             log.debug(f"Fetching {formatted_ticker} from FinMind...")
+            self.__class__.increment_request_count()
 
             # Get daily price data
             df = self.dl.taiwan_stock_daily(

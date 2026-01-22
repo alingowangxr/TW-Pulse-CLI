@@ -4,6 +4,7 @@ from pulse.cli.commands.advanced import (
     broker_command,
     plan_command,
     sapta_command,
+    sapta_retrain_command,
     sector_command,
 )
 from pulse.cli.commands.analysis import (
@@ -37,4 +38,5 @@ __all__ = [
     "sector_command",
     "plan_command",
     "sapta_command",
+    "sapta_retrain_command",
 ]

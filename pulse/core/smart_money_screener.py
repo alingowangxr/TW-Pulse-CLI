@@ -29,7 +29,7 @@ from typing import Literal
 import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Any, cast
+from typing import cast
 
 import pandas as pd
 

@@ -1,7 +1,6 @@
 """Pulse CLI - Main TUI Application."""
 
 import asyncio
-from functools import partial
 
 from textual import on, work
 from textual.app import App, ComposeResult

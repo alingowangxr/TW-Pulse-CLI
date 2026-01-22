@@ -5,6 +5,7 @@ Supports:
 1. Preset screeners (oversold, bullish, breakout, etc)
 2. Flexible criteria (rsi<30, pe<15, etc)
 3. AI-driven smart screening
+4. Real-time progress tracking with Rich progress bar
 """
 
 import asyncio
@@ -12,6 +13,8 @@ import re
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
+
+from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeElapsedColumn
 
 from pulse.utils.constants import MIDCAP100_TICKERS, TPEX_POPULAR, TW50_TICKERS
 from pulse.utils.logger import get_logger
@@ -736,8 +739,20 @@ class StockScreener:
         sort_by: str = "score",
         sort_asc: bool = False,
         limit: int = 20,
+        show_progress: bool = True,
     ) -> list[ScreenResult]:
-        """Run screening with given criteria."""
+        """Run screening with given criteria.
+
+        Args:
+            criteria: Screening criteria dictionary
+            sort_by: Field to sort results by
+            sort_asc: Sort ascending if True, descending if False
+            limit: Maximum number of results to return
+            show_progress: Show Rich progress bar if True
+
+        Returns:
+            List of matching ScreenResult objects
+        """
         results = []
 
         # Fetch data for all stocks in parallel (with semaphore to limit concurrency)
@@ -749,8 +764,32 @@ class StockScreener:
 
         log.info(f"Screening {len(self.universe)} stocks...")
 
-        tasks = [fetch_with_limit(ticker) for ticker in self.universe]
-        all_results = await asyncio.gather(*tasks, return_exceptions=True)
+        # Create progress bar
+        progress = Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(complete_style="green", finished_style="green"),
+            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+            TimeElapsedColumn(),
+            transient=not show_progress,
+            disable=not show_progress,
+        )
+
+        all_results: list[ScreenResult | None | BaseException] = []
+
+        with progress:
+            task_id = progress.add_task(
+                f"Screening {len(self.universe)} stocks...", total=len(self.universe)
+            )
+
+            # Process in batches to update progress
+            batch_size = 10
+            for i in range(0, len(self.universe), batch_size):
+                batch = self.universe[i : i + batch_size]
+                tasks = [fetch_with_limit(ticker) for ticker in batch]
+                batch_results = await asyncio.gather(*tasks, return_exceptions=True)
+                all_results.extend(batch_results)
+                progress.update(task_id, advance=len(batch))
 
         # Filter and score results
         for result in all_results:
@@ -766,7 +805,7 @@ class StockScreener:
         # Sort results
         if sort_by == "score":
             results.sort(key=lambda x: x.score, reverse=not sort_asc)
-        elif hasattr(results[0] if results else ScreenResult, sort_by):
+        elif results and hasattr(results[0], sort_by):
             results.sort(key=lambda x: getattr(x, sort_by) or 0, reverse=not sort_asc)
 
         log.info(f"Found {len(results)} stocks matching criteria")

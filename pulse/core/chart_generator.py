@@ -2,10 +2,17 @@
 Chart generator - creates PNG/JPG charts saved to disk.
 
 Uses matplotlib for high-quality chart generation.
+Supports:
+- Multiple chart themes (dark/light)
+- Customizable colors and styles
+- Technical indicator overlays
 """
 
+from dataclasses import dataclass
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
+from typing import Any
 
 from pulse.utils.logger import get_logger
 
@@ -13,6 +20,95 @@ log = get_logger(__name__)
 
 # Chart output directory
 CHARTS_DIR = Path(__file__).parent.parent.parent / "charts"
+
+
+class ChartTheme(str, Enum):
+    """Chart color themes."""
+
+    DARK = "dark"
+    LIGHT = "light"
+    TRADITIONAL = "traditional"
+
+
+class ChartStyle(str, Enum):
+    """Chart line styles."""
+
+    SOLID = "-"
+    DASHED = "--"
+    DOTTED = ":"
+    DASHDOT = "-."
+
+
+@dataclass
+class ChartConfig:
+    """Chart configuration for customization."""
+
+    theme: ChartTheme = ChartTheme.DARK
+    figure_size: tuple[int, int] = (12, 8)
+    line_width: float = 2.0
+    grid_alpha: float = 0.2
+    show_ma20: bool = True
+    show_ma50: bool = True
+    show_ma200: bool = False
+    show_volume: bool = True
+    title_fontsize: int = 16
+    label_fontsize: int = 12
+
+    # Theme colors
+    @property
+    def colors(self) -> dict[str, str]:
+        """Get colors based on theme."""
+        if self.theme == ChartTheme.DARK:
+            return {
+                "bg": "#0d1117",
+                "face": "#0d1117",
+                "line": "#58a6ff",
+                "fill": "#58a6ff",
+                "ma20": "#f0883e",
+                "ma50": "#a371f7",
+                "ma200": "#f85149",
+                "bullish": "#3fb950",
+                "bearish": "#f85149",
+                "title": "#c9d1d9",
+                "label": "#8b949e",
+                "grid": "#30363d",
+                "spine": "#30363d",
+                "annotation_bg": "#21262d",
+            }
+        elif self.theme == ChartTheme.LIGHT:
+            return {
+                "bg": "#ffffff",
+                "face": "#ffffff",
+                "line": "#0969da",
+                "fill": "#0969da",
+                "ma20": "#cf222e",
+                "ma50": "#8250df",
+                "ma200": "#0550ae",
+                "bullish": "#1a7f37",
+                "bearish": "#cf222e",
+                "title": "#24292f",
+                "label": "#57606a",
+                "grid": "#d0d7de",
+                "spine": "#d0d7de",
+                "annotation_bg": "#f6f8fa",
+            }
+        else:  # TRADITIONAL
+            return {
+                "bg": "#000000",
+                "face": "#000000",
+                "line": "#00ff00",
+                "fill": "#00ff00",
+                "ma20": "#ffff00",
+                "ma50": "#ff00ff",
+                "ma200": "#00ffff",
+                "bullish": "#00ff00",
+                "bearish": "#ff0000",
+                "title": "#ffffff",
+                "label": "#cccccc",
+                "grid": "#333333",
+                "spine": "#333333",
+                "annotation_bg": "#333333",
+            }
 
 
 def ensure_charts_dir() -> Path:
@@ -35,8 +131,15 @@ def generate_filename(ticker: str, chart_type: str = "chart") -> str:
 class ChartGenerator:
     """Generate high-quality charts as image files."""
 
-    def __init__(self):
+    def __init__(self, config: ChartConfig | None = None):
+        """
+        Initialize chart generator.
+
+        Args:
+            config: Chart configuration (optional, uses defaults if not provided)
+        """
         self._check_matplotlib()
+        self.config = config or ChartConfig()
 
     def _check_matplotlib(self) -> bool:
         """Check if matplotlib is available."""
@@ -60,6 +163,7 @@ class ChartGenerator:
         prices: list[float],
         volumes: list[float] | None = None,
         period: str = "3mo",
+        config: ChartConfig | None = None,
     ) -> str | None:
         """
         Generate price chart and save to file.
@@ -70,6 +174,7 @@ class ChartGenerator:
             prices: List of closing prices
             volumes: Optional volume data
             period: Time period label
+            config: Chart configuration (uses instance config if not provided)
 
         Returns:
             Path to saved chart file, or None if failed
@@ -77,38 +182,68 @@ class ChartGenerator:
         if not self._plt:
             return None
 
+        cfg = config or self.config
+        colors = cfg.colors
         plt = self._plt
 
         try:
-            # Setup figure with dark theme
-            plt.style.use("dark_background")
+            # Setup figure
+            plt.style.use("dark_background" if cfg.theme == ChartTheme.DARK else "default")
 
-            if volumes:
+            if cfg.show_volume and volumes:
                 fig, (ax1, ax2) = plt.subplots(
-                    2, 1, figsize=(12, 8), gridspec_kw={"height_ratios": [3, 1]}, sharex=True
+                    2,
+                    1,
+                    figsize=cfg.figure_size,
+                    gridspec_kw={"height_ratios": [3, 1]},
+                    sharex=True,
                 )
             else:
-                fig, ax1 = plt.subplots(figsize=(12, 6))
+                fig, ax1 = plt.subplots(figsize=cfg.figure_size)
 
-            fig.patch.set_facecolor("#0d1117")
-            ax1.set_facecolor("#0d1117")
+            fig.patch.set_facecolor(colors["bg"])
+            ax1.set_facecolor(colors["face"])
 
             # Plot price line
             x = range(len(prices))
-            ax1.plot(x, prices, color="#58a6ff", linewidth=2, label="Price")
-            ax1.fill_between(x, prices, alpha=0.1, color="#58a6ff")
+            ax1.plot(x, prices, color=colors["line"], linewidth=cfg.line_width, label="Price")
+            ax1.fill_between(x, prices, alpha=0.1, color=colors["fill"])
 
-            # Add moving averages if enough data
-            if len(prices) >= 20:
+            # Add moving averages
+            if cfg.show_ma20 and len(prices) >= 20:
                 ma20 = self._moving_average(prices, 20)
                 ax1.plot(
-                    x, ma20, color="#f0883e", linewidth=1, label="MA20", linestyle="--", alpha=0.7
+                    x,
+                    ma20,
+                    color=colors["ma20"],
+                    linewidth=1,
+                    label="MA20",
+                    linestyle="--",
+                    alpha=0.7,
                 )
 
-            if len(prices) >= 50:
+            if cfg.show_ma50 and len(prices) >= 50:
                 ma50 = self._moving_average(prices, 50)
                 ax1.plot(
-                    x, ma50, color="#a371f7", linewidth=1, label="MA50", linestyle="--", alpha=0.7
+                    x,
+                    ma50,
+                    color=colors["ma50"],
+                    linewidth=1,
+                    label="MA50",
+                    linestyle="--",
+                    alpha=0.7,
+                )
+
+            if cfg.show_ma200 and len(prices) >= 200:
+                ma200 = self._moving_average(prices, 200)
+                ax1.plot(
+                    x,
+                    ma200,
+                    color=colors["ma200"],
+                    linewidth=1,
+                    label="MA200",
+                    linestyle="-.",
+                    alpha=0.7,
                 )
 
             # Current price annotation
@@ -117,42 +252,46 @@ class ChartGenerator:
             change = current_price - prev_price
             change_pct = (change / prev_price * 100) if prev_price else 0
 
-            color = "#3fb950" if change >= 0 else "#f85149"
-            ax1.axhline(y=current_price, color=color, linestyle="-", alpha=0.5)
+            price_color = colors["bullish"] if change >= 0 else colors["bearish"]
+            ax1.axhline(y=current_price, color=price_color, linestyle="-", alpha=0.5)
             ax1.annotate(
-                f"Rp {current_price:,.0f} ({change:+,.0f}, {change_pct:+.2f}%)",
+                f"{current_price:,.0f} ({change:+,.0f}, {change_pct:+.2f}%)",
                 xy=(len(prices) - 1, current_price),
                 xytext=(10, 0),
                 textcoords="offset points",
                 fontsize=10,
-                color=color,
-                bbox=dict(boxstyle="round", facecolor="#21262d", edgecolor=color),
+                color=price_color,
+                bbox=dict(
+                    boxstyle="round", facecolor=colors["annotation_bg"], edgecolor=price_color
+                ),
             )
 
             # Styling
-            ax1.set_title(f"{ticker} - {period}", fontsize=16, color="#c9d1d9", pad=20)
-            ax1.set_ylabel("Price (Rp)", fontsize=12, color="#8b949e")
-            ax1.legend(loc="upper left", facecolor="#21262d", edgecolor="#30363d")
-            ax1.grid(True, alpha=0.2, color="#30363d")
-            ax1.tick_params(colors="#8b949e")
+            ax1.set_title(
+                f"{ticker} - {period}", fontsize=cfg.title_fontsize, color=colors["title"], pad=20
+            )
+            ax1.set_ylabel("Price", fontsize=cfg.label_fontsize, color=colors["label"])
+            ax1.legend(loc="upper left", facecolor=colors["bg"], edgecolor=colors["grid"])
+            ax1.grid(True, alpha=cfg.grid_alpha, color=colors["grid"])
+            ax1.tick_params(colors=colors["label"])
 
             for spine in ax1.spines.values():
-                spine.set_color("#30363d")
+                spine.set_color(colors["spine"])
 
             # Volume subplot
-            if volumes and "ax2" in dir():
-                ax2.set_facecolor("#0d1117")
-                colors = [
-                    "#3fb950" if prices[i] >= prices[i - 1] else "#f85149"
+            if cfg.show_volume and volumes and "ax2" in dir():
+                ax2.set_facecolor(colors["face"])
+                bar_colors = [
+                    colors["bullish"] if prices[i] >= prices[i - 1] else colors["bearish"]
                     for i in range(1, len(prices))
                 ]
-                colors.insert(0, "#3fb950")
-                ax2.bar(x, volumes, color=colors, alpha=0.7)
-                ax2.set_ylabel("Volume", fontsize=12, color="#8b949e")
-                ax2.grid(True, alpha=0.2, color="#30363d")
-                ax2.tick_params(colors="#8b949e")
+                bar_colors.insert(0, colors["bullish"])
+                ax2.bar(x, volumes, color=bar_colors, alpha=0.7)
+                ax2.set_ylabel("Volume", fontsize=cfg.label_fontsize, color=colors["label"])
+                ax2.grid(True, alpha=cfg.grid_alpha, color=colors["grid"])
+                ax2.tick_params(colors=colors["label"])
                 for spine in ax2.spines.values():
-                    spine.set_color("#30363d")
+                    spine.set_color(colors["spine"])
 
             # X-axis labels (show every nth date)
             n = max(1, len(dates) // 6)

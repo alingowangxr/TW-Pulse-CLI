@@ -141,6 +141,17 @@ class TechnicalAnalyzer:
         mfi = MFIIndicator(high, low, close, volume, n=14)
         mfi_14 = float(mfi.money_flow_index().iloc[-1])
 
+        # === Advanced Momentum Indicators ===
+
+        # ADX (Average Directional Index) - Manual implementation
+        adx_val, adx_pos, adx_neg = self._calculate_adx(high, low, close, n=14)
+
+        # CCI (Commodity Channel Index) - Manual implementation
+        cci_val = self._calculate_cci(high, low, close, n=20)
+
+        # Ichimoku Cloud (一目均衡表)
+        ichimoku = self._calculate_ichimoku(df)
+
         # Volume SMA
         volume_sma = SMAIndicator(volume.astype(float), n=20).sma_indicator().iloc[-1]
 
@@ -176,6 +187,17 @@ class TechnicalAnalyzer:
             obv=obv_val,
             mfi_14=mfi_14,
             volume_sma_20=float(volume_sma) if pd.notna(volume_sma) else None,
+            # Advanced momentum indicators
+            adx=adx_val,
+            adx_pos=adx_pos,
+            adx_neg=adx_neg,
+            cci=cci_val,
+            # Ichimoku Cloud
+            ichimoku_tenkan=ichimoku.get("tenkan"),
+            ichimoku_kijun=ichimoku.get("kijun"),
+            ichimoku_senkou_a=ichimoku.get("senkou_a"),
+            ichimoku_senkou_b=ichimoku.get("senkou_b"),
+            ichimoku_chikou=ichimoku.get("chikou"),
             support_1=support_1,
             support_2=support_2,
             resistance_1=resistance_1,
@@ -213,6 +235,158 @@ class TechnicalAnalyzer:
             float(resistance_1),
             float(resistance_2),
         )
+
+    def _calculate_ichimoku(self, df: pd.DataFrame) -> dict[str, float | None]:
+        """
+        Calculate Ichimoku Cloud (一目均衡表) indicators.
+
+        Tenkan-sen (Conversion Line): (Highest High + Lowest Low) / 2 for 9 periods
+        Kijun-sen (Base Line): (Highest High + Lowest Low) / 2 for 26 periods
+        Senkou Span A (Leading Span A): (Tenkan + Kijun) / 2, plotted 26 periods ahead
+        Senkou Span B (Leading Span B): (Highest High + Lowest Low) / 2 for 52 periods, plotted 26 ahead
+        Chikou Span (Lagging Span): Close plotted 26 periods behind
+
+        Returns:
+            Dictionary with tenkan, kijun, senkou_a, senkou_b, chikou
+        """
+        high = df["high"]
+        low = df["low"]
+        close = df["close"]
+
+        # Need sufficient data for Ichimoku calculations (at least 52 periods)
+        # Senkou Span A/B are plotted 26 periods ahead
+
+        try:
+            # Tenkan-sen (Conversion Line) - 9 periods
+            tenkan_high = high.rolling(window=9).max()
+            tenkan_low = low.rolling(window=9).min()
+            tenkan = (tenkan_high + tenkan_low) / 2
+
+            # Kijun-sen (Base Line) - 26 periods
+            kijun_high = high.rolling(window=26).max()
+            kijun_low = low.rolling(window=26).min()
+            kijun = (kijun_high + kijun_low) / 2
+
+            # Senkou Span B (Leading Span B) - 52 periods
+            senkou_b_high = high.rolling(window=52).max()
+            senkou_b_low = low.rolling(window=52).min()
+            senkou_b = (senkou_b_high + senkou_b_low) / 2
+
+            # Senkou Span A (Leading Span A) - plotted 26 periods ahead
+            senkou_a = (tenkan + kijun) / 2
+
+            # Get latest values (shifted 26 periods ahead for leading indicators)
+            latest_tenkan = float(tenkan.iloc[-1]) if len(tenkan) > 0 else None
+            latest_kijun = float(kijun.iloc[-1]) if len(kijun) > 0 else None
+            latest_senkou_a = float(senkou_a.iloc[-26]) if len(senkou_a) > 26 else None
+            latest_senkou_b = float(senkou_b.iloc[-26]) if len(senkou_b) > 26 else None
+            latest_chikou = float(close.iloc[-26]) if len(close) > 26 else None
+
+            return {
+                "tenkan": latest_tenkan,
+                "kijun": latest_kijun,
+                "senkou_a": latest_senkou_a,
+                "senkou_b": latest_senkou_b,
+                "chikou": latest_chikou,
+            }
+        except Exception:
+            return {
+                "tenkan": None,
+                "kijun": None,
+                "senkou_a": None,
+                "senkou_b": None,
+                "chikou": None,
+            }
+
+    def _calculate_adx(
+        self, high: pd.Series, low: pd.Series, close: pd.Series, n: int = 14
+    ) -> tuple[float | None, float | None, float | None]:
+        """
+        Calculate ADX (Average Directional Index) and +/- DI.
+
+        Args:
+            high: High prices
+            low: Low prices
+            close: Close prices
+            n: Period for calculation
+
+        Returns:
+            Tuple of (adx, plus_di, minus_di)
+        """
+        try:
+            # Calculate True Range (TR)
+            prev_close = close.shift(1)
+            tr1 = high - low
+            tr2 = abs(high - prev_close)
+            tr3 = abs(low - prev_close)
+            tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+
+            # Calculate +DM and -DM
+            plus_dm = high.diff()
+            minus_dm = -low.diff()
+
+            # Only consider positive values for +DM, negative for -DM
+            plus_dm = plus_dm.where(plus_dm > minus_dm, 0)
+            plus_dm = plus_dm.where(plus_dm > 0, 0)
+            minus_dm = minus_dm.where(minus_dm > plus_dm, 0)
+            minus_dm = minus_dm.where(minus_dm > 0, 0)
+
+            # Smooth using rolling mean
+            atr = tr.rolling(window=n).mean()
+            plus_di = (plus_dm.rolling(window=n).mean() / atr) * 100
+            minus_di = (minus_dm.rolling(window=n).mean() / atr) * 100
+
+            # Calculate DX
+            dx = (abs(plus_di - minus_di) / (plus_di + minus_di)) * 100
+
+            # Calculate ADX (smoothed DX)
+            adx = dx.rolling(window=n).mean()
+
+            return (
+                float(adx.iloc[-1]) if len(adx) > 0 and not pd.isna(adx.iloc[-1]) else None,
+                float(plus_di.iloc[-1])
+                if len(plus_di) > 0 and not pd.isna(plus_di.iloc[-1])
+                else None,
+                float(minus_di.iloc[-1])
+                if len(minus_di) > 0 and not pd.isna(minus_di.iloc[-1])
+                else None,
+            )
+        except Exception:
+            return None, None, None
+
+    def _calculate_cci(
+        self, high: pd.Series, low: pd.Series, close: pd.Series, n: int = 20
+    ) -> float | None:
+        """
+        Calculate CCI (Commodity Channel Index).
+
+        CCI = (Typical Price - SMA of TP) / (0.015 * Mean Deviation)
+
+        Args:
+            high: High prices
+            low: Low prices
+            close: Close prices
+            n: Period for calculation
+
+        Returns:
+            CCI value or None
+        """
+        try:
+            # Typical Price
+            tp = (high + low + close) / 3
+
+            # SMA of Typical Price
+            tp_sma = tp.rolling(window=n).mean()
+
+            # Mean Deviation
+            mean_dev = tp.rolling(window=n).apply(lambda x: abs(x - x.mean()).mean(), raw=True)
+
+            # CCI
+            cci = (tp - tp_sma) / (0.015 * mean_dev)
+
+            return float(cci.iloc[-1]) if len(cci) > 0 and not pd.isna(cci.iloc[-1]) else None
+        except Exception:
+            return None
 
     def _determine_trend(
         self,

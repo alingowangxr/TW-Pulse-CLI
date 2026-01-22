@@ -122,6 +122,14 @@ class CommandRegistry:
         )
 
         self.register(
+            "sapta-retrain",
+            self._cmd_sapta_retrain,
+            "Retrain SAPTA ML model",
+            "/sapta-retrain [--stocks=N] [--target-gain=N] [--walk-forward]",
+            aliases=["saptaretrain", "retrain-sapta"],
+        )
+
+        self.register(
             "technical",
             self._cmd_technical,
             "Technical analysis (技術分析)",
@@ -350,3 +358,9 @@ class CommandRegistry:
         from pulse.cli.commands.advanced import sapta_command
 
         return await sapta_command(self.app, args)
+
+    async def _cmd_sapta_retrain(self, args: str) -> str:
+        """SAPTA Model Retraining command handler."""
+        from pulse.cli.commands.advanced import sapta_retrain_command
+
+        return await sapta_retrain_command(self.app, args)

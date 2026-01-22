@@ -68,7 +68,20 @@ class DataSettings(BaseSettings):
     """Data fetching and caching configuration."""
 
     cache_dir: Path = Field(default=Path("data/cache"), description="Cache directory")
-    cache_ttl: int = Field(default=3600, description="Cache TTL in seconds (1 hour)")
+    cache_ttl: int = Field(default=3600, description="Default cache TTL in seconds (1 hour)")
+
+    # Specific TTL configurations (in seconds)
+    stock_cache_ttl: int = Field(default=1800, description="Stock price data TTL (30 minutes)")
+    technical_cache_ttl: int = Field(default=3600, description="Technical indicators TTL (1 hour)")
+    fundamental_cache_ttl: int = Field(default=86400, description="Fundamental data TTL (24 hours)")
+    broker_cache_ttl: int = Field(
+        default=86400, description="Broker/institutional data TTL (24 hours)"
+    )
+
+    # Cache optimization settings
+    cache_preload_count: int = Field(default=10, description="Number of top stocks to preload")
+    cache_warmup: bool = Field(default=True, description="Enable cache warmup on startup")
+
     yfinance_suffix: str = Field(default=".TW", description="yfinance ticker suffix for Taiwan")
     default_period: str = Field(default="3mo", description="Default historical data period")
     tickers_file: Path = Field(

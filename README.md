@@ -33,14 +33,16 @@
 |---------|-------------|
 | **Smart Agent** | AI 代理會在分析前獲取真實數據 |
 | **Natural Language** | 支援繁體中文或英文提問 |
-| **Technical Analysis** | RSI, MACD, 布林通道, SMA/EMA 等 15+ 指標 |
+| **Technical Analysis** | RSI, MACD, 布林通道, SMA/EMA, ADX, CCI, Ichimoku 等 18+ 指標 |
 | **Fundamental Analysis** | PE, PB, ROE/ROA, 股息率, 營收成長 |
 | **Institutional Flow** | 外資、投信、自營商買賣超分析 |
-| **Stock Screening** | 多條件篩選股票，支援 CSV 匯出 |
+| **Stock Screening** | 多條件篩選股票，支援 CSV 匯出，進度條顯示 |
 | **Trading Plan** | 自動生成停利/停損/風險報酬計算 |
-| **SAPTA Engine** | 機器學習預漲偵測 (6 模組 + XGBoost) |
+| **SAPTA Engine** | 機器學習預漲偵測 (6 模組 + XGBoost) + `/sapta-retrain` |
+| **SAPTA Feature Analysis** | `/sapta-retrain --report` 特徵重要性 + `/sapta-retrain --thresholds` 閾值分析 |
 | **Smart Money Screener** | 主力足跡選股 (Trend/Volume/Bias) |
-| **Chart Generation** | 匯出價格圖表為 PNG 格式 |
+| **Chart Generation** | 匯出價格圖表為 PNG 格式 (支援自訂主題) |
+| **E2E Tests** | 461 tests with comprehensive coverage |
 
 ---
 
@@ -107,6 +109,9 @@ pulse
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.2.0 | 2026-01-22 | E2E tests (461 total), SAPTA retrain CLI, chart customization |
+| 0.1.10 | 2026-01-22 | Rich progress bar, chart customization, FinMind quota monitoring |
+| 0.1.9 | 2026-01-22 | New indicators: ADX, CCI, Ichimoku Cloud; Cache TTL optimization |
 | 0.1.8 | 2026-01-20 | Smart Money Screener, JSON 股票清單 |
 | 0.1.7 | 2026-01-20 | SAPTA 圖表、基本面數據補救 |
 | 0.1.6 | 2026-01-20 | DeepSeek 模型、測試覆蓋率提升 |

@@ -251,6 +251,19 @@ class TechnicalIndicators(BaseModel):
     mfi_14: float | None = None
     volume_sma_20: float | None = None
 
+    # Advanced momentum indicators
+    adx: float | None = None  # Average Directional Index
+    adx_pos: float | None = None  # Plus Directional Indicator
+    adx_neg: float | None = None  # Minus Directional Indicator
+    cci: float | None = None  # Commodity Channel Index
+
+    # Ichimoku Cloud indicators
+    ichimoku_tenkan: float | None = None  # Conversion Line
+    ichimoku_kijun: float | None = None  # Base Line
+    ichimoku_senkou_a: float | None = None  # Leading Span A
+    ichimoku_senkou_b: float | None = None  # Leading Span B
+    ichimoku_chikou: float | None = None  # Lagging Span
+
     # Support/Resistance
     support_1: float | None = None
     support_2: float | None = None
@@ -266,6 +279,8 @@ class TechnicalIndicators(BaseModel):
         return {
             "RSI": self.rsi_14,
             "MACD": self.macd,
+            "ADX": self.adx,
+            "CCI": self.cci,
             "SMA 20": self.sma_20,
             "SMA 50": self.sma_50,
             "SMA 200": self.sma_200,

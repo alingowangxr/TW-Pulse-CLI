@@ -1,5 +1,6 @@
 """Data caching layer using diskcache."""
 
+import asyncio
 import hashlib
 from collections.abc import Callable
 from functools import wraps
@@ -131,7 +132,8 @@ class DataCache:
         """Cache broker summary."""
         key = self._make_key("broker", ticker.upper(), date)
         # Broker data should be cached longer (1 day)
-        return self.set(key, data, ttl or 86400)
+        broker_ttl = ttl or settings.data.broker_cache_ttl
+        return self.set(key, data, broker_ttl)
 
     def get_technical(self, ticker: str) -> Any | None:
         """Get cached technical indicators."""
@@ -152,7 +154,39 @@ class DataCache:
         """Cache fundamental data."""
         key = self._make_key("fundamental", ticker.upper())
         # Fundamental data changes less frequently
-        return self.set(key, data, ttl or 86400)
+        fundamental_ttl = ttl or settings.data.fundamental_cache_ttl
+        return self.set(key, data, fundamental_ttl)
+
+    async def preload_hot_data(self, tickers: list[str]) -> None:
+        """
+        Preload hot data for specified tickers.
+
+        Args:
+            tickers: List of tickers to preload
+        """
+        if not settings.data.cache_warmup:
+            return
+
+        log.info(f"Preloading cache for {len(tickers)} tickers...")
+
+        from pulse.core.data.stock_data_provider import StockDataProvider
+
+        fetcher = StockDataProvider()
+
+        async def preload_stock(ticker: str) -> None:
+            try:
+                await fetcher.fetch_stock(ticker)
+            except Exception:
+                pass  # Silently skip preload errors
+
+        # Preload in batches to avoid overwhelming the API
+        batch_size = 5
+        for i in range(0, len(tickers), batch_size):
+            batch = tickers[i : i + batch_size]
+            await asyncio.gather(*(preload_stock(t) for t in batch))
+            await asyncio.sleep(0.5)  # Rate limiting between batches
+
+        log.info("Cache warmup completed")
 
     def stats(self) -> dict:
         """Get cache statistics."""

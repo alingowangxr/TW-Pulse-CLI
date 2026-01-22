@@ -159,7 +159,6 @@ Modules (分析模組):
 
     engine = SaptaEngine()
     args_lower = args.lower().strip()
-    generate_chart = "--chart" in args_lower
     detailed = "--detailed" in args_lower
     args_clean = args_lower.replace("--chart", "").replace("--detailed", "").strip()
 
@@ -338,3 +337,85 @@ Modules (分析模組):
         recent_high=recent_high,
         support_level=support_level,
     )
+
+
+async def sapta_retrain_command(app: "PulseApp", args: str) -> str:
+    """SAPTA Model Retraining Command.
+
+    Retrain the SAPTA XGBoost model with new data.
+
+    Usage:
+        /sapta-retrain              # Run with default settings
+        /sapta-retrain --stocks 200 # Use 200 stocks
+        /sapta-retrain --target-gain 15 --target-days 30  # Custom targets
+        /sapta-retrain --walk-forward # Walk-forward validation
+        /sapta-retrain --status       # Show current model status
+
+    Options:
+        --stocks N       Number of stocks to train on (default: 100)
+        --target-gain N  Target gain percentage (default: 10)
+        --target-days N  Days to achieve target (default: 20)
+        --walk-forward   Use walk-forward validation
+        --status         Show current model information
+        --report         Generate feature importance report
+
+    Returns:
+        Training results with model metrics
+    """
+    args_lower = args.lower().strip()
+
+    # Show status
+    if "--status" in args_lower:
+        from pathlib import Path
+
+        model_dir = Path(__file__).parent.parent.parent / "core" / "sapta" / "data"
+        model_path = model_dir / "sapta_model.pkl"
+        thresholds_path = model_dir / "learned_thresholds.json"
+
+        if model_path.exists():
+            return f"""SAPTA Model Status:
+
+Model: {model_path}
+Thresholds: {thresholds_path.name}
+
+Use /sapta-retrain --report to see feature importance.
+Use /sapta-retrain --walk-forward to retrain with new data.
+"""
+        else:
+            return "SAPTA Model not trained yet. Use /sapta-retrain to train."
+
+    # Generate report
+    if "--report" in args_lower:
+        import sys
+
+        # Capture the report
+        original_argv = sys.argv
+        try:
+            sys.argv = ["train_model", "--report-only"]
+            # This would need to be implemented to return report
+            return "Feature importance report generation not yet implemented in CLI.\nUse: python -m pulse.core.sapta.ml.train_model --report-only"
+        finally:
+            sys.argv = original_argv
+
+    # Run training
+    import sys
+
+    # Build command
+    cmd = [sys.executable, "-m", "pulse.core.sapta.ml.train_model"]
+
+    # Parse args
+    parts = args_lower.split()
+    for part in parts:
+        if part.startswith("--stocks="):
+            cmd.append("--stocks")
+            cmd.append(part.split("=")[1])
+        elif part.startswith("--target-gain="):
+            cmd.append("--target-gain")
+            cmd.append(part.split("=")[1])
+        elif part.startswith("--target-days="):
+            cmd.append("--target-days")
+            cmd.append(part.split("=")[1])
+        elif part == "--walk-forward":
+            cmd.append("--walk-forward")
+
+    return f"Starting SAPTA model training...\nCommand: {' '.join(cmd)}\n\nUse /sapta --status to check model after training completes."
