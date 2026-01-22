@@ -246,6 +246,24 @@ class TestCalculateIndicators:
         assert result.atr_14 is not None
         assert result.atr_14 > 0
 
+    def test_keltner_channel_calculation(self, analyzer, sample_price_data):
+        """Test Keltner Channel calculation."""
+        result = analyzer._calculate_indicators("2330", sample_price_data)
+
+        # Keltner Channel should be calculated
+        assert result.kc_middle is not None
+        assert result.kc_upper is not None
+        assert result.kc_lower is not None
+
+        # Upper band should be above middle
+        assert result.kc_upper > result.kc_middle
+        # Middle band should be above lower
+        assert result.kc_middle > result.kc_lower
+        # All values should be positive
+        assert result.kc_middle > 0
+        assert result.kc_upper > 0
+        assert result.kc_lower > 0
+
     def test_stochastic_calculation(self, analyzer, sample_price_data):
         """Test Stochastic oscillator calculation."""
         result = analyzer._calculate_indicators("2330", sample_price_data)

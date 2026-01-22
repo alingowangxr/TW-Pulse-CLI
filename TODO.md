@@ -1,11 +1,50 @@
 # TW-Pulse-CLI Roadmap - 未來改進計劃
 
-> **版本**: v0.2.0
+> **版本**: v0.2.1
 > **最後更新**: 2026-01-22
 
 ---
 
-## 核心功能改進
+## 版本 v0.2.1 - 技術指標擴充 (2026-01-22)
+
+### ✅ 已完成
+
+#### Keltner Channel 指標
+
+- [x] **肯特納通道指標** ✅ v0.2.1
+  - `_calculate_keltner_channel()` 計算方法
+  - `kc_middle`, `kc_upper`, `kc_lower` 模型欄位
+  - 預設參數: EMA(20), ATR(10), 倍數(2.0)
+
+#### Keltner Channel 策略
+
+- [x] **Keltner Channel 突破策略** ✅ v0.2.1
+  - 完整策略模組 (`pulse/core/strategies/keltner_channel_strategy.py`)
+  - 四種信號類型: BUY, HOLD, SELL, WATCH
+  - 策略條件:
+    - 買進: 價格 >= 肯特納上軌 + EMA 多頭排列 + 成交量充足
+    - 持有: 價格在中軌與上軌之間
+    - 賣出: 價格跌破中軌
+  - 最小成交量濾網: 3,000,000 股
+  - EMA 多頭排列確認: EMA 9 > EMA 21 > EMA 55
+
+- [x] **選股器整合** ✅ v0.2.1
+  - `ScreenPreset.KELTNER_BREAKOUT` - 突破型篩選
+  - `ScreenPreset.KELTNER_HOLD` - 持有型篩選
+  - 新增篩選條件: `kc_above_upper`, `kc_above_middle`, `kc_ema_bullish`, `volume_min`
+
+#### 測試覆蓋
+
+- [x] **技術分析測試** ✅ 29 tests passed
+  - `test_keltner_channel_calculation` - Keltner Channel 計算測試
+- [x] **策略單元測試** ✅ 21 tests passed
+  - `TestKeltnerStrategyResult` - 結果模型測試
+  - `TestKeltnerChannelStrategy` - 策略邏輯測試
+  - `TestScreenKeltnerBreakout` - 快速篩選測試
+
+---
+
+## 版本 v0.2.0 - 測試覆蓋與 SAPTA 增強
 
 ### 測試覆蓋 (目標: 80%+)
 
@@ -29,16 +68,67 @@
   - `/sapta-retrain --thresholds` 閾值分析與建議
   - 調整閾值參數 (PRE-MARKUP >= 46.3, SIAP >= 23.8, WATCHLIST >= 10.2)
 
-### 數據穩定性
+---
 
-- [x] **API 配額監控** ✅ v0.1.10
-  - FinMind API 配額監控 (request_count, quota_limit)
-  - 優雅降級策略 (現有)
-  - 配額狀態 API: `get_quota_status()`, `set_quota_limit()`
+## 技術指標總覽 (v0.2.1)
 
-- [ ] **批量股票測試**
-  - 驗證多股票數據一致性
-  - 自動化數據品質檢測
+### 波動性指標
+
+| 指標 | 狀態 | 說明 |
+|------|------|------|
+| 布林通道 (Bollinger Bands) | ✅ | 標準差通道 |
+| **肯特納通道 (Keltner Channel)** | ✅ **新增** | EMA + ATR 通道 |
+| ATR | ✅ | 平均真實波幅 |
+
+### 趨勢指標
+
+| 指標 | 狀態 | 說明 |
+|------|------|------|
+| SMA (20, 50, 200) | ✅ | 簡單移動平均線 |
+| EMA (9, 21, 55) | ✅ | 指數移動平均線 |
+| Ichimoku Cloud | ✅ | 一目均衡表 |
+
+### 動量指標
+
+| 指標 | 狀態 | 說明 |
+|------|------|------|
+| RSI (14) | ✅ | 相對強弱指標 |
+| MACD | ✅ | 指數平滑異同移動平均線 |
+| Stochastic | ✅ | 隨機指標 |
+| ADX | ✅ | 平均方向指數 |
+| CCI | ✅ | 商品通道指數 |
+
+### 成交量指標
+
+| 指標 | 狀態 | 說明 |
+|------|------|------|
+| OBV | ✅ | 能量潮 |
+| MFI | ✅ | 資金流量指數 |
+| Volume SMA | ✅ | 成交量均線 |
+
+---
+
+## 策略總覽 (v0.2.1)
+
+### 內建策略
+
+| 策略 | 狀態 | 類型 | 說明 |
+|------|------|------|------|
+| Smart Money Screener | ✅ | 選股 | 主力足跡選股 (Trend/Volume/Bias) |
+| SAPTA Engine | ✅ | 預測 | 機器學習預漲偵測 |
+| **Keltner Breakout** | ✅ **新增** | 短線 | 肯特納通道突破策略 |
+| **Keltner Hold** | ✅ **新增** | 短線 | 肯特納通道持有策略 |
+
+### Keltner Channel 策略參數
+
+```python
+# 預設參數
+min_avg_volume = 3_000_000  # 最小日均成交量
+ema_periods = (9, 21, 55)   # EMA 週期
+atr_multiplier = 2.0        # ATR 倍數
+atr_period = 10             # ATR 週期
+rebalance_frequency = "biweekly"  # 換股頻率
+```
 
 ---
 
@@ -56,29 +146,12 @@
 
 ---
 
-## 功能擴展
+## 數據穩定性
 
-### 技術指標擴充
-
-- [x] **新增技術指標** ✅ v0.1.9
-  - OBV (On-Balance Volume) - 已有
-  - ADX (Average Directional Index) - ✅ 新增
-  - CCI (Commodity Channel Index) - ✅ 新增
-  - Ichimoku Cloud (一目均衡表) - ✅ 新增
-
-### 圖表自訂選項
-
-- [x] **圖表客製化** ✅ v0.1.10
-  - 顏色主題切換 (dark/light/traditional)
-  - 圖表樣式調整 (ChartConfig)
-  - 時間範圍自訂 (figure_size, line_width)
-  - 多指標疊加 (MA20/MA50/MA200 開關)
-
-### 批量掃描優化
-
-- [x] **並發批量下載** ✅ v0.1.9
-  - 多股票同時獲取數據 (已有 asyncio.gather)
-  - 智能限流機制 (已有 semaphore=10)
+- [x] **API 配額監控** ✅ v0.1.10
+  - FinMind API 配額監控 (request_count, quota_limit)
+  - 優雅降級策略 (現有)
+  - 配額狀態 API: `get_quota_status()`, `set_quota_limit()`
 
 ---
 
@@ -96,26 +169,13 @@
 
 ## 未來版本規劃
 
-### v0.2.0 - 個人化功能
-
-- [ ] **自選股管理**
-  - 本地 JSON 存儲自選股
-  - 快速訪問清單
-- [ ] **投資組合追蹤**
-  - 成本基礎計算
-  - 盈虧追蹤
-  - 績效統計
-- [ ] **價格提醒**
-  - 突破/跌破通知
-  - 自訂閾值設定
-
 ### v0.3.0 - 回測與策略
 
 - [ ] **回測框架**
   - 歷史模擬交易
   - 信號回測驗證
 - [ ] **策略建構器**
-  - 自訂進場/出場規則
+  - 自訂進場/出场規則
   - 條件組合編輯器
 - [ ] **績效報告**
   - 勝率統計
@@ -134,7 +194,7 @@
   - BTC/ETH 等主流幣種
   - 交易所 API 整合
 - [ ] **選擇權分析**
-  -  Greeks 計算
+  - Greeks 計算
   - 履約價分析
 
 ---
@@ -144,10 +204,10 @@
 - [ ] **部署指南**
   - Docker 容器化
   - pip 安裝說明
-- [ ] **使用範例擴充**
-  - 高級用法教程
-  - 實際案例分析
+- [x] **策略文檔擴充** ✅ v0.2.1
+  - Keltner Channel 策略說明
+  - 策略參數與使用範例
 
 ---
 
-*最後更新: 2026-01-20 (v0.1.8)*
+*最後更新: 2026-01-22 (v0.2.1 - Keltner Channel)*

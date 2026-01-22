@@ -245,6 +245,11 @@ class TechnicalIndicators(BaseModel):
     bb_width: float | None = None
     atr_14: float | None = None
 
+    # Keltner Channel indicators
+    kc_middle: float | None = None  # Middle line (EMA)
+    kc_upper: float | None = None  # Upper band
+    kc_lower: float | None = None  # Lower band
+
     # Volume indicators
     obv: float | None = None
     vwap: float | None = None

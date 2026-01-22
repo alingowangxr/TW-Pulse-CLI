@@ -131,6 +131,9 @@ class TechnicalAnalyzer:
         atr = AverageTrueRange(high, low, close, n=14)
         atr_14 = float(atr.average_true_range().iloc[-1])
 
+        # Keltner Channel
+        kc_middle, kc_upper, kc_lower = self._calculate_keltner_channel(close, high, low)
+
         # === Volume Indicators ===
 
         # OBV
@@ -184,6 +187,10 @@ class TechnicalAnalyzer:
             bb_lower=bb_lower,
             bb_width=bb_width,
             atr_14=atr_14,
+            # Keltner Channel
+            kc_middle=kc_middle,
+            kc_upper=kc_upper,
+            kc_lower=kc_lower,
             obv=obv_val,
             mfi_14=mfi_14,
             volume_sma_20=float(volume_sma) if pd.notna(volume_sma) else None,
@@ -387,6 +394,55 @@ class TechnicalAnalyzer:
             return float(cci.iloc[-1]) if len(cci) > 0 and not pd.isna(cci.iloc[-1]) else None
         except Exception:
             return None
+
+    def _calculate_keltner_channel(
+        self,
+        close: pd.Series,
+        high: pd.Series,
+        low: pd.Series,
+        ema_period: int = 20,
+        atr_period: int = 10,
+        atr_multiplier: float = 2.0,
+    ) -> tuple[float | None, float | None, float | None]:
+        """
+        Calculate Keltner Channel indicators.
+
+        Keltner Channel consists of:
+        - Middle Line: EMA of close price
+        - Upper Band: EMA + (ATR * multiplier)
+        - Lower Band: EMA - (ATR * multiplier)
+
+        Args:
+            close: Close prices
+            high: High prices
+            low: Low prices
+            ema_period: Period for EMA (default 20)
+            atr_period: Period for ATR (default 10)
+            atr_multiplier: ATR multiplier for bands (default 2.0)
+
+        Returns:
+            Tuple of (kc_middle, kc_upper, kc_lower)
+        """
+        try:
+            # Calculate EMA for middle band
+            ema = EMAIndicator(close, n=ema_period)
+            kc_middle = float(ema.ema_indicator().iloc[-1])
+
+            # Calculate ATR for band width
+            atr = AverageTrueRange(high, low, close, n=atr_period)
+            atr_value = atr.average_true_range()
+
+            # Calculate upper and lower bands
+            kc_upper = kc_middle + (atr_value.iloc[-1] * atr_multiplier)
+            kc_lower = kc_middle - (atr_value.iloc[-1] * atr_multiplier)
+
+            return (
+                float(kc_middle) if kc_middle and not pd.isna(kc_middle) else None,
+                float(kc_upper) if not pd.isna(kc_upper) else None,
+                float(kc_lower) if not pd.isna(kc_lower) else None,
+            )
+        except Exception:
+            return None, None, None
 
     def _determine_trend(
         self,

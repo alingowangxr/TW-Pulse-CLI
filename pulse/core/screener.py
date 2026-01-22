@@ -41,6 +41,8 @@ class ScreenPreset(str, Enum):
     UNDERVALUED = "undervalued"
     DIVIDEND = "dividend"
     MOMENTUM = "momentum"
+    KELTNER_BREAKOUT = "keltner_breakout"
+    KELTNER_HOLD = "keltner_hold"
 
 
 class StockUniverse(str, Enum):
@@ -74,11 +76,21 @@ class ScreenResult:
     macd_histogram: float | None = None
     sma_20: float | None = None
     sma_50: float | None = None
+    sma_200: float | None = None
+    ema_9: float | None = None
+    ema_21: float | None = None
+    ema_55: float | None = None
     bb_upper: float | None = None
     bb_lower: float | None = None
     bb_middle: float | None = None
     stoch_k: float | None = None
     stoch_d: float | None = None
+
+    # Keltner Channel indicators
+    kc_middle: float | None = None
+    kc_upper: float | None = None
+    kc_lower: float | None = None
+    kc_position: float | None = None  # Price position relative to KC (0-100%)
 
     # Fundamental data
     pe_ratio: float | None = None
@@ -211,6 +223,26 @@ class StockScreener:
                 "volume_above_avg": True,
             },
             "sort_by": "score",
+            "sort_asc": False,
+        },
+        ScreenPreset.KELTNER_BREAKOUT: {
+            "description": "Keltner Channel Breakout - Price above KC upper band + EMA bullish",
+            "criteria": {
+                "kc_above_upper": True,  # Price broke above KC upper
+                "kc_ema_bullish": True,  # EMA 9 > EMA 21 > EMA 55
+                "volume_min": 3000000,  # Min 3M avg daily volume (liquid stocks)
+            },
+            "sort_by": "kc_position",
+            "sort_asc": False,
+        },
+        ScreenPreset.KELTNER_HOLD: {
+            "description": "Keltner Channel Hold - Price holding above KC upper band",
+            "criteria": {
+                "kc_above_upper": True,  # Price above KC upper
+                "kc_above_middle": True,  # Price above KC middle
+                "volume_min": 3000000,  # Min 3M avg daily volume
+            },
+            "sort_by": "price",
             "sort_asc": False,
         },
     }
@@ -401,6 +433,82 @@ class StockScreener:
                         signals.append(f"BB Squeeze ({bb_width:.1f}%)")
                     else:
                         return False, []
+                continue
+
+            # Keltner Channel conditions
+            if key == "kc_above_upper":
+                # Price just broke above Keltner Upper Band
+                if condition and result.kc_upper and result.price:
+                    if result.price >= result.kc_upper:
+                        signals.append(f"KC Breakout ({result.price:.1f} >= {result.kc_upper:.1f})")
+                    else:
+                        return False, []
+                continue
+
+            if key == "kc_above_middle":
+                # Price above Keltner Middle (EMA)
+                if condition and result.kc_middle and result.price:
+                    if result.price > result.kc_middle:
+                        signals.append(f"KC Middle ({result.kc_middle:.1f})")
+                    else:
+                        return False, []
+                continue
+
+            if key == "kc_below_upper":
+                # Price below Keltner Upper Band (exit condition)
+                if condition and result.kc_upper and result.price:
+                    if result.price < result.kc_upper:
+                        signals.append(
+                            f"KC Below Upper ({result.price:.1f} < {result.kc_upper:.1f})"
+                        )
+                    else:
+                        return False, []
+                continue
+
+            if key == "kc_above_lower":
+                # Price above Keltner Lower Band
+                if condition and result.kc_lower and result.price:
+                    if result.price > result.kc_lower:
+                        signals.append(f"KC Lower ({result.kc_lower:.1f})")
+                    else:
+                        return False, []
+                continue
+
+            if key == "kc_ema_bullish":
+                # EMA bullish alignment: EMA 9 > EMA 21 > EMA 55
+                if condition:
+                    if result.ema_9 and result.ema_21 and result.ema_55:
+                        if result.ema_9 > result.ema_21 > result.ema_55:
+                            signals.append(
+                                f"EMA Bullish ({result.ema_9:.1f} > {result.ema_21:.1f} > {result.ema_55:.1f})"
+                            )
+                        else:
+                            return False, []
+                    else:
+                        return False, []
+                continue
+
+            if key == "kc_position_above_upper":
+                # Price position relative to KC bands (0-100%)
+                # Above upper band = position > 100
+                if (
+                    condition
+                    and result.kc_position is not None
+                    and result.kc_upper
+                    and result.kc_lower
+                ):
+                    if result.kc_position >= 100:
+                        signals.append(f"KC Position: {result.kc_position:.1f}%")
+                    else:
+                        return False, []
+                continue
+
+            if key == "volume_min":
+                # Minimum average daily volume filter
+                if isinstance(condition, (int, float)):
+                    if result.avg_volume < condition:
+                        return False, []
+                    signals.append(f"Vol: {result.avg_volume:,}")
                 continue
 
             # Market cap categories

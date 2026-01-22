@@ -130,6 +130,7 @@ python -m pulse.cli.app
 | `/sapta` | `/premarkup` | 預漲偵測 | `/sapta 2330` |
 | `/index` | `/market` | 大盤指數 | `/index` |
 | `/sector` | `/sec` | 產業分析 | `/sector` |
+| `/keltner` | `/kc` | 肯特納通道策略 | `/keltner 2330` |
 
 ### 篩選命令
 
@@ -158,6 +159,8 @@ python -m pulse.cli.app
 | `breakout` | 突破壓力位 + 量增 |
 | `momentum` | RSI 50-70 + MACD 多頭 |
 | `undervalued` | PE < 15 + ROE > 10% |
+| `keltner_breakout` | 肯特納通道突破 |
+| `keltner_hold` | 肯特納通道持有 |
 | `rsi<30` | 自訂條件 |
 | `pe<15 and roe>10` | 複合條件 |
 
@@ -227,6 +230,167 @@ python -m pulse.cli.app
 ```
 
 別名：`/tvb`, `/主力`
+
+---
+
+## Keltner Channel Strategy
+
+### `/keltner` - 肯特納通道策略
+
+**肯特納通道 (Keltner Channel)** 是一種波動性通道指標，由 Chester Keltner 在 1960 年代開發。
+它使用 EMA 作為中軌，ATR 的倍數作為上下軌，與布林通道相比對價格變動的反應更平滑。
+
+### 策略信號
+
+| 信號 | 顏色 | 說明 |
+|------|------|------|
+| **BUY** | 🟢 綠色 | 價格突破上軌 + EMA 多頭排列 |
+| **HOLD** | 🟡 黃色 | 價格在通道內 (中軌與上軌之間) |
+| **SELL** | 🔴 紅色 | 價格跌破中軌 |
+| **WATCH** | ⚪ 白色 | 接近上軌或成交量不足 |
+
+### 策略參數
+
+```python
+# 預設參數
+min_avg_volume = 3_000_000   # 最小日均成交量 (股)
+ema_periods = (9, 21, 55)    # EMA 週期用於趨勢確認
+atr_multiplier = 2.0         # ATR 倍數
+atr_period = 10              # ATR 週期
+rebalance_frequency = "biweekly"  # 換股頻率
+```
+
+### 策略邏輯
+
+#### 買進條件 (BUY)
+- 收盤價 **>=** 肯特納上軌 (kc_upper)
+- EMA 多頭排列 (EMA 9 > EMA 21 > EMA 55)
+- 日均成交量 **>=** 3,000,000 股
+
+#### 持有條件 (HOLD)
+- 收盤價在 **肯特納中軌** 與 **肯特納上軌** 之間
+- 或收盤價維持在肯特納上軌之上
+
+#### 賣出條件 (SELL)
+- 收盤價 **跌破** 肯特納中軌 (保守止損)
+- 或收盤價跌破肯特納上軌 (積極止損)
+
+### 使用方式
+
+```bash
+# 分析單一股票
+/keltner 2330
+
+# 篩選買進信號
+/keltner --buy
+
+# 篩選持有信號 (用於倉位檢視)
+/keltner --hold
+
+# 篩選賣出信號 (用於倉位檢視)
+/keltner --sell
+
+# 自訂最小成交量
+/keltner --min-volume=5000000
+
+# 自訂股票清單
+/keltner 2330 2303 2379
+```
+
+### Python API
+
+```python
+from pulse.core.strategies.keltner_channel_strategy import (
+    KeltnerChannelStrategy,
+    screen_keltner_breakout,
+)
+
+# 方式 1: 完整策略物件
+strategy = KeltnerChannelStrategy()
+
+# 買進信號篩選
+buy_signals = await strategy.screen_buy_signals(limit=20)
+
+# 持有信號篩選
+hold_signals = await strategy.screen_hold_signals(limit=20)
+
+# 賣出信號篩選
+sell_signals = await strategy.screen_sell_signals(limit=20)
+
+# 完整篩選 (含觀察名單)
+all_signals = await strategy.screen(include_watchlist=True)
+
+# 顯示結果
+for r in buy_signals:
+    print(f"{r.ticker}: {r.signal.value} @ ${r.price}")
+    print(f"  KC Upper: {r.kc_upper:.2f}, KC Middle: {r.kc_middle:.2f}")
+    print(f"  EMA: {r.ema_9:.2f} > {r.ema_21:.2f} > {r.ema_55:.2f}")
+    print(f"  成交量: {r.avg_volume:,}")
+
+# 方式 2: 快速篩選
+quick_results = await screen_keltner_breakout(universe=["2330", "2303"], limit=10)
+```
+
+### 輸出範例
+
+```
+肯特納通道策略 (BUY 信號)
+---
+找到 5 檔符合條件的股票:
+
+[BUY] 2330  台積電
+    價格: NT$1,025 (+2.5%)
+    KC Upper: 1,020.0 | KC Middle: 980.0 | KC Lower: 940.0
+    EMA: 1,000 > 990 > 970 (多頭排列)
+    成交量: 5,234,567 (1.3x 平均)
+    距離上軌: +0.5%
+
+[BUY] 2303  聯電
+    價格: NT$52.5 (+1.8%)
+    KC Upper: 51.8 | KC Middle: 49.2 | KC Lower: 46.6
+    EMA: 52.1 > 50.5 > 48.9 (多頭排列)
+    成交量: 3,456,789 (1.1x 平均)
+    距離上軌: +1.4%
+
+---
+篩選條件:
+  - 價格 >= 肯特納上軌
+  - EMA 多頭排列 (EMA 9 > EMA 21 > EMA 55)
+  - 日均成交量 >= 3,000,000 股
+```
+
+### 肯特納通道 vs 布林通道
+
+| 特性 | 肯特納通道 | 布林通道 |
+|------|------------|----------|
+| 中軌 | EMA (20) | SMA (20) |
+| 帶寬 | ATR × 倍數 | 標準差 × 倍數 |
+| 反應 | 更平滑 | 更敏感 |
+| 適用 | 趨勢確認 | 波動性測量 |
+
+### 策略優勢與劣勢
+
+#### 優勢
+- 順勢交易，追蹤趨勢
+- 明確的進場/出场規則
+- 濾除噪音，減少假突破
+- 適合波段行情
+
+#### 劣勢
+- 盤整市場可能產生假信號
+- 參數需要優化
+- 趨勢反轉時可能造成較大虧損
+- 不適合當日沖銷
+
+### 風險控制建議
+
+1. **成交量濾網**: 排除日均成交量 < 3,000,000 股的股票
+2. **EMA 確認**: 只在 EMA 多頭排列時買進
+3. **換股頻率**: 兩週檢視一次 (Bi-weekly)
+4. **止損紀律**: 跌破中軌立即止損
+5. **分散投資**: 不要把所有資金投入單一股票
+
+別名：`/kc`
 
 ---
 
@@ -354,4 +518,4 @@ PULSE_AI__DEFAULT_MODEL=deepseek/deepseek-chat
 
 ---
 
-**最後更新**: 2026-01-20
+**最後更新**: 2026-01-22 (v0.2.1 - Keltner Channel)
