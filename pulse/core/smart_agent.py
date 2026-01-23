@@ -1233,27 +1233,31 @@ Saham mana yang paling menarik untuk diperhatikan?"""
         # Step 2: If no tickers found but we have last context, this might be a follow-up
         is_followup = False
         if not tickers and self._last_ticker and intent == "general":
-            # Check if this looks like a follow-up question
+            # Check if this looks like a follow-up question (Chinese patterns)
             followup_patterns = [
-                r"kenapa",
-                r"mengapa",
-                r"kok",
-                r"gimana",
-                r"bagaimana",
-                r"terus",
-                r"lalu",
-                r"jadi",
-                r"berarti",
-                r"apakah",
-                r"apa itu",
-                r"maksudnya",
-                r"lebih",
-                r"kurang",
-                r"naik",
-                r"turun",
-                r"support",
-                r"resistance",
-                r"target",
+                r"為什麼",
+                r"怎麼",
+                r"為啥",
+                r"為何",
+                r"所以",
+                r"然後",
+                r"可以嗎",
+                r"好嗎",
+                r"推薦",
+                r"應該",
+                r"漲",
+                r"跌",
+                r"可以買",
+                r"可以賣",
+                r"怎麼看",
+                r"你覺得",
+                r"後續",
+                r"目標",
+                r"支撐",
+                r"壓力",
+                r"看法",
+                r"建議",
+                r"操作",
             ]
             msg_lower = user_message.lower()
             for pattern in followup_patterns:
@@ -1307,7 +1311,7 @@ Chart saved: {filepath}"""
                 if forecast.get("filepath"):
                     msg += f"\n\nChart saved: {forecast['filepath']}"
                 return AgentResponse(message=msg, chart=forecast.get("filepath"))
-            return AgentResponse(message=f"Tidak dapat membuat forecast untuk {ticker}")
+            return AgentResponse(message=f"無法為 {ticker} 生成預測")
 
         # Handle screen intent - smart stock screening
         if intent == "screen":
@@ -1346,24 +1350,22 @@ Chart saved: {filepath}"""
 
         # For follow-up questions, include previous context
         if is_followup and self._last_context:
-            analysis_prompt = (
-                f"[Konteks sebelumnya: Analisis {self._last_ticker}]\n\n" + analysis_prompt
-            )
+            analysis_prompt = f"[前一次分析: {self._last_ticker}]\n\n" + analysis_prompt
 
         ai_response = await ai.chat(
             analysis_prompt,
             system_prompt=(
-                "Kamu adalah analis saham senior Indonesia. "
-                "Analisis berdasarkan DATA REAL yang diberikan. "
-                "Jawab dalam Bahasa Indonesia, singkat dan to the point. "
-                "Jangan mengarang data - gunakan HANYA data yang tersedia."
+                "你是台灣股市資深分析師。 "
+                "根據提供的真實數據進行分析。 "
+                "用繁體中文回覆，簡潔有力。 "
+                "不要編造數據 - 只能使用提供的數據。"
             ),
             use_history=True,  # Enable history for follow-up context
         )
 
-        # Generate chart for analysis intent too
+        # Generate chart for any stock-related intent (price, analyze, technical)
         chart_filepath = None
-        if intent in ["analyze", "technical"] and tickers:
+        if tickers:
             chart_filepath = await self._generate_chart(tickers[0])
 
         # Append chart info to response if generated
