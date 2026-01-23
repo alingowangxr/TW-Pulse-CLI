@@ -119,6 +119,67 @@ class SmartAgent:
         "2609",  # 陽明
     }
 
+    # Chinese stock name to ticker mapping (for user queries like "台塑股價")
+    CHINESE_NAME_TO_TICKER = {
+        # Plastic (塑化)
+        "台塑": "1301",
+        "南亞": "1303",
+        "台化": "1326",
+        "台塑化": "6505",
+        # Semiconductor (半導體)
+        "台積電": "2330",
+        "聯發科": "2454",
+        "聯電": "2303",
+        "日月光": "3711",
+        "瑞昱": "2379",
+        "聯詠": "3034",
+        "矽力": "6415",
+        # Electronics (電子)
+        "鴻海": "2317",
+        "廣達": "2382",
+        "華碩": "2357",
+        "緯創": "3231",
+        "仁寶": "2324",
+        "英業達": "2356",
+        "光寶科": "2301",
+        "台達電": "2308",
+        # Finance (金融)
+        "富邦金": "2881",
+        "國泰金": "2882",
+        "中信金": "2891",
+        "兆豐金": "2886",
+        "玉山金": "2884",
+        "第一金": "2892",
+        "華南金": "2880",
+        "開發金": "2883",
+        "台新金": "2887",
+        "合庫金": "5880",
+        # Steel (鋼鐵)
+        "中鋼": "2002",
+        "東和鋼鐵": "2006",
+        "中鴻": "2014",
+        "大成鋼": "2027",
+        # Food (食品)
+        "統一": "1216",
+        "佳格": "1227",
+        "聯華": "1229",
+        "聯華食": "1231",
+        # Biotech (生技)
+        "泰博": "4736",
+        "合一": "4743",
+        "台耀": "4746",
+        "藥華藥": "6446",
+        # Telecom (電信)
+        "中華電": "2412",
+        "台灣大": "3045",
+        "遠傳": "4904",
+        # Others (其他)
+        "統一超": "2912",
+        "彰銀": "2801",
+        "長榮": "2603",
+        "陽明": "2609",
+    }
+
     # Words that look like tickers but aren't (Taiwan context)
     TICKER_BLACKLIST = {
         # Numbers that aren't tickers
@@ -268,13 +329,21 @@ class SmartAgent:
         return self.ai_client
 
     def _extract_tickers(self, message: str) -> list[str]:
-        """Extract stock tickers from message (Taiwan 4-6 digit codes)."""
+        """Extract stock tickers from message (Taiwan 4-6 digit codes or Chinese names)."""
         tickers = []
+
+        # Check for Chinese stock names first
+        for name, ticker in self.CHINESE_NAME_TO_TICKER.items():
+            if name in message:
+                if ticker not in tickers:
+                    tickers.append(ticker)
+                log.debug(f"Found Chinese stock name: {name} -> {ticker}")
 
         # Check for known tickers (4-digit codes)
         for ticker in self.KNOWN_TICKERS:
             if ticker in message:
-                tickers.append(ticker)
+                if ticker not in tickers:
+                    tickers.append(ticker)
 
         # Also check for 4-6 digit numbers that might be tickers
         words = re.findall(r"\b(\d{4,6})\b", message)
