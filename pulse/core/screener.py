@@ -168,7 +168,7 @@ class StockScreener:
         results = await screener.screen_criteria("rsi<30 and volume>1000000")
 
         # AI smart screening
-        results = await screener.smart_screen("saham yang akan naik")
+        results = await screener.smart_screen("尋找上漲股票")
     """
 
     # Preset criteria definitions
@@ -759,70 +759,68 @@ class StockScreener:
         # Multibagger: small/mid cap, momentum, growth
         if any(
             w in query_lower
-            for w in ["multibagger", "multi bagger", "10x", "100x", "cuan besar", "untung besar"]
+            for w in ["multibagger", "multi bagger", "10x", "100x", "大漲", "潛力股"]
         ):
             criteria = {
                 "market_cap_small_mid": True,
                 "macd_above_signal": True,
                 "volume_above_avg": True,
             }
-            explanation = "Mencari saham potensi multibagger (small/mid cap, momentum bullish, volume aktif). Kriteria: bukan big cap, MACD bullish, volume di atas rata-rata."
+            explanation = "尋找潛力股 (小型/中型股, 技術面多頭, 成交量活躍)。條件: 非大型股, MACD 多頭, 平均成交量以上。"
 
         # Small cap
-        elif any(w in query_lower for w in ["small cap", "saham kecil", "kapitalisasi kecil"]):
+        elif any(w in query_lower for w in ["small cap", "小型股", "小型"]):
             criteria = {
                 "market_cap_small": True,
                 "macd_above_signal": True,
             }
-            explanation = "Mencari saham small cap dengan momentum bullish"
+            explanation = "尋找小型股多頭趨勢"
 
         # Growth stocks
-        elif any(w in query_lower for w in ["growth", "pertumbuhan", "tumbuh"]):
+        elif any(w in query_lower for w in ["growth", "成長", "高成長"]):
             criteria = {
                 "high_growth": True,
                 "macd_above_signal": True,
             }
-            explanation = (
-                "Mencari saham dengan pertumbuhan tinggi (earnings/revenue growth > 15-20%)"
-            )
+            explanation = "尋找高成長股票 (營收/獲利成長率 > 15-20%)"
 
         # Breakout
-        elif any(w in query_lower for w in ["breakout", "tembus"]):
+        elif any(w in query_lower for w in ["breakout", "突破", "即將上漲"]):
             criteria = {
                 "near_resistance": True,
                 "volume_spike": True,
             }
-            explanation = "Mencari saham potensi breakout (dekat resistance, volume spike)"
+            explanation = "尋找即將突破股票 (接近壓力位, 成交量爆發)"
 
         # Oversold
-        elif any(w in query_lower for w in ["oversold", "jenuh jual"]):
+        elif any(w in query_lower for w in ["oversold", "超賣", "撿便宜"]):
             criteria = {"rsi_14": ("<", 30)}
-            explanation = "Mencari saham oversold (RSI < 30)"
+            explanation = "尋找超賣股票 (RSI < 30)"
 
         # Undervalued
-        elif any(w in query_lower for w in ["murah", "undervalued", "diskon"]):
+        elif any(w in query_lower for w in ["便宜", "低估", "被低估"]):
             criteria = {
                 "pe_ratio": ("<", 15),
                 "roe": (">", 10),
             }
-            explanation = "Mencari saham undervalued (PE < 15, ROE > 10%)"
+            explanation = "尋找被低估股票 (PE < 15, ROE > 10%)"
 
         # Bearish
-        elif any(w in query_lower for w in ["turun", "bearish", "jual", "hindari"]):
+        elif any(w in query_lower for w in ["下跌", "空頭", "賣出", "避開"]):
             criteria = {
                 "rsi_14": (">", 70),
                 "macd_below_signal": True,
             }
-            explanation = "Mencari saham dengan sinyal bearish (RSI > 70, MACD bearish)"
+            explanation = "尋找空頭訊號股票 (RSI > 70, MACD 空頭)"
 
         # Bullish momentum (generic - check last)
-        elif any(w in query_lower for w in ["naik", "bullish", "bagus", "potensial", "beli"]):
+        elif any(w in query_lower for w in ["上漲", "多頭", "看好", "潛力", "買進"]):
             criteria = {
                 "rsi_14": ("between", (30, 65)),
                 "macd_above_signal": True,
                 "volume_above_avg": True,
             }
-            explanation = "Mencari saham dengan momentum bullish (RSI 30-65, MACD bullish, volume di atas rata-rata)"
+            explanation = "尋找多頭趨勢股票 (RSI 30-65, MACD 多頭, 成交量增加)"
 
         else:
             # Default: momentum screening
@@ -830,7 +828,7 @@ class StockScreener:
                 "macd_above_signal": True,
                 "volume_above_avg": True,
             }
-            explanation = "Screening momentum (MACD bullish, volume di atas rata-rata)"
+            explanation = "技術面篩選 (MACD 多頭, 成交量增加)"
 
         results = await self._run_screen(
             criteria=criteria,

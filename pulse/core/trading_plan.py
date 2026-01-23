@@ -41,7 +41,7 @@ class TradingPlanGenerator:
     DEFAULT_RISK_PERCENT = 2.0  # 2% risk per trade
     DEFAULT_ATR_SL_MULTIPLIER = 1.5  # SL = Entry - (ATR * 1.5)
     DEFAULT_ATR_TP_MULTIPLIER = 2.0  # TP1 = Entry + (ATR * 2.0)
-    DEFAULT_ACCOUNT_SIZE = 100_000_000  # Rp 100 juta default
+    DEFAULT_ACCOUNT_SIZE = 10_000_000  # Default 1000萬帳戶
 
     def __init__(self):
         self.fetcher = YFinanceFetcher()

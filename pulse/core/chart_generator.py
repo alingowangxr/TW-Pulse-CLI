@@ -389,7 +389,7 @@ class ChartGenerator:
 
             color = "#3fb950" if change_pct >= 0 else "#f85149"
             ax.annotate(
-                f"Target: Rp {target:,.0f} ({change_pct:+.2f}%)",
+                f"目標: {target:,.0f} ({change_pct:+.2f}%)",
                 xy=(forecast_x[-1], target),
                 xytext=(10, 0),
                 textcoords="offset points",

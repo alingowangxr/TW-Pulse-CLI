@@ -623,7 +623,7 @@ class SmartAgent:
         ctx.stock_data = await self._fetch_stock_data(primary_ticker)
 
         if not ctx.stock_data:
-            ctx.error = f"Tidak dapat mengambil data untuk {primary_ticker}"
+            ctx.error = f"無法取得 {primary_ticker} 的數據"
             return ctx
 
         # Fetch additional data based on intent
