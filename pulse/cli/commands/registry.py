@@ -202,6 +202,14 @@ class CommandRegistry:
         )
 
         self.register(
+            "stocks",
+            self._cmd_stocks,
+            "Fetch Taiwan stock code list (上市/上櫃)",
+            "/stocks [--json] [--csv] [--twse] [--tpex]",
+            aliases=["stocklist", "tickers"],
+        )
+
+        self.register(
             "taiex",
             self._cmd_taiex,
             "Taiwan index overview (大盤指數)",
@@ -364,3 +372,9 @@ class CommandRegistry:
         from pulse.cli.commands.advanced import sapta_retrain_command
 
         return await sapta_retrain_command(self.app, args)
+
+    async def _cmd_stocks(self, args: str) -> str:
+        """Fetch Taiwan stock code list command handler."""
+        from pulse.cli.commands.stock_list import stocks_command
+
+        return await stocks_command(self.app, args)
