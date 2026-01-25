@@ -78,7 +78,7 @@ For comprehensive analysis, provide:
 2. **Technical Analysis**
    - Trend: MA, EMA positioning
    - Momentum: RSI, MACD, Stochastic
-   - Volatility: Bollinger Bands
+   - Volatility: Bollinger Bands,Keltner Channel
    - Support & Resistance levels
    - Chart patterns if any
 

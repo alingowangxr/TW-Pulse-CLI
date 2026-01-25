@@ -57,8 +57,7 @@ class BBSqueezeModule(BaseModule):
         close = df["close"]
 
         # Calculate Bollinger Bands
-        # ta 0.5.25 uses 'n' and 'ndev' instead of 'window' and 'window_dev'
-        bb = BollingerBands(close, n=bb_period, ndev=bb_std)
+        bb = BollingerBands(close, window=bb_period, window_dev=bb_std)
         bb_width = bb.bollinger_wband()
 
         # === Check 1: Current width percentile ===
