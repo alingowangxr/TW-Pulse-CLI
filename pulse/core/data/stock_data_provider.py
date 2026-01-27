@@ -1,5 +1,6 @@
 """Centralized data provider to fetch stock data from FinMind (primary), yfinance (fallback), or Fugle (tertiary)."""
 
+import os
 import pandas as pd
 
 from pulse.core.data.finmind_data import FinMindFetcher
@@ -24,8 +25,21 @@ class StockDataProvider:
 
         Args:
             finmind_token: FinMind API token (optional, for higher rate limits)
+                          If not provided, will try to read from FINMIND_TOKEN environment variable
             fugle_api_key: Fugle API key (optional, for real-time data)
+                          If not provided, will try to read from FUGLE_API_KEY environment variable
         """
+        # Auto-load tokens from environment if not provided
+        if not finmind_token:
+            finmind_token = os.getenv("FINMIND_TOKEN", "")
+            if finmind_token:
+                log.info("Loaded FinMind API token from environment variable")
+
+        if not fugle_api_key:
+            fugle_api_key = os.getenv("FUGLE_API_KEY", "")
+            if fugle_api_key:
+                log.info("Loaded Fugle API key from environment variable")
+
         self.finmind_fetcher = FinMindFetcher(token=finmind_token)
         self.yfinance_fetcher = YFinanceFetcher()
         self.fugle_fetcher = FugleFetcher(api_key=fugle_api_key)
