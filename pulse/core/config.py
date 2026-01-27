@@ -170,7 +170,7 @@ class Settings(BaseSettings):
         config_path = self.base_dir / self.config_file
 
         if config_path.exists():
-            with open(config_path) as f:
+            with open(config_path, encoding="utf-8") as f:
                 yaml_config = yaml.safe_load(f)
 
             if yaml_config:
