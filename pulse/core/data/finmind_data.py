@@ -742,6 +742,20 @@ class FinMindFetcher:
 
             return df
 
+        except KeyError as e:
+            if str(e) == "'data'":
+                # FinMind API quota exceeded
+                error_msg = (
+                    f"FinMind API quota exceeded. "
+                    f"法人買賣超數據查詢已達每日上限。"
+                    f"請等待明日配額重置，或前往 https://finmindtrade.com/ 取得 API Token。"
+                )
+                log.error(error_msg)
+                FinMindFetcher.set_quota_exceeded(error_msg)
+                return None
+            else:
+                log.error(f"Error fetching institutional investor data for {ticker} from FinMind: {e}")
+                return None
         except Exception as e:
             log.error(f"Error fetching institutional investor data for {ticker} from FinMind: {e}")
             return None

@@ -14,12 +14,37 @@ async def broker_command(app: "PulseApp", args: str) -> str:
     ticker = args.strip().upper()
 
     from pulse.core.analysis.institutional_flow import InstitutionalFlowAnalyzer
+    from pulse.core.data.finmind_data import FinMindFetcher
+
+    # Check if FinMind quota exceeded
+    if FinMindFetcher.is_quota_exceeded():
+        quota_status = FinMindFetcher.get_quota_status()
+        return (
+            f"❌ FinMind API 配額已用完\n\n"
+            f"📊 配額狀態：\n"
+            f"  - 已使用：{quota_status['request_count']}/{quota_status['quota_limit']}\n"
+            f"  - 錯誤訊息：{quota_status['error_message']}\n\n"
+            f"💡 解決方案：\n"
+            f"  1. 等待明日配額重置\n"
+            f"  2. 前往 https://finmindtrade.com/ 註冊並取得付費 API Token\n"
+            f"  3. 在 config/pulse.yaml 中設定 FINMIND_API_TOKEN"
+        )
 
     analyzer = InstitutionalFlowAnalyzer()
 
     result = await analyzer.analyze(ticker)
 
     if not result:
+        # Check again if quota was exceeded during the call
+        if FinMindFetcher.is_quota_exceeded():
+            quota_status = FinMindFetcher.get_quota_status()
+            return (
+                f"❌ FinMind API 配額已用完\n\n"
+                f"錯誤訊息：{quota_status['error_message']}\n\n"
+                f"💡 解決方案：\n"
+                f"  1. 等待明日配額重置\n"
+                f"  2. 前往 https://finmindtrade.com/ 取得付費 API Token"
+            )
         return f"無法取得 {ticker} 的法人動向資料"
 
     return analyzer.format_summary_table(result)
