@@ -47,15 +47,15 @@ class FarmerPlantingStrategy(BaseStrategy):
         """
         self.ticker = ticker
         self.config = {
-            "max_shares": config.get("max_shares", 10_000),  # 最大持股 10000 股
-            "shares_per_trade": config.get("shares_per_trade", 1_000),  # 每次交易 1000 股
+            "max_positions": config.get("max_positions", 10),  # 最大持倉份數
+            "shares_per_position": config.get("shares_per_position", 1_000),  # 每份股數（1張=1000股）
             "add_threshold": config.get("add_threshold", 1.03),
             "reduce_threshold": config.get("reduce_threshold", 0.97),
             "trailing_stop": config.get("trailing_stop", 0.20),
             "ma200_stop": config.get("ma200_stop", 0.96),
             "rsi_oversold": config.get("rsi_oversold", 30),
             "use_dynamic_capital": config.get("use_dynamic_capital", True),  # 啟用動態資金管理
-            "num_positions": config.get("num_positions", 10),  # 總份數
+            "num_positions": config.get("num_positions", 10),  # 總份數（與max_positions一致）
         }
 
         self.state = StrategyState(cash=initial_cash, total_capital=initial_cash)
@@ -104,7 +104,7 @@ class FarmerPlantingStrategy(BaseStrategy):
             return shares
         else:
             # 使用固定股數
-            return self.config["shares_per_trade"]
+            return self.config["shares_per_position"]
 
     async def on_bar(
         self, bar: dict[str, Any], indicators: dict[str, Any]
