@@ -237,26 +237,44 @@ class YFinanceFetcher:
         self,
         ticker: str,
         period: str = "3mo",
+        start: str | None = None,
+        end: str | None = None,
     ) -> pd.DataFrame | None:
         """
         Fetch historical data as DataFrame (async wrapper).
 
         Args:
             ticker: Stock ticker
-            period: Historical data period
+            period: Historical data period (used if start/end not provided)
+            start: Start date (datetime or str, optional)
+            end: End date (datetime or str, optional)
 
         Returns:
             DataFrame with OHLCV data
         """
-        return self.get_history_df(ticker, period)
+        # Convert datetime to string if necessary
+        if start is not None and hasattr(start, 'strftime'):
+            start = start.strftime('%Y-%m-%d')
+        if end is not None and hasattr(end, 'strftime'):
+            end = end.strftime('%Y-%m-%d')
 
-    def get_history_df(self, ticker: str, period: str = "1y") -> pd.DataFrame | None:
+        return self.get_history_df(ticker, period, start, end)
+
+    def get_history_df(
+        self,
+        ticker: str,
+        period: str = "1y",
+        start: str | None = None,
+        end: str | None = None,
+    ) -> pd.DataFrame | None:
         """
         Get historical data as pandas DataFrame (for technical analysis).
 
         Args:
             ticker: Stock ticker
-            period: Historical data period
+            period: Historical data period (used if start/end not provided)
+            start: Start date (YYYY-MM-DD format, optional)
+            end: End date (YYYY-MM-DD format, optional)
 
         Returns:
             DataFrame with OHLCV data
@@ -265,7 +283,12 @@ class YFinanceFetcher:
 
         try:
             stock = yf.Ticker(formatted_ticker)
-            hist = stock.history(period=period)
+
+            # Use start/end if provided, otherwise use period
+            if start and end:
+                hist = stock.history(start=start, end=end)
+            else:
+                hist = stock.history(period=period)
 
             if hist.empty:
                 return None

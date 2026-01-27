@@ -30,6 +30,62 @@ class TechnicalAnalyzer:
         self.fetcher = StockDataProvider()
         self.settings = settings.analysis
 
+    async def calculate_indicators(self, df: pd.DataFrame) -> pd.DataFrame | None:
+        """
+        Calculate technical indicators for entire DataFrame (for backtest).
+
+        Args:
+            df: DataFrame with OHLCV data
+
+        Returns:
+            DataFrame with added technical indicator columns
+        """
+        if not HAS_TA:
+            log.error("ta library not installed. Run: pip install ta")
+            return None
+
+        try:
+            df = df.copy()
+
+            # Ensure column names are lowercase
+            df.columns = df.columns.str.lower()
+
+            close = df["close"]
+            high = df["high"]
+            low = df["low"]
+            volume = df["volume"]
+
+            # Calculate indicators
+            # RSI
+            rsi = RSIIndicator(close, window=14)
+            df["RSI_14"] = rsi.rsi()
+
+            # Moving Averages
+            df["MA_50"] = SMAIndicator(close, window=50).sma_indicator()
+            df["MA_200"] = SMAIndicator(close, window=200).sma_indicator()
+
+            # MACD
+            macd = MACD(close)
+            df["MACD"] = macd.macd()
+            df["MACD_signal"] = macd.macd_signal()
+            df["MACD_hist"] = macd.macd_diff()
+
+            # Bollinger Bands
+            bb = BollingerBands(close, window=20, window_dev=2)
+            df["BB_upper"] = bb.bollinger_hband()
+            df["BB_middle"] = bb.bollinger_mavg()
+            df["BB_lower"] = bb.bollinger_lband()
+
+            # ATR
+            atr = AverageTrueRange(high, low, close, window=14)
+            df["ATR"] = atr.average_true_range()
+
+            return df
+
+        except Exception as e:
+            log.error(f"Error calculating indicators: {e}")
+            return None
+
     async def analyze(
         self,
         ticker: str,
