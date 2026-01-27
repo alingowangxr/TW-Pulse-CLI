@@ -1,5 +1,6 @@
 """AI client using LiteLLM for multi-provider LLM support."""
 
+import os
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -14,6 +15,35 @@ from pulse.utils.logger import get_logger
 litellm.suppress_debug_info = True
 
 log = get_logger(__name__)
+
+
+def _check_api_keys():
+    """Check if required API keys are set for the current model."""
+    # Map of model prefixes to their required environment variables
+    api_key_map = {
+        "gemini/": ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
+        "anthropic/": ["ANTHROPIC_API_KEY"],
+        "openai/": ["OPENAI_API_KEY"],
+        "groq/": ["GROQ_API_KEY"],
+        "deepseek/": ["DEEPSEEK_API_KEY"],
+    }
+
+    model = settings.ai.default_model
+    for prefix, env_vars in api_key_map.items():
+        if model.startswith(prefix):
+            # Check if any of the required env vars is set
+            has_key = any(os.getenv(var) for var in env_vars)
+            if not has_key:
+                log.warning(
+                    f"Model '{model}' requires API key. "
+                    f"Please set one of: {', '.join(env_vars)} in your .env file"
+                )
+            return has_key
+    return True  # Unknown provider, assume it's okay
+
+
+# Check API keys on module load
+_check_api_keys()
 
 
 class AIClient:
@@ -130,8 +160,27 @@ class AIClient:
             return assistant_message
 
         except Exception as e:
-            log.error(f"AI request failed: {e}")
-            raise
+            # Provide more helpful error messages for common issues
+            error_msg = str(e).lower()
+
+            if "rate limit" in error_msg or "quota" in error_msg:
+                log.error(f"API rate limit/quota exceeded for {self.model}: {e}")
+                raise Exception(
+                    f"API 配額超限。請檢查您的 API 使用額度或稍後再試。\n"
+                    f"模型: {settings.get_model_display_name(self.model)}\n"
+                    f"詳細錯誤: {e}"
+                ) from e
+            elif "api key" in error_msg or "authentication" in error_msg:
+                log.error(f"API authentication failed for {self.model}: {e}")
+                raise Exception(
+                    f"API 金鑰無效或未設定。\n"
+                    f"模型: {settings.get_model_display_name(self.model)}\n"
+                    f"請確認 .env 文件中已正確設定對應的 API 金鑰。\n"
+                    f"詳細錯誤: {e}"
+                ) from e
+            else:
+                log.error(f"AI request failed: {e}")
+                raise
 
     async def chat_stream(
         self,

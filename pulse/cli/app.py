@@ -1,6 +1,7 @@
 """Pulse CLI - Main TUI Application."""
 
 import asyncio
+from pathlib import Path
 
 from textual import on, work
 from textual.app import App, ComposeResult
@@ -18,6 +19,29 @@ from pulse.utils.error_handler import format_error_response
 from pulse.utils.logger import get_logger
 
 log = get_logger(__name__)
+
+
+# Ensure environment variables are loaded early
+def _ensure_env_loaded():
+    """Load environment variables from .env file if not already loaded."""
+    try:
+        from dotenv import load_dotenv
+
+        # Find .env file (go up from pulse/cli to project root)
+        env_path = Path(__file__).parent.parent.parent / ".env"
+        if env_path.exists():
+            load_dotenv(env_path, override=True)
+            log.debug(f"Environment variables loaded from {env_path}")
+        else:
+            log.warning(f".env file not found at {env_path}")
+    except ImportError:
+        log.warning("python-dotenv not installed, skipping .env loading")
+    except Exception as e:
+        log.error(f"Failed to load .env file: {e}")
+
+
+# Load environment variables when module is imported
+_ensure_env_loaded()
 
 
 class CommandPalette(OptionList):
