@@ -56,7 +56,6 @@ class AISettings(BaseSettings):
             "openai/gpt-4o-mini": "GPT-4o Mini (OpenAI)",
             # Google Gemini (2.5 stable, 3.0 preview)
             "gemini/gemini-2.5-flash": "Gemini 2.5 Flash (Google)",
-            "gemini/gemini-2.5-pro": "Gemini 2.5 Pro (Google)",
             "gemini/gemini-3-flash-preview": "Gemini 3 Flash Preview (Google)",
             # Groq (free tier available)
             "groq/llama-3.3-70b-versatile": "Llama 3.3 70B (Groq)",
@@ -208,11 +207,41 @@ class Settings(BaseSettings):
         """Get display name for a model."""
         return self.ai.available_models.get(model_id, model_id)
 
-    def list_models(self) -> list[dict[str, str]]:
-        """List all available AI models."""
-        return [
+    def list_models(self, filter_by_api_key: bool = True) -> list[dict[str, str]]:
+        """
+        List available AI models.
+
+        Args:
+            filter_by_api_key: If True, only return models with configured API keys.
+                               If False, return all models.
+
+        Returns:
+            List of model dictionaries with 'id' and 'name' keys.
+        """
+        all_models = [
             {"id": model_id, "name": name} for model_id, name in self.ai.available_models.items()
         ]
+
+        if not filter_by_api_key:
+            return all_models
+
+        # Import here to avoid circular dependency
+        from pulse.ai.client import get_available_providers
+
+        available_providers = get_available_providers()
+
+        # If no providers configured, return empty list
+        if not available_providers:
+            return []
+
+        # Filter models by available providers
+        filtered_models = [
+            model
+            for model in all_models
+            if any(model["id"].startswith(prefix) for prefix in available_providers)
+        ]
+
+        return filtered_models
 
 
 # Global settings instance

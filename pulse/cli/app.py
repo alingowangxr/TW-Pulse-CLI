@@ -140,16 +140,39 @@ class ModelsModal(ModalScreen):
     def compose(self) -> ComposeResult:
         with Vertical():
             yield Static("Select Model", classes="modal-title")
-            option_list = OptionList(id="model-list")
-            for model in self.models:
-                marker = "> " if model["id"] == self.current else "  "
-                label = f"{marker}{model['name']}"
-                option_list.add_option(Option(label, id=model["id"]))
-            yield option_list
-            yield Static("Enter: Select | Esc: Cancel", classes="modal-hint")
+
+            if not self.models:
+                # No models available - show configuration guide
+                yield Static(
+                    "\n⚠️  No API keys configured\n\n"
+                    "Please set at least one API key in .env file:\n"
+                    "  • DEEPSEEK_API_KEY (recommended)\n"
+                    "  • GEMINI_API_KEY\n"
+                    "  • GROQ_API_KEY (free tier)\n"
+                    "  • ANTHROPIC_API_KEY\n"
+                    "  • OPENAI_API_KEY\n\n"
+                    "Run: python scripts/check_api_keys.py\n",
+                    classes="modal-hint",
+                )
+            else:
+                # Models available - show list
+                option_list = OptionList(id="model-list")
+                for model in self.models:
+                    marker = "> " if model["id"] == self.current else "  "
+                    label = f"{marker}{model['name']}"
+                    option_list.add_option(Option(label, id=model["id"]))
+                yield option_list
+
+                # Add hint about configuring more models
+                hint_text = "Enter: Select | Esc: Cancel"
+                if len(self.models) < 5:  # Less than half of total models
+                    hint_text = "💡 Want more models? Configure API keys in .env\n" + hint_text
+                yield Static(hint_text, classes="modal-hint")
 
     def on_mount(self) -> None:
-        self.query_one("#model-list", OptionList).focus()
+        # Only focus if there are models to select
+        if self.models:
+            self.query_one("#model-list", OptionList).focus()
 
     @on(OptionList.OptionSelected, "#model-list")
     def on_model_selected(self, event: OptionList.OptionSelected) -> None:

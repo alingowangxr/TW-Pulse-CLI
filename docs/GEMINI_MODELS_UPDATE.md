@@ -14,7 +14,6 @@ Gemini API 模型已全面更新，**Gemini 2.0 已停止服務**（2026-03-31�
 ```python
 # Google Gemini (2.5 stable, 3.0 preview)
 "gemini/gemini-2.5-flash": "Gemini 2.5 Flash (Google)",
-"gemini/gemini-2.5-pro": "Gemini 2.5 Pro (Google)",
 "gemini/gemini-3-flash-preview": "Gemini 3 Flash Preview (Google)",
 ```
 
@@ -26,7 +25,6 @@ Gemini API 模型已全面更新，**Gemini 2.0 已停止服務**（2026-03-31�
 ```bash
 # Options:
 #   - gemini/gemini-2.5-flash (Google Gemini 2.5 - Fast & Balanced)
-#   - gemini/gemini-2.5-pro (Google Gemini 2.5 - Advanced Reasoning)
 #   - gemini/gemini-3-flash-preview (Google Gemini 3 - Preview Version)
 ```
 
@@ -43,7 +41,6 @@ Gemini API 模型已全面更新，**Gemini 2.0 已停止服務**（2026-03-31�
 | 模型 ID | 說明 | 狀態 | 測試結果 |
 |---------|------|------|----------|
 | `gemini/gemini-2.5-flash` | 快速、平衡的多模態理解 | 穩定 | ✅ 成功 |
-| `gemini/gemini-2.5-pro` | 進階推理和編碼能力 | 穩定 | ✅ 可用 |
 
 **特點：**
 - 1M token context window
@@ -87,10 +84,6 @@ Testing: gemini/gemini-3-flash-preview
 ### Gemini 2.5 Flash
 - **輸入：** $0.075 / 百萬 tokens
 - **輸出：** $0.30 / 百萬 tokens
-
-### Gemini 2.5 Pro
-- **輸入：** $1.25 / 百萬 tokens
-- **輸出：** $5.00 / 百萬 tokens
 
 ### Gemini 3 Flash (預覽)
 - **輸入：** $0.10 / 百萬 tokens
@@ -184,11 +177,6 @@ model = "gemini/gemini-3-flash-preview"
 PULSE_AI__DEFAULT_MODEL=gemini/gemini-2.5-flash
 ```
 
-### 進階推理任務
-```bash
-PULSE_AI__DEFAULT_MODEL=gemini/gemini-2.5-pro
-```
-
 ### 嘗試最新功能
 ```bash
 PULSE_AI__DEFAULT_MODEL=gemini/gemini-3-flash-preview
@@ -205,7 +193,6 @@ PULSE_AI__DEFAULT_MODEL=groq/llama-3.3-70b-versatile
 
 所有配置已更新為最新的 Gemini 模型。你的 Pulse CLI 現在支援：
 - ✅ Gemini 2.5 Flash（穩定版）
-- ✅ Gemini 2.5 Pro（穩定版）
 - ✅ Gemini 3 Flash Preview（預覽版）
 
 執行診斷確認：

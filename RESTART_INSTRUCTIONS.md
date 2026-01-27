@@ -17,7 +17,6 @@ $ python scripts/verify_models.py
 Gemini models found:
 ----------------------------------------------------------------------
 [OK]  gemini/gemini-2.5-flash       -> Gemini 2.5 Flash (Google)
-[OK]  gemini/gemini-2.5-pro         -> Gemini 2.5 Pro (Google)
 [OK]  gemini/gemini-3-flash-preview -> Gemini 3 Flash Preview (Google)
 
 [SUCCESS] Configuration updated correctly!
@@ -48,7 +47,6 @@ pulse
 **你應該看到：**
 - ❌ ~~Gemini 2.0 Flash~~ (已移除)
 - ✅ Gemini 2.5 Flash (Google)
-- ✅ Gemini 2.5 Pro (Google)
 - ✅ Gemini 3 Flash Preview (Google)
 
 ## 🎯 現在可用的 Gemini 模型
@@ -56,7 +54,6 @@ pulse
 | 模型 | 說明 | 推薦用途 |
 |------|------|----------|
 | Gemini 2.5 Flash | 快速、平衡 | 日常股票分析 ⭐ |
-| Gemini 2.5 Pro | 進階推理 | 複雜分析任務 |
 | Gemini 3 Flash Preview | 最新預覽 | 測試新功能 |
 
 ## 🔧 如果仍然看到舊模型

@@ -17,19 +17,38 @@ litellm.suppress_debug_info = True
 log = get_logger(__name__)
 
 
+# API Key mapping - centralized configuration
+API_KEY_MAP = {
+    "gemini/": ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
+    "anthropic/": ["ANTHROPIC_API_KEY"],
+    "openai/": ["OPENAI_API_KEY"],
+    "groq/": ["GROQ_API_KEY"],
+    "deepseek/": ["DEEPSEEK_API_KEY"],
+}
+
+
+def get_available_providers() -> set[str]:
+    """
+    Get list of providers that have API keys configured.
+
+    Returns:
+        Set of provider prefixes (e.g., {'gemini/', 'deepseek/', 'groq/'})
+    """
+    available_providers = set()
+
+    for prefix, env_vars in API_KEY_MAP.items():
+        # Check if any of the required env vars is set and not empty
+        if any(os.getenv(var) for var in env_vars):
+            available_providers.add(prefix)
+
+    return available_providers
+
+
 def _check_api_keys():
     """Check if required API keys are set for the current model."""
-    # Map of model prefixes to their required environment variables
-    api_key_map = {
-        "gemini/": ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
-        "anthropic/": ["ANTHROPIC_API_KEY"],
-        "openai/": ["OPENAI_API_KEY"],
-        "groq/": ["GROQ_API_KEY"],
-        "deepseek/": ["DEEPSEEK_API_KEY"],
-    }
-
     model = settings.ai.default_model
-    for prefix, env_vars in api_key_map.items():
+
+    for prefix, env_vars in API_KEY_MAP.items():
         if model.startswith(prefix):
             # Check if any of the required env vars is set
             has_key = any(os.getenv(var) for var in env_vars)

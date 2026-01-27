@@ -19,7 +19,6 @@
 | 模型 | LiteLLM ID | 測試結果 |
 |------|------------|----------|
 | Gemini 2.5 Flash | `gemini/gemini-2.5-flash` | ✅ 成功 |
-| Gemini 2.5 Pro | `gemini/gemini-2.5-pro` | ✅ 可用 |
 | Gemini 3 Flash | `gemini/gemini-3-flash-preview` | ✅ 成功 |
 
 **注意：** Gemini 3 目前需要使用 `-preview` 後綴。

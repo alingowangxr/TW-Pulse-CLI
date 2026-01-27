@@ -7,7 +7,6 @@
 **目前可用的模型（通過測試）：**
 - **Gemini 2.5 系列**（穩定版）：
   - `gemini/gemini-2.5-flash` ✅ - 快速、平衡的多模態理解
-  - `gemini/gemini-2.5-pro` ✅ - 進階推理和編碼能力
 
 - **Gemini 3 系列**（預覽版）：
   - `gemini/gemini-3-flash-preview` ✅ - 最新預覽版，複雜多模態理解
