@@ -184,6 +184,98 @@ python -m pulse.cli.app
 
 ---
 
+## 策略回測系統
+
+### 可用策略
+
+| 策略 Key | 名稱 | 說明 |
+|----------|------|------|
+| `farmerplanting` | 進階農夫播種術 | 基準價加減碼策略，適合趨勢股票長期持有 |
+| `momentumbreakout` | 動量突破策略 | ADX 強趨勢 + MACD 黃金交叉 + 成交量確認 |
+| `macrossover` | 均線交叉策略 | EMA9/EMA21 交叉 + MA50 趨勢過濾 |
+| `bbsqueeze` | 布林壓縮策略 | 低波動壓縮後的向上突破 |
+
+### 策略回測指令
+
+```bash
+# 查看所有可用策略
+/strategy
+
+# 執行回測（5年歷史數據）
+/strategy farmerplanting 2330 backtest
+/strategy momentumbreakout 2330 backtest
+/strategy macrossover 2330 backtest
+/strategy bbsqueeze 2330 backtest
+```
+
+---
+
+### 動量突破策略 (Momentum Breakout)
+
+**進場條件** (全部滿足):
+- ADX > 25 (強趨勢)
+- MACD 黃金交叉 (MACD 上穿信號線)
+- 成交量 > 20日均量 × 1.5
+
+**出場條件** (任一觸發):
+- ADX < 20 (趨勢轉弱)
+- MACD 死亡交叉
+- 移動停利 15%
+
+**參數**:
+| 參數 | 預設值 | 說明 |
+|------|--------|------|
+| `adx_entry_threshold` | 25 | ADX 進場門檻 |
+| `adx_exit_threshold` | 20 | ADX 出場門檻 |
+| `volume_multiplier` | 1.5 | 成交量倍數 |
+| `trailing_stop_pct` | 0.15 | 移動停利 15% |
+
+**風險緩解**: 成交量確認 + ADX 過濾假突破
+
+---
+
+### 均線交叉策略 (MA Crossover)
+
+**進場條件**:
+- EMA9 上穿 EMA21 (黃金交叉)
+- 收盤價 > MA50 (趨勢過濾)
+
+**出場條件**:
+- EMA9 下穿 EMA21 (死亡交叉)
+- 收盤價 < MA50
+
+**參數**:
+| 參數 | 預設值 | 說明 |
+|------|--------|------|
+| `ema_fast` | 9 | 快速 EMA 週期 |
+| `ema_slow` | 21 | 慢速 EMA 週期 |
+| `ma_filter` | 50 | 趨勢過濾均線週期 |
+
+**風險緩解**: MA50 趨勢過濾減少盤整期頻繁交易
+
+---
+
+### 布林壓縮策略 (BB Squeeze)
+
+**進場條件**:
+- 帶寬收縮至 20% 百分位以下 (壓縮偵測)
+- 帶寬開始擴張
+- 收盤價突破上軌 (方向性突破)
+
+**出場條件**:
+- 價格回歸中軌
+- 價格觸及下軌
+
+**參數**:
+| 參數 | 預設值 | 說明 |
+|------|--------|------|
+| `squeeze_percentile` | 20 | 壓縮判定百分位 |
+| `lookback_period` | 20 | 帶寬歷史回顧期間 |
+
+**風險緩解**: 只做向上突破，避免壓縮後無方向
+
+---
+
 ## Smart Money Screener
 
 ### `/smart-money` - 主力足跡選股
@@ -518,4 +610,4 @@ PULSE_AI__DEFAULT_MODEL=deepseek/deepseek-chat
 
 ---
 
-**最後更新**: 2026-01-22 (v0.2.1 - Keltner Channel)
+**最後更新**: 2026-02-03 (v0.3.1 - 三大交易策略)

@@ -7,7 +7,6 @@ from pulse.core.backtest.position import PositionManager
 from pulse.core.backtest.report import BacktestReport, calculate_metrics
 from pulse.core.data.yfinance import YFinanceFetcher
 from pulse.core.strategies.base import BaseStrategy, SignalAction
-from pulse.reports import TradeReportGenerator
 from pulse.utils.logger import get_logger
 
 log = get_logger(__name__)
@@ -60,9 +59,7 @@ class BacktestEngine:
 
         # 1. 載入歷史數據
         log.info("Loading historical data...")
-        df = await self.fetcher.fetch_history(
-            self.ticker, start=self.start_date, end=self.end_date
-        )
+        df = await self.fetcher.fetch_history(self.ticker, start=self.start_date, end=self.end_date)
 
         if df is None or df.empty:
             raise ValueError(f"無法載入 {self.ticker} 的歷史數據")
@@ -77,9 +74,7 @@ class BacktestEngine:
             raise ValueError("技術指標計算失敗")
 
         # 3. 初始化策略
-        await self.strategy.initialize(
-            self.ticker, self.initial_cash, self.strategy.config
-        )
+        await self.strategy.initialize(self.ticker, self.initial_cash, self.strategy.config)
 
         # 4. 初始化持倉管理器
         position_manager = PositionManager(self.initial_cash)
@@ -104,18 +99,38 @@ class BacktestEngine:
 
             # 準備技術指標
             indicators = {
+                # 基礎指標
                 "rsi_14": row.get("RSI_14"),
                 "ma_200": row.get("MA_200"),
                 "ma_50": row.get("MA_50"),
                 "ma_20": row.get("MA_20"),
+                # MACD
+                "macd": row.get("MACD"),
+                "macd_signal": row.get("MACD_signal"),
+                # ADX
+                "adx": row.get("ADX"),
+                # EMA
+                "ema_9": row.get("EMA_9"),
+                "ema_21": row.get("EMA_21"),
+                # Bollinger Bands
+                "bb_upper": row.get("BB_upper"),
+                "bb_middle": row.get("BB_middle"),
+                "bb_lower": row.get("BB_lower"),
+                "bb_width": row.get("BB_width"),
+                # Volume
+                "volume_sma_20": row.get("Volume_SMA_20"),
             }
-            
+
             # 同步資金管理器狀態（在生成訊號前）
             if self.strategy.capital_manager:
                 current_equity = position_manager.get_total_equity(row["close"])
                 realized_pnl = current_equity - self.initial_cash
-                self.strategy.capital_manager.state.current_capital = self.initial_cash + realized_pnl
-                log.debug(f"Synced capital: equity={current_equity:,.0f}, realized_pnl={realized_pnl:+,.0f}")
+                self.strategy.capital_manager.state.current_capital = (
+                    self.initial_cash + realized_pnl
+                )
+                log.debug(
+                    f"Synced capital: equity={current_equity:,.0f}, realized_pnl={realized_pnl:+,.0f}"
+                )
 
             # 生成交易訊號
             signal = await self.strategy.on_bar(bar, indicators)
@@ -133,42 +148,51 @@ class BacktestEngine:
 
                 if success:
                     signals_generated += 1
-                    log.debug(f"{date.date()} | {action_str} {signal.quantity}股 @ {signal.price:,.0f}")
+                    log.debug(
+                        f"{date.date()} | {action_str} {signal.quantity}股 @ {signal.price:,.0f}"
+                    )
 
                     # 更新策略狀態（quantity 直接是股數變化）
-                    quantity_change = signal.quantity if signal.action == SignalAction.BUY else -signal.quantity
+                    quantity_change = (
+                        signal.quantity if signal.action == SignalAction.BUY else -signal.quantity
+                    )
                     self.strategy.state.update_position(
                         quantity_change,
                         signal.price,
                         1,  # shares_per_position 不再使用，傳入 1
                     )
-                    
+
                     # 更新動態資金管理器（賣出時記錄已實現損益）
                     if self.strategy.capital_manager and signal.action == SignalAction.SELL:
                         # 計算已實現損益（賣出金額 - 成本）
                         sell_amount = signal.quantity * signal.price
-                        cost = signal.quantity * position_manager.avg_cost if position_manager.avg_cost > 0 else 0
+                        cost = (
+                            signal.quantity * position_manager.avg_cost
+                            if position_manager.avg_cost > 0
+                            else 0
+                        )
                         realized_pnl = sell_amount - cost
-                        
+
                         # 更新總資金
                         self.strategy.capital_manager.update_capital(realized_pnl)
-                        log.debug(f"Updated capital: realized_pnl={realized_pnl:+,.0f}, new_capital={self.strategy.capital_manager.get_current_capital():,.0f}")
+                        log.debug(
+                            f"Updated capital: realized_pnl={realized_pnl:+,.0f}, new_capital={self.strategy.capital_manager.get_current_capital():,.0f}"
+                        )
 
             # 更新權益曲線
             position_manager.update_equity(date, row["close"])
-
 
         log.info(f"Backtest completed. Signals generated: {signals_generated}")
 
         # 6. 計算績效指標
         log.info("Calculating performance metrics...")
-        
+
         # 檢查是否有動態資金管理
         capital_state = None
-        if hasattr(self.strategy, 'capital_manager') and self.strategy.capital_manager:
+        if hasattr(self.strategy, "capital_manager") and self.strategy.capital_manager:
             capital_state = self.strategy.capital_manager.get_state()
             log.info("Dynamic capital management detected, will include detailed trade table")
-        
+
         report = calculate_metrics(
             ticker=self.ticker,
             strategy_name=self.strategy.name,
@@ -177,7 +201,7 @@ class BacktestEngine:
             end_date=self.end_date,
             capital_state=capital_state,
         )
-        
+
         # 暫存 position_manager 供外部使用（例如 CLI 生成詳細報表）
         self._last_position_manager = position_manager
 

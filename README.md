@@ -61,7 +61,10 @@
 
 | Strategy | Description |
 |----------|-------------|
-| **Farmer Planting** | 🆕 進階農夫播種術 - 基準價加減碼策略，適合趨勢股票長期持有 |
+| **Farmer Planting** | 進階農夫播種術 - 基準價加減碼策略，適合趨勢股票長期持有 |
+| **Momentum Breakout** | 🆕 動量突破策略 - ADX 強趨勢 + MACD 黃金交叉 + 成交量確認 |
+| **MA Crossover** | 🆕 均線交叉策略 - EMA9/EMA21 交叉 + MA50 趨勢過濾 |
+| **BB Squeeze** | 🆕 布林壓縮策略 - 低波動壓縮後的向上突破 |
 | **Keltner Channel** | 短線突破策略 (BUY/HOLD/SELL/WATCH 信號) |
 | **Custom Strategies** | 支援自定義策略開發與回測 |
 
@@ -70,7 +73,7 @@
 | Feature | Description |
 |---------|-------------|
 | **Chart Generation** | 匯出價格圖表為 PNG 格式 (支援自訂主題) |
-| **E2E Tests** | 461 tests with comprehensive coverage + 21 strategy tests |
+| **E2E Tests** | 461 tests with comprehensive coverage + 63 strategy tests |
 
 ---
 
@@ -131,8 +134,12 @@ pulse
 ```bash
 /strategy                          # 查看所有可用策略
 /strategy farmerplanting           # 查看農夫播種術策略詳情
-/strategy farmerplanting 2330      # 查看策略在 2330 的狀態
 /strategy farmerplanting 2330 backtest  # 執行回測（5年歷史數據）
+
+# 新增策略
+/strategy momentumbreakout 2330 backtest  # 動量突破策略回測
+/strategy macrossover 2330 backtest       # 均線交叉策略回測
+/strategy bbsqueeze 2330 backtest         # 布林壓縮策略回測
 ```
 
 ### 智能選股
@@ -180,7 +187,8 @@ pulse
 
 | Version | Date | Changes |
 |---------|------|---------|
-| **0.3.0** | **2026-01-27** | **策略回測系統、動態資金管理、FinMind Token 自動讀取** |
+| **0.3.1** | **2026-02-03** | **三大交易策略：動量突破、均線交叉、布林壓縮 + 42 new tests** |
+| 0.3.0 | 2026-01-27 | 策略回測系統、動態資金管理、FinMind Token 自動讀取 |
 | 0.2.1 | 2026-01-22 | Keltner Channel indicator & strategy, 21 new tests |
 | 0.2.0 | 2026-01-22 | E2E tests (461 total), SAPTA retrain CLI, chart customization |
 | 0.1.10 | 2026-01-22 | Rich progress bar, chart customization, FinMind quota monitoring |

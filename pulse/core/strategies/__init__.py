@@ -8,8 +8,14 @@ from pulse.core.strategies.registry import registry
 
 # 導入策略實作並自動註冊
 from pulse.core.strategies.farmer_planting import FarmerPlantingStrategy
+from pulse.core.strategies.momentum_breakout import MomentumBreakoutStrategy
+from pulse.core.strategies.ma_crossover import MACrossoverStrategy
+from pulse.core.strategies.bb_squeeze import BBSqueezeStrategy
 
 registry.register(FarmerPlantingStrategy)
+registry.register(MomentumBreakoutStrategy)
+registry.register(MACrossoverStrategy)
+registry.register(BBSqueezeStrategy)
 
 __all__ = [
     "BaseStrategy",
@@ -17,4 +23,7 @@ __all__ = [
     "StrategyState",
     "SignalAction",
     "registry",
+    "MomentumBreakoutStrategy",
+    "MACrossoverStrategy",
+    "BBSqueezeStrategy",
 ]

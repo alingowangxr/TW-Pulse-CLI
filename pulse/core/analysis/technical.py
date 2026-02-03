@@ -80,6 +80,22 @@ class TechnicalAnalyzer:
             atr = AverageTrueRange(high, low, close, window=14)
             df["ATR"] = atr.average_true_range()
 
+            # EMA for crossover strategies
+            df["EMA_9"] = EMAIndicator(close, window=9).ema_indicator()
+            df["EMA_21"] = EMAIndicator(close, window=21).ema_indicator()
+
+            # MA_20 for strategies
+            df["MA_20"] = SMAIndicator(close, window=20).sma_indicator()
+
+            # Volume SMA for volume confirmation
+            df["Volume_SMA_20"] = SMAIndicator(volume.astype(float), window=20).sma_indicator()
+
+            # ADX (Average Directional Index)
+            df["ADX"] = self._calculate_adx_series(high, low, close, n=14)
+
+            # Bollinger Band width for squeeze detection
+            df["BB_width"] = bb.bollinger_wband()
+
             return df
 
         except Exception as e:
@@ -360,6 +376,54 @@ class TechnicalAnalyzer:
                 "senkou_b": None,
                 "chikou": None,
             }
+
+    def _calculate_adx_series(
+        self, high: pd.Series, low: pd.Series, close: pd.Series, n: int = 14
+    ) -> pd.Series:
+        """
+        Calculate ADX (Average Directional Index) as a Series for backtesting.
+
+        Args:
+            high: High prices
+            low: Low prices
+            close: Close prices
+            n: Period for calculation
+
+        Returns:
+            ADX Series
+        """
+        try:
+            # Calculate True Range (TR)
+            prev_close = close.shift(1)
+            tr1 = high - low
+            tr2 = abs(high - prev_close)
+            tr3 = abs(low - prev_close)
+            tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+
+            # Calculate +DM and -DM
+            plus_dm = high.diff()
+            minus_dm = -low.diff()
+
+            # Only consider positive values for +DM, negative for -DM
+            plus_dm = plus_dm.where(plus_dm > minus_dm, 0)
+            plus_dm = plus_dm.where(plus_dm > 0, 0)
+            minus_dm = minus_dm.where(minus_dm > plus_dm, 0)
+            minus_dm = minus_dm.where(minus_dm > 0, 0)
+
+            # Smooth using rolling mean
+            atr = tr.rolling(window=n).mean()
+            plus_di = (plus_dm.rolling(window=n).mean() / atr) * 100
+            minus_di = (minus_dm.rolling(window=n).mean() / atr) * 100
+
+            # Calculate DX
+            dx = (abs(plus_di - minus_di) / (plus_di + minus_di)) * 100
+
+            # Calculate ADX (smoothed DX)
+            adx = dx.rolling(window=n).mean()
+
+            return adx
+        except Exception:
+            return pd.Series([None] * len(high), index=high.index)
 
     def _calculate_adx(
         self, high: pd.Series, low: pd.Series, close: pd.Series, n: int = 14
