@@ -22,6 +22,14 @@ from pulse.utils.logger import get_logger
 log = get_logger(__name__)
 
 
+# Import Happy Lines types for type hints
+try:
+    from pulse.core.models import HappyLinesIndicators, HappyZone
+except ImportError:
+    HappyLinesIndicators = Any
+    HappyZone = Any
+
+
 def load_all_tickers() -> list[str]:
     """Load all tickers (TW50 + MIDCAP + POPULAR combined)."""
     # Combine all ticker lists and remove duplicates
@@ -43,6 +51,11 @@ class ScreenPreset(str, Enum):
     MOMENTUM = "momentum"
     KELTNER_BREAKOUT = "keltner_breakout"
     KELTNER_HOLD = "keltner_hold"
+    # Happy Lines presets
+    HAPPY_OVERSOLD = "happy_oversold"  # Line 1-2
+    HAPPY_OVERBOUGHT = "happy_overbought"  # Line 4-5
+    HAPPY_CHEAP = "happy_cheap"  # Line 1-2
+    HAPPY_EXPENSIVE = "happy_expensive"  # Line 4-5
 
 
 class StockUniverse(str, Enum):
@@ -91,6 +104,9 @@ class ScreenResult:
     kc_upper: float | None = None
     kc_lower: float | None = None
     kc_position: float | None = None  # Price position relative to KC (0-100%)
+
+    # Happy Lines (樂活五線譜) indicators
+    happy_lines: Any = None  # Complete Happy Lines data (HappyLinesIndicators)
 
     # Fundamental data
     pe_ratio: float | None = None
@@ -245,6 +261,43 @@ class StockScreener:
             "sort_by": "price",
             "sort_asc": False,
         },
+        # Happy Lines (樂活五線譜) presets
+        ScreenPreset.HAPPY_OVERSOLD: {
+            "description": "Happy Lines Oversold - Price in Line 1-2 (超跌/偏低區)",
+            "criteria": {
+                "happy_lines": ("exists", True),
+                "happy_zone": "oversold",
+            },
+            "sort_by": "happy_position_ratio",
+            "sort_asc": True,
+        },
+        ScreenPreset.HAPPY_OVERBOUGHT: {
+            "description": "Happy Lines Overbought - Price in Line 4-5 (偏高/過熱區)",
+            "criteria": {
+                "happy_lines": ("exists", True),
+                "happy_zone": "overbought",
+            },
+            "sort_by": "happy_position_ratio",
+            "sort_asc": False,
+        },
+        ScreenPreset.HAPPY_CHEAP: {
+            "description": "Happy Lines Cheap - Price below Line 2 (偏低區以下)",
+            "criteria": {
+                "happy_lines": ("exists", True),
+                "happy_zone": "cheap",
+            },
+            "sort_by": "happy_position_ratio",
+            "sort_asc": True,
+        },
+        ScreenPreset.HAPPY_EXPENSIVE: {
+            "description": "Happy Lines Expensive - Price above Line 4 (偏高區以上)",
+            "criteria": {
+                "happy_lines": ("exists", True),
+                "happy_zone": "expensive",
+            },
+            "sort_by": "happy_position_ratio",
+            "sort_asc": False,
+        },
     }
 
     def __init__(
@@ -332,6 +385,19 @@ class StockScreener:
                 result.stoch_d = technical.stoch_d
                 result.support = technical.support_1
                 result.resistance = technical.resistance_1
+
+                # Calculate Happy Lines
+                try:
+                    from pulse.core.data.stock_data_provider import StockDataProvider
+
+                    fetcher = StockDataProvider()
+                    df = await fetcher.fetch_history(ticker, period="1y")
+                    if df is not None and not df.empty:
+                        happy_lines = analyzer.calculate_happy_lines(df, ticker, period=60)
+                        if happy_lines:
+                            result.happy_lines = happy_lines
+                except Exception as e:
+                    log.debug(f"Could not calculate Happy Lines for {ticker}: {e}")
 
             # Fetch fundamental data (optional, may be slow)
             try:
@@ -548,6 +614,62 @@ class StockScreener:
                         has_growth = True
                     if not has_growth:
                         return False, []
+                continue
+
+            # Happy Lines (樂活五線譜) criteria
+            if key == "happy_lines":
+                # Check if Happy Lines data exists
+                if condition == ("exists", True):
+                    if result.happy_lines is not None:
+                        signals.append("Has Happy Lines")
+                    else:
+                        return False, []
+                continue
+
+            if key == "happy_zone":
+                # Filter by Happy Lines zone
+                if result.happy_lines is not None:
+                    zone = result.happy_lines.zone
+                    if condition == "oversold" and zone.value == "超跌區":
+                        signals.append(f"Happy Zone: {zone.value}")
+                    elif condition == "undervalued" and zone.value == "偏低區":
+                        signals.append(f"Happy Zone: {zone.value}")
+                    elif condition == "balanced" and zone.value == "平衡區":
+                        signals.append(f"Happy Zone: {zone.value}")
+                    elif condition == "overvalued" and zone.value == "偏高區":
+                        signals.append(f"Happy Zone: {zone.value}")
+                    elif condition == "overbought" and zone.value == "過熱區":
+                        signals.append(f"Happy Zone: {zone.value}")
+                    elif condition == "cheap" and zone.value in ["超跌區", "偏低區"]:
+                        signals.append(f"Happy Zone: {zone.value}")
+                    elif condition == "expensive" and zone.value in ["偏高區", "過熱區"]:
+                        signals.append(f"Happy Zone: {zone.value}")
+                    else:
+                        return False, []
+                else:
+                    return False, []
+                continue
+
+            if key == "happy_position_ratio":
+                # Filter by position ratio threshold
+                if result.happy_lines is not None:
+                    ratio = result.happy_lines.position_ratio
+                    if isinstance(condition, tuple):
+                        operator, threshold = condition
+                        if operator == "<" and ratio >= threshold:
+                            return False, []
+                        elif operator == ">" and ratio <= threshold:
+                            return False, []
+                        elif operator == "<=" and ratio > threshold:
+                            return False, []
+                        elif operator == ">=" and ratio < threshold:
+                            return False, []
+                        else:
+                            signals.append(f"Happy Position: {ratio:.1f}%")
+                    else:
+                        signals.append(f"Happy Position: {ratio:.1f}%")
+                else:
+                    return False, []
                 continue
 
             # Handle numeric comparisons
