@@ -26,6 +26,12 @@ Presets (預設篩選條件):
   /screen breakout    - Near resistance + volume spike (突破)
   /screen momentum    - RSI 50-70 + MACD bullish (動能)
   /screen undervalued - PE < 15 + ROE > 10% (低估)
+  
+Happy Lines (樂活五線譜):
+  /screen happy_oversold   - 超跌區 (第1線)
+  /screen happy_overbought - 過熱區 (第5線)
+  /screen happy_cheap      - 偏低區以下 (第1-2線)
+  /screen happy_expensive  - 偏高區以上 (第4-5線)
 
 Flexible (自訂條件):
   /screen rsi<30
@@ -221,6 +227,14 @@ def export_results_to_csv(results: list["ScreenResult"], filename: str | None = 
         "market_cap",
         "score",
         "signals",
+        # Happy Lines (樂活五線譜)
+        "happy_line_1",
+        "happy_line_2",
+        "happy_line_3",
+        "happy_line_4",
+        "happy_line_5",
+        "happy_position_ratio",
+        "happy_zone",
     ]
 
     with open(filepath, "w", newline="", encoding="utf-8-sig") as f:
@@ -247,6 +261,16 @@ def export_results_to_csv(results: list["ScreenResult"], filename: str | None = 
                 "market_cap": r.market_cap,
                 "score": r.score,
                 "signals": "; ".join(r.signals) if r.signals else "",
+                # Happy Lines (樂活五線譜)
+                "happy_line_1": r.happy_lines.line_1 if r.happy_lines else None,
+                "happy_line_2": r.happy_lines.line_2 if r.happy_lines else None,
+                "happy_line_3": r.happy_lines.line_3 if r.happy_lines else None,
+                "happy_line_4": r.happy_lines.line_4 if r.happy_lines else None,
+                "happy_line_5": r.happy_lines.line_5 if r.happy_lines else None,
+                "happy_position_ratio": f"{r.happy_lines.position_ratio:.2f}%"
+                if r.happy_lines
+                else None,
+                "happy_zone": r.happy_lines.zone.value if r.happy_lines else None,
             }
             writer.writerow(row)
 

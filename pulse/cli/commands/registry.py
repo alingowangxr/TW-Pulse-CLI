@@ -146,6 +146,14 @@ class CommandRegistry:
         )
 
         self.register(
+            "happy-lines",
+            self._cmd_happy_lines,
+            "Happy Lines analysis (樂活五線譜分析)",
+            "/happy-lines <TICKER> [period=120]",
+            aliases=["happy", "五線譜", "hl"],
+        )
+
+        self.register(
             "institutional",
             self._cmd_broker,
             "Institutional investor flow (法人動向)",
@@ -310,6 +318,12 @@ class CommandRegistry:
         from pulse.cli.commands.analysis import fundamental_command
 
         return await fundamental_command(self.app, args)
+
+    async def _cmd_happy_lines(self, args: str) -> str:
+        """Happy Lines (樂活五線譜) analysis command handler."""
+        from pulse.cli.commands.analysis import happy_lines_command
+
+        return await happy_lines_command(self.app, args)
 
     async def _cmd_screen(self, args: str) -> str:
         """Screen stocks command handler."""
