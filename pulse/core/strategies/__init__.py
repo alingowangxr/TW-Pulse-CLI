@@ -12,6 +12,9 @@ from pulse.core.strategies.momentum_breakout import MomentumBreakoutStrategy
 from pulse.core.strategies.ma_crossover import MACrossoverStrategy
 from pulse.core.strategies.bb_squeeze import BBSqueezeStrategy
 
+# Note: HappyLinesStrategy is a screening strategy (not backtesting),
+# so it's not registered here. It's used via the screener or CLI commands.
+
 registry.register(FarmerPlantingStrategy)
 registry.register(MomentumBreakoutStrategy)
 registry.register(MACrossoverStrategy)
@@ -26,4 +29,5 @@ __all__ = [
     "MomentumBreakoutStrategy",
     "MACrossoverStrategy",
     "BBSqueezeStrategy",
+    # HappyLinesStrategy is available for import directly from its module
 ]
