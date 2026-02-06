@@ -162,7 +162,10 @@ data/logs/
 data/stockbit/
 data/broker_summary/
 data/reports/
+data/test_cache/
 charts/
+.reports/
+report/
 *.png
 !docs/*.png
 

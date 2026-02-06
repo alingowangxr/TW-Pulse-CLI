@@ -455,7 +455,7 @@ class TestModelsE2E:
 
     def test_broker_summary_creation(self):
         """Test BrokerSummary model creation."""
-        from pulse.core.models import BrokerSummary, BrokerTransaction, BandarDetector, AccDistType
+        from pulse.core.models import BrokerSummary, BrokerTransaction, SmartMoneyDetector, AccDistType
         from datetime import datetime
 
         summary = BrokerSummary(

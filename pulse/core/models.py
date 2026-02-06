@@ -10,8 +10,8 @@ from pydantic import BaseModel, Field
 class BrokerType(str, Enum):
     """Broker type classification."""
 
-    ASING = "Asing"
-    LOKAL = "Lokal"
+    FOREIGN = "Foreign"
+    DOMESTIC = "Domestic"
     UNKNOWN = "Unknown"
 
 
@@ -140,8 +140,8 @@ class BrokerTransaction(BaseModel):
         return self.net_value < 0
 
 
-class BandarDetector(BaseModel):
-    """Bandar/smart money detection data."""
+class SmartMoneyDetector(BaseModel):
+    """Smart money detection data."""
 
     average: float = 0.0
     broker_accdist: AccDistType = AccDistType.NEUTRAL
@@ -177,8 +177,8 @@ class BrokerSummary(BaseModel):
     top_buyers: list[BrokerTransaction] = Field(default_factory=list)
     top_sellers: list[BrokerTransaction] = Field(default_factory=list)
 
-    # Bandar detection
-    bandar: BandarDetector | None = None
+    # Smart money detection
+    smart_money: SmartMoneyDetector | None = None
 
     # Foreign flow
     foreign_net_buy: float = 0.0

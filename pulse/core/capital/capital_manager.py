@@ -3,8 +3,7 @@
 實現依據盈虧動態調整資金配置的邏輯。
 """
 
-from dataclasses import dataclass, field
-from typing import Optional
+from dataclasses import dataclass
 
 from pulse.utils.logger import get_logger
 
@@ -82,8 +81,7 @@ class DynamicCapitalManager:
         self.state.current_capital = self.state.initial_capital + self.state.realized_pnl
 
         log.debug(
-            f"Capital updated: PnL={profit_or_loss:+,.0f}, "
-            f"Total={self.state.current_capital:,.0f}"
+            f"Capital updated: PnL={profit_or_loss:+,.0f}, Total={self.state.current_capital:,.0f}"
         )
 
     def get_current_capital(self) -> float:
