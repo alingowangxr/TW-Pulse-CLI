@@ -16,7 +16,13 @@ except ImportError:
 
 from pulse.core.config import settings
 from pulse.core.data.stock_data_provider import StockDataProvider
-from pulse.core.models import SignalType, TechnicalIndicators, TrendType
+from pulse.core.models import (
+    HappyLinesIndicators,
+    HappyZone,
+    SignalType,
+    TechnicalIndicators,
+    TrendType,
+)
 from pulse.utils.logger import get_logger
 
 log = get_logger(__name__)
@@ -166,7 +172,9 @@ class TechnicalAnalyzer:
         # SMA
         sma_20 = SMAIndicator(close, window=20).sma_indicator().iloc[-1]
         sma_50 = SMAIndicator(close, window=50).sma_indicator().iloc[-1]
-        sma_200 = SMAIndicator(close, window=200).sma_indicator().iloc[-1] if len(df) >= 200 else None
+        sma_200 = (
+            SMAIndicator(close, window=200).sma_indicator().iloc[-1] if len(df) >= 200 else None
+        )
 
         # EMA
         ema_9 = EMAIndicator(close, window=9).ema_indicator().iloc[-1]
@@ -772,3 +780,196 @@ class TechnicalAnalyzer:
         )
 
         return summary
+
+    def calculate_happy_lines(
+        self,
+        df: pd.DataFrame,
+        ticker: str,
+        period: int = 60,
+    ) -> HappyLinesIndicators | None:
+        """Calculate Happy Lines (樂活五線譜) indicators.
+
+        五線譜是一種基於統計分佈的股價位階判斷工具：
+        - 第3線 (平衡線): N日收盤價的移動平均
+        - 第5線 (過熱線): 中軌 + (N日標準差 × 2.0)
+        - 第1線 (超跌線): 中軌 - (N日標準差 × 2.0)
+        - 第4線 (偏高線): 中軌 + (N日標準差 × 1.0)
+        - 第2線 (偏低線): 中軌 - (N日標準差 × 1.0)
+
+        Args:
+            df: DataFrame with OHLCV data
+            ticker: Stock ticker symbol
+            period: Calculation period (default: 60 days)
+
+        Returns:
+            HappyLinesIndicators object or None if calculation fails
+        """
+        try:
+            if df is None or df.empty or len(df) < period:
+                log.warning(f"Insufficient data for Happy Lines calculation: {ticker}")
+                return None
+
+            # Ensure column names are lowercase
+            df = df.copy()
+            df.columns = df.columns.str.lower()
+
+            close = df["close"]
+            current_price = float(close.iloc[-1])
+
+            # Calculate moving average (中軌)
+            ma = close.rolling(window=period).mean()
+            line_3 = float(ma.iloc[-1])
+
+            # Calculate standard deviation
+            std = close.rolling(window=period).std()
+            std_dev = float(std.iloc[-1])
+
+            # Calculate five lines
+            line_5 = line_3 + (std_dev * 2.0)  # 過熱線
+            line_4 = line_3 + (std_dev * 1.0)  # 偏高線
+            line_2 = line_3 - (std_dev * 1.0)  # 偏低線
+            line_1 = line_3 - (std_dev * 2.0)  # 超跌線
+
+            # Calculate position ratio (0-100%)
+            if line_5 != line_1:
+                position_ratio = ((current_price - line_1) / (line_5 - line_1)) * 100
+                position_ratio = max(0, min(100, position_ratio))  # Clamp to 0-100
+            else:
+                position_ratio = 50.0
+
+            # Determine zone
+            zone = self._determine_happy_zone(current_price, line_1, line_2, line_3, line_4, line_5)
+
+            # Calculate distances
+            distance_to_line1 = ((current_price - line_1) / line_1) * 100 if line_1 > 0 else 0
+            distance_to_line5 = (
+                ((line_5 - current_price) / current_price) * 100 if current_price > 0 else 0
+            )
+
+            # Determine trend
+            trend = self._determine_happy_trend(close, period)
+
+            # Determine signal
+            signal = self._determine_happy_signal(zone, trend)
+
+            return HappyLinesIndicators(
+                ticker=ticker,
+                line_1=line_1,
+                line_2=line_2,
+                line_3=line_3,
+                line_4=line_4,
+                line_5=line_5,
+                current_price=current_price,
+                position_ratio=position_ratio,
+                zone=zone,
+                period=period,
+                std_dev=std_dev,
+                distance_to_line1=distance_to_line1,
+                distance_to_line5=distance_to_line5,
+                trend=trend,
+                signal=signal,
+            )
+
+        except Exception as e:
+            log.error(f"Error calculating Happy Lines for {ticker}: {e}")
+            return None
+
+    def _determine_happy_zone(
+        self,
+        price: float,
+        line_1: float,
+        line_2: float,
+        line_3: float,
+        line_4: float,
+        line_5: float,
+    ) -> HappyZone:
+        """Determine which zone the price is in."""
+        if price >= line_5:
+            return HappyZone.OVERBOUGHT
+        elif price >= line_4:
+            return HappyZone.OVERVALUED
+        elif price >= line_2:
+            return HappyZone.BALANCED
+        elif price >= line_1:
+            return HappyZone.UNDERVALUED
+        else:
+            return HappyZone.OVERSOLD
+
+    def _determine_happy_trend(self, close: pd.Series, period: int) -> TrendType:
+        """Determine trend direction based on price vs moving average."""
+        try:
+            ma = close.rolling(window=period).mean()
+            current_price = float(close.iloc[-1])
+            current_ma = float(ma.iloc[-1])
+
+            # Also check shorter term trend
+            short_ma = close.rolling(window=20).mean()
+            current_short_ma = float(short_ma.iloc[-1])
+
+            if current_price > current_ma and current_price > current_short_ma:
+                return TrendType.BULLISH
+            elif current_price < current_ma and current_price < current_short_ma:
+                return TrendType.BEARISH
+            else:
+                return TrendType.SIDEWAYS
+        except Exception:
+            return TrendType.SIDEWAYS
+
+    def _determine_happy_signal(self, zone: HappyZone, trend: TrendType) -> SignalType:
+        """Determine trading signal based on zone and trend."""
+        # Buy signals: oversold/undervalued zones
+        if zone in [HappyZone.OVERSOLD, HappyZone.UNDERVALUED]:
+            if trend == TrendType.BULLISH:
+                return SignalType.STRONG_BUY
+            elif trend == TrendType.SIDEWAYS:
+                return SignalType.BUY
+            else:
+                return SignalType.NEUTRAL  # Wait for trend reversal
+
+        # Sell signals: overbought/overvalued zones
+        elif zone in [HappyZone.OVERBOUGHT, HappyZone.OVERVALUED]:
+            if trend == TrendType.BEARISH:
+                return SignalType.STRONG_SELL
+            elif trend == TrendType.SIDEWAYS:
+                return SignalType.SELL
+            else:
+                return SignalType.NEUTRAL  # Wait for trend reversal
+
+        # Balanced zone
+        else:
+            return SignalType.NEUTRAL
+
+    async def analyze_happy_lines(
+        self,
+        ticker: str,
+        period: str = "1y",
+        lookback_period: int = 60,
+    ) -> HappyLinesIndicators | None:
+        """Perform Happy Lines analysis on a stock.
+
+        Args:
+            ticker: Stock ticker symbol
+            period: Historical data period
+            lookback_period: Calculation period for Happy Lines (default: 60 days)
+
+        Returns:
+            HappyLinesIndicators object or None
+        """
+        from datetime import datetime, timedelta
+
+        # Define date range
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=365)
+        start_date_str = start_date.strftime("%Y-%m-%d")
+        end_date_str = end_date.strftime("%Y-%m-%d")
+
+        # Get historical data
+        df = await self.fetcher.fetch_history(
+            ticker, period, start_date=start_date_str, end_date=end_date_str
+        )
+
+        if df is None or df.empty:
+            log.warning(f"No data available for {ticker}")
+            return None
+
+        return self.calculate_happy_lines(df, ticker, period=lookback_period)

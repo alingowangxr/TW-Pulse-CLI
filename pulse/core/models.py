@@ -456,6 +456,83 @@ class TradeValidity(str, Enum):
     POSITION = "Position"  # Weeks to months
 
 
+class HappyZone(str, Enum):
+    """Happy Lines zone classification."""
+
+    OVERSOLD = "超跌區"  # Line 1
+    UNDERVALUED = "偏低區"  # Line 2
+    BALANCED = "平衡區"  # Line 3
+    OVERVALUED = "偏高區"  # Line 4
+    OVERBOUGHT = "過熱區"  # Line 5
+
+
+class HappyLinesIndicators(BaseModel):
+    """樂活五線譜技術指標.
+
+    五線譜是一種基於統計分佈的股價位階判斷工具，
+    將股價分為五個區域，協助投資人判斷進出場時機。
+    """
+
+    ticker: str
+    calculated_at: datetime = Field(default_factory=datetime.now)
+
+    # 五線價格 (Line 1 = 下軌, Line 5 = 上軌)
+    line_1: float | None = None  # 超跌線 (中軌 - 2σ)
+    line_2: float | None = None  # 偏低線 (中軌 - 1σ)
+    line_3: float | None = None  # 平衡線 (中軌, 移動平均)
+    line_4: float | None = None  # 偏高線 (中軌 + 1σ)
+    line_5: float | None = None  # 過熱線 (中軌 + 2σ)
+
+    # 當前狀態
+    current_price: float = 0.0
+    position_ratio: float = 0.0  # 位階百分比 (0-100%)
+    zone: HappyZone = HappyZone.BALANCED
+
+    # 統計數據
+    period: int = 120  # 計算週期 (預設120日)
+    std_dev: float = 0.0  # 標準差
+
+    # 距離計算
+    distance_to_line1: float = 0.0  # 距離超跌線 %
+    distance_to_line5: float = 0.0  # 距離過熱線 %
+
+    # 趨勢與訊號
+    trend: TrendType = TrendType.SIDEWAYS
+    signal: SignalType = SignalType.NEUTRAL
+
+    @property
+    def line_width(self) -> float:
+        """Calculate total channel width (Line 5 - Line 1)."""
+        if self.line_5 and self.line_1:
+            return self.line_5 - self.line_1
+        return 0.0
+
+    @property
+    def is_near_support(self) -> bool:
+        """Check if price is near support (Line 1-2)."""
+        return self.zone in [HappyZone.OVERSOLD, HappyZone.UNDERVALUED]
+
+    @property
+    def is_near_resistance(self) -> bool:
+        """Check if price is near resistance (Line 4-5)."""
+        return self.zone in [HappyZone.OVERVALUED, HappyZone.OVERBOUGHT]
+
+    def to_summary(self) -> dict[str, Any]:
+        """Generate summary dict for display."""
+        return {
+            "當前價格": self.current_price,
+            "位階": self.zone.value,
+            "位階百分比": f"{self.position_ratio:.1f}%",
+            "過熱線(5)": self.line_5,
+            "偏高線(4)": self.line_4,
+            "平衡線(3)": self.line_3,
+            "偏低線(2)": self.line_2,
+            "超跌線(1)": self.line_1,
+            "趨勢": self.trend.value,
+            "訊號": self.signal.value,
+        }
+
+
 class TradingPlan(BaseModel):
     """Complete trading plan with entry, TP, SL, and RR calculations."""
 
