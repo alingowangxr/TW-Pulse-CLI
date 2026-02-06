@@ -43,7 +43,7 @@
 
 | Feature | Description |
 |---------|-------------|
-| **Technical Analysis** | RSI, MACD, 布林通道, SMA/EMA, ADX, CCI, Ichimoku, Keltner Channel 等 20+ 指標 |
+| **Technical Analysis** | RSI, MACD, 布林通道, SMA/EMA, ADX, CCI, Ichimoku, Keltner Channel, **Happy Lines (樂活五線譜)** 等 20+ 指標 |
 | **Fundamental Analysis** | PE, PB, ROE/ROA, 股息率, 營收成長 |
 | **Institutional Flow** | 外資、投信、自營商買賣超分析（支援 API Token） |
 | **Stock Screening** | 多條件篩選股票，支援 CSV 匯出，進度條顯示 |
@@ -66,6 +66,7 @@
 | **MA Crossover** | 🆕 均線交叉策略 - EMA9/EMA21 交叉 + MA50 趨勢過濾 |
 | **BB Squeeze** | 🆕 布林壓縮策略 - 低波動壓縮後的向上突破 |
 | **Keltner Channel** | 短線突破策略 (BUY/HOLD/SELL/WATCH 信號) |
+| **Happy Lines** | 樂活五線譜 - 基於統計分佈的股價位階判斷工具 |
 | **Custom Strategies** | 支援自定義策略開發與回測 |
 
 ### 🛠️ 其他工具

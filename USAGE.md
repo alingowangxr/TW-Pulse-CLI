@@ -131,6 +131,7 @@ python -m pulse.cli.app
 | `/index` | `/market` | 大盤指數 | `/index` |
 | `/sector` | `/sec` | 產業分析 | `/sector` |
 | `/keltner` | `/kc` | 肯特納通道策略 | `/keltner 2330` |
+| `/happy-lines` | `/happy`, `/五線譜`, `/hl` | 樂活五線譜分析 | `/happy-lines 2330` |
 
 ### 篩選命令
 
@@ -161,6 +162,10 @@ python -m pulse.cli.app
 | `undervalued` | PE < 15 + ROE > 10% |
 | `keltner_breakout` | 肯特納通道突破 |
 | `keltner_hold` | 肯特納通道持有 |
+| `happy_oversold` | 樂活五線譜超跌區 (第1線) |
+| `happy_overbought` | 樂活五線譜過熱區 (第5線) |
+| `happy_cheap` | 樂活五線譜偏低區以下 (第1-2線) |
+| `happy_expensive` | 樂活五線譜偏高區以上 (第4-5線) |
 | `rsi<30` | 自訂條件 |
 | `pe<15 and roe>10` | 複合條件 |
 
@@ -486,6 +491,185 @@ quick_results = await screen_keltner_breakout(universe=["2330", "2303"], limit=1
 
 ---
 
+## Happy Lines (樂活五線譜)
+
+### `/happy-lines` - 樂活五線譜分析
+
+**樂活五線譜**是一種基於統計分佈的股價位階判斷工具，透過移動平均線和標準差計算五條關鍵價位線，將股價分為五個區域，協助投資人判斷進出場時機。
+
+### 五線譜計算邏輯
+
+| 線位 | 名稱 | 計算公式 | 投資建議 |
+|------|------|----------|----------|
+| **第5線** | 過熱線 | 中軌 + (標準差 × 2.0) | 考慮減碼/停利 |
+| **第4線** | 偏高線 | 中軌 + (標準差 × 1.0) | 分批獲利 |
+| **第3線** | 平衡線 | N日移動平均 (預設120日) | 觀望等待 |
+| **第2線** | 偏低線 | 中軌 - (標準差 × 1.0) | 分批布局 |
+| **第1線** | 超跌線 | 中軌 - (標準差 × 2.0) | 考慮進場/加碼 |
+
+### 策略參數
+
+```python
+# 預設參數
+period = 120                    # 計算週期 (日)
+min_avg_volume = 1_000_000      # 最小日均成交量 (股)
+```
+
+### 週期選擇建議
+
+| 週期 | 適用風格 | 說明 |
+|------|----------|------|
+| 20日 | 短線 | 適合當沖或隔日沖 |
+| 60日 | 中線 | 適合波段操作 |
+| **120日** | **長線** | **適合長期投資 (預設)** |
+| 240日 | 年線 | 適合價值投資 |
+
+### 策略邏輯
+
+#### 買進條件
+- 股價處於 **第1線** 或 **第2線** 區域 (超跌/偏低)
+- 趨勢為多頭或盤整 (非空頭)
+- 日均成交量 >= 1,000,000 股
+
+#### 賣出條件
+- 股價突破 **第5線** (過熱區)
+- 或股價跌破 **第3線** 且趨勢轉空
+
+#### 持有條件
+- 股價在 **第2-4線** 之間
+- 或已進場且趨勢仍偏多
+
+### 使用方式
+
+```bash
+# 分析單一股票 (預設120日週期)
+/happy-lines 2330
+
+# 使用不同週期
+/happy-lines 2330 period=60     # 60日週期
+/happy-lines 2330 period=240    # 240日週期
+
+# 別名使用
+/happy 2330
+/五線譜 2330
+/hl 2330
+```
+
+### 篩選功能
+
+```bash
+# 篩選超跌股票 (第1線附近)
+/screen happy_oversold
+
+# 篩選過熱股票 (第5線附近)
+/screen happy_overbought
+
+# 篩選便宜股票 (第1-2線區間)
+/screen happy_cheap
+
+# 篩選昂貴股票 (第4-5線區間)
+/screen happy_expensive
+
+# 指定股票池
+/screen happy_cheap --universe=tw50
+```
+
+### Python API
+
+```python
+from pulse.core.strategies.happy_lines import (
+    HappyLinesStrategy,
+    HappyLinesSignal,
+    screen_happy_lines,
+)
+
+# 方式 1: 完整策略物件
+strategy = HappyLinesStrategy(period=120)
+
+# 買進信號篩選
+buy_signals = await strategy.screen_buy_signals(limit=20)
+
+# 賣出信號篩選
+sell_signals = await strategy.screen_sell_signals(limit=20)
+
+# 超跌股票篩選
+oversold = await strategy.screen_oversold(limit=20)
+
+# 過熱股票篩選
+overbought = await strategy.screen_overbought(limit=20)
+
+# 顯示結果
+for r in buy_signals:
+    print(f"{r.ticker}: {r.signal.value} @ ${r.price}")
+    print(f"  位階: {r.zone.value} ({r.position_ratio:.1f}%)")
+    print(f"  五線: L1={r.line_1:.0f} L2={r.line_2:.0f} L3={r.line_3:.0f} L4={r.line_4:.0f} L5={r.line_5:.0f}")
+
+# 方式 2: 快速篩選
+quick_results = await screen_happy_lines(
+    universe=["2330", "2454"],
+    limit=10,
+    period=120,
+    buy_signals_only=True
+)
+```
+
+### 輸出範例
+
+```
+【樂活五線譜分析 - 2330】
+
+第5線 (過熱區): 1,250
+第4線 (偏高區): 1,150
+第3線 (平衡區): 1,050 ← 你在這裡
+第2線 (偏低區): 950
+第1線 (超跌區): 850
+
+【分析摘要】
+  當前價格: NT$ 1,085
+  位階百分比: 58.0%
+  所在區域: 平衡區
+  計算週期: 120日
+
+【交易訊號】
+  趨勢: Sideways
+  訊號: NEUTRAL
+```
+
+### 與其他策略的比較
+
+| 特性 | 樂活五線譜 | 布林通道 | 肯特納通道 |
+|------|------------|----------|------------|
+| 中軌 | 移動平均 | SMA | EMA |
+| 帶寬計算 | 標準差 | 標準差 | ATR |
+| 區域劃分 | 五個明確區域 | 連續分佈 | 三條線 |
+| 適用場景 | 位階判斷 | 波動性測量 | 趨勢確認 |
+| 主要用途 | 進出場時機 | 超買超賣 | 順勢交易 |
+
+### 策略優勢與劣勢
+
+#### 優勢
+- **統計基礎**: 基於標準差，客觀判斷位階
+- **簡單易懂**: 五個區域明確，易於理解
+- **適合波段**: 對中長期趨勢判斷準確
+- **可搭配使用**: 可與農夫播種術等策略結合，作為加減碼參考
+
+#### 劣勢
+- **週期敏感**: 不同週期結論可能差異較大
+- **盤整失真**: 長期盤整後突破可能產生假信號
+- **單一維度**: 僅考慮價格，未考慮成交量等其他因素
+
+### 使用建議
+
+1. **選擇合適週期**: 根據投資風格選擇 60日(波段) 或 120日(長期)
+2. **搭配趨勢確認**: 結合 EMA 或 MACD 確認趨勢方向
+3. **分批操作**: 在第1-2線分批買入，第4-5線分批賣出
+4. **設定停損**: 跌破第1線且趨勢轉空時考慮停損
+5. **結合基本面**: 低估區+好基本面 = 更好的投資機會
+
+別名：`/happy`, `/五線譜`, `/hl`
+
+---
+
 ## SAPTA 預漲偵測
 
 ### `/sapta` - 預漲信號檢測
@@ -610,4 +794,4 @@ PULSE_AI__DEFAULT_MODEL=deepseek/deepseek-chat
 
 ---
 
-**最後更新**: 2026-02-03 (v0.3.1 - 三大交易策略)
+**最後更新**: 2026-02-06 (v0.4.0 - 新增樂活五線譜策略)
