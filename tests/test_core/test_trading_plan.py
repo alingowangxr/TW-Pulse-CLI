@@ -87,7 +87,7 @@ class TestTradingPlanGeneratorInitialization:
         assert generator.DEFAULT_RISK_PERCENT == 2.0
         assert generator.DEFAULT_ATR_SL_MULTIPLIER == 1.5
         assert generator.DEFAULT_ATR_TP_MULTIPLIER == 2.0
-        assert generator.DEFAULT_ACCOUNT_SIZE == 100_000_000
+        assert generator.DEFAULT_ACCOUNT_SIZE == 10_000_000
 
     def test_initializes_fetcher(self, generator):
         """Test generator initializes YFinanceFetcher."""

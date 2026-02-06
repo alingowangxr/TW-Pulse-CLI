@@ -159,7 +159,7 @@ class TestScreenPresetEnum:
     def test_all_presets_defined(self):
         """Test that all expected presets are defined."""
         presets = list(ScreenPreset)
-        assert len(presets) == 9
+        assert len(presets) == 15
 
 
 class TestStockUniverse:
