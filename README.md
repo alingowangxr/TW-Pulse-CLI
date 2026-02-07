@@ -159,6 +159,8 @@ pulse
 |----------|-------------|
 | [USAGE.md](USAGE.md) | 完整安裝與使用說明 |
 | [TODO.md](TODO.md) | 未來改進計劃與路線圖 |
+| [docs/CONTRIB.md](docs/CONTRIB.md) | 貢獻指南 - 開發工作流與環境設定 |
+| [docs/RUNBOOK.md](docs/RUNBOOK.md) | 運維手冊 - 部署與故障排除 |
 | [docs/SAPTA_ALGORITHM.md](docs/SAPTA_ALGORITHM.md) | SAPTA 算法詳解 |
 | [docs/training_guide.md](docs/training_guide.md) | ML 模型訓練文檔 |
 | [docs/architecture.md](docs/architecture.md) | 系統架構與設計 |
