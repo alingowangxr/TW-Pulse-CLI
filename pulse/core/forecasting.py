@@ -94,14 +94,15 @@ class PriceForecaster:
             df.index.name = "date"
 
             # Configure AutoTS based on mode
+            # "superfast" list: ~8 lightweight models (GLS, ETS, Naive variants, etc.)
             if mode == "full":
-                model_list = "all"
-                max_generations = 5
-                num_validations = 3
-            else:
-                model_list = "fast"
-                max_generations = 1
+                model_list = "superfast"
+                max_generations = 3
                 num_validations = 2
+            else:
+                model_list = "superfast"
+                max_generations = 1
+                num_validations = 1
 
             def _fit_and_predict():
                 model = AutoTS(
