@@ -54,6 +54,7 @@
 |---------|-------------|
 | **SAPTA Engine** | 機器學習預漲偵測 (6 模組 + XGBoost) + `/sapta-retrain` |
 | **SAPTA Feature Analysis** | `/sapta-retrain --report` 特徵重要性 + 閾值分析 |
+| **AutoTS Forecasting** | 🆕 AI 價格預測引擎 (AutoTS)，支援快速/完整兩種模式 |
 | **Smart Money Screener** | 主力足跡選股 (Trend/Volume/Bias) |
 | **Trading Plan** | 自動生成停利/停損/風險報酬計算 |
 
@@ -129,6 +130,8 @@ pulse
 /chart 2330                        # 生成 K 線圖
 /inst 2330                         # 法人買賣超
 /plan 2330                         # 交易計畫
+/forecast 2330                     # 快速模式價格預測 (7天)
+/forecast 2330 14 full             # 完整模式價格預測 (14天)
 ```
 
 ### 策略回測
@@ -176,7 +179,7 @@ pulse
 
 ### Data & Analysis
 - **Data Sources**: FinMind, Yahoo Finance, Fugle
-- **ML/AI**: XGBoost, scikit-learn
+- **ML/AI**: XGBoost, scikit-learn, AutoTS (M6 competition winner)
 - **Analysis**: pandas, numpy, ta (Technical Analysis Library)
 
 ### Strategy & Backtesting
@@ -190,7 +193,8 @@ pulse
 
 | Version | Date | Changes |
 |---------|------|---------|
-| **0.3.1** | **2026-02-03** | **三大交易策略：動量突破、均線交叉、布林壓縮 + 42 new tests** |
+| **0.4.1** | **2026-02-08** | **AutoTS 預測引擎：取代 Prophet，支援快速/完整兩種模式 + 16 new tests** |
+| 0.3.1 | 2026-02-03 | 三大交易策略：動量突破、均線交叉、布林壓縮 + 42 new tests |
 | 0.3.0 | 2026-01-27 | 策略回測系統、動態資金管理、FinMind Token 自動讀取 |
 | 0.2.1 | 2026-01-22 | Keltner Channel indicator & strategy, 21 new tests |
 | 0.2.0 | 2026-01-22 | E2E tests (461 total), SAPTA retrain CLI, chart customization |

@@ -124,7 +124,7 @@ python -m pulse.cli.app
 | `/fundamental` | `/fa`, `/fund` | 基本面分析 | `/fundamental 2330` |
 | `/institutional` | `/inst`, `/flow` | 法人動向 | `/institutional 2330` |
 | `/chart` | `/c` | 產生圖表 | `/chart 2330 3mo` |
-| `/forecast` | `/fc` | 價格預測 | `/forecast 2330 14` |
+| `/forecast` | `/pred`, `/predict` | 價格預測 | `/forecast 2330 14 [fast\|full]` |
 | `/compare` | `/cmp`, `/vs` | 比較股票 | `/compare 2330 2454` |
 | `/plan` | `/tp` | 交易計畫 | `/plan 2330` |
 | `/sapta` | `/premarkup` | 預漲偵測 | `/sapta 2330` |
@@ -670,6 +670,89 @@ quick_results = await screen_happy_lines(
 
 ---
 
+## 價格預測 (AutoTS)
+
+### `/forecast` - AI 價格預測
+
+基於 **AutoTS** (M6 預測競賽冠軍) 的多模型自動選擇預測引擎，支援快速與完整兩種模式。
+
+### 預測模式
+
+| 模式 | 說明 | 預估時間 |
+|------|------|----------|
+| **fast** (預設) | `superfast` 模型清單，1 代演化，1 次驗證 | ~18 秒 |
+| **full** | `superfast` 模型清單，3 代演化，2 次驗證 | ~30 秒 |
+
+### 使用方式
+
+```bash
+# 快速模式 (預設 7 天)
+/forecast 2330
+
+# 指定天數
+/forecast 2330 14
+
+# 完整模式
+/forecast 2330 full
+/forecast 2330 14 full
+
+# 順序不拘
+/forecast 2330 full 14
+```
+
+### 模型選擇
+
+AutoTS 會自動從以下模型中選擇最佳預測模型：
+
+| 模型 | 說明 |
+|------|------|
+| GLS | 廣義最小平方法 |
+| ETS | 指數平滑法 |
+| LastValueNaive | 最後值延伸 |
+| AverageValueNaive | 平均值延伸 |
+| SeasonalNaive | 季節性延伸 |
+| SeasonalityMotif | 季節性模式匹配 |
+| SectionalMotif | 區段模式匹配 |
+| BasicLinearModel | 基本線性模型 |
+
+### 輸出範例
+
+```
+=== 價格預測: 2330 (7天) ===
+
+模式: 快速模式
+模型: GLS
+
+現價: NT$ 1,025.00
+目標價: NT$ 1,042.00
+預期漲跌: +1.66%
+
+趨勢: + 上漲
+支撐位: NT$ 1,010.00
+壓力位: NT$ 1,055.00
+信心度: [########--] 78%
+
+圖表已儲存: charts/forecast_2330_20260208.png
+```
+
+### Fallback 機制
+
+若 AutoTS 未安裝或執行失敗，系統會自動退回 **MA Extrapolation**（移動平均外推法），信心度固定為 50%。
+
+### 自然語言支援
+
+在 Smart Agent 模式下，可使用自然語言觸發預測：
+
+```
+> 預測 2330
+> 完整預測 2330     → 自動使用 full 模式
+> 詳細預測台積電    → 自動使用 full 模式
+```
+
+別名：`/pred`, `/predict`
+
+---
+
 ## SAPTA 預漲偵測
 
 ### `/sapta` - 預漲信號檢測
@@ -794,4 +877,4 @@ PULSE_AI__DEFAULT_MODEL=deepseek/deepseek-chat
 
 ---
 
-**最後更新**: 2026-02-06 (v0.4.0 - 新增樂活五線譜策略)
+**最後更新**: 2026-02-08 (v0.4.1 - AutoTS 預測引擎，支援快速/完整模式)
