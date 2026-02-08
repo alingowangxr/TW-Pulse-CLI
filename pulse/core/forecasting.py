@@ -1,5 +1,6 @@
-"""Price forecasting using Prophet and statistical models."""
+"""Price forecasting using AutoTS and statistical models."""
 
+import asyncio
 from dataclasses import dataclass
 
 import numpy as np
@@ -24,22 +25,24 @@ class ForecastResult:
     target_price: float
     support: float
     resistance: float
+    model_name: str = ""
+    mode: str = "fast"
 
 
 class PriceForecaster:
     """Price forecasting using multiple models."""
 
     def __init__(self):
-        self._prophet_available = self._check_prophet()
+        self._autots_available = self._check_autots()
 
-    def _check_prophet(self) -> bool:
-        """Check if Prophet is available."""
+    def _check_autots(self) -> bool:
+        """Check if AutoTS is available."""
         try:
-            from prophet import Prophet  # noqa: F401
+            import autots  # noqa: F401
 
             return True
         except ImportError:
-            log.warning("Prophet not available, using fallback methods")
+            log.warning("AutoTS not available, using fallback methods")
             return False
 
     async def forecast(
@@ -48,6 +51,7 @@ class PriceForecaster:
         prices: list[float],
         dates: list[str],
         days: int = 7,
+        mode: str = "fast",
     ) -> ForecastResult | None:
         """
         Forecast future prices.
@@ -57,6 +61,7 @@ class PriceForecaster:
             prices: Historical closing prices
             dates: Historical dates
             days: Days to forecast
+            mode: "fast" (few seconds) or "full" (1-2 minutes, more models)
 
         Returns:
             ForecastResult or None
@@ -65,42 +70,70 @@ class PriceForecaster:
             log.warning(f"Not enough data for forecasting: {len(prices)} points")
             return None
 
-        if self._prophet_available:
-            return await self._forecast_prophet(ticker, prices, dates, days)
-        else:
-            return await self._forecast_simple(ticker, prices, dates, days)
+        if self._autots_available:
+            return await self._forecast_autots(ticker, prices, dates, days, mode)
+        return await self._forecast_simple(ticker, prices, dates, days)
 
-    async def _forecast_prophet(
+    async def _forecast_autots(
         self,
         ticker: str,
         prices: list[float],
         dates: list[str],
         days: int,
+        mode: str = "fast",
     ) -> ForecastResult | None:
-        """Forecast using Facebook Prophet."""
+        """Forecast using AutoTS with fast or full mode."""
         try:
-            from prophet import Prophet
+            from autots import AutoTS
 
-            # Prepare data for Prophet
-            df = pd.DataFrame({"ds": pd.to_datetime(dates), "y": prices})
-
-            # Create and fit model
-            model = Prophet(
-                daily_seasonality=False,
-                weekly_seasonality=True,
-                yearly_seasonality=True,
-                changepoint_prior_scale=0.05,
+            # Prepare data for AutoTS
+            df = pd.DataFrame(
+                {"date": pd.to_datetime(dates), "close": prices}
             )
-            model.fit(df)
+            df = df.set_index("date")
+            df.index.name = "date"
 
-            # Make future dataframe
-            future = model.make_future_dataframe(periods=days)
-            forecast = model.predict(future)
+            # Configure AutoTS based on mode
+            if mode == "full":
+                model_list = "all"
+                max_generations = 5
+                num_validations = 3
+            else:
+                model_list = "fast"
+                max_generations = 1
+                num_validations = 2
 
-            # Extract predictions
-            predictions = forecast["yhat"].tail(days).tolist()
-            lower_bound = forecast["yhat_lower"].tail(days).tolist()
-            upper_bound = forecast["yhat_upper"].tail(days).tolist()
+            def _fit_and_predict():
+                model = AutoTS(
+                    forecast_length=days,
+                    frequency="infer",
+                    prediction_interval=0.9,
+                    model_list=model_list,
+                    max_generations=max_generations,
+                    num_validations=num_validations,
+                    verbose=0,
+                    no_negatives=True,
+                )
+                model = model.fit(df)
+
+                prediction = model.predict()
+                forecast_df = prediction.forecast
+                lower_df = prediction.lower_forecast
+                upper_df = prediction.upper_forecast
+
+                best_model = model.best_model_name
+
+                return forecast_df, lower_df, upper_df, best_model
+
+            # Run AutoTS in a thread to avoid blocking the event loop
+            forecast_df, lower_df, upper_df, best_model = await asyncio.to_thread(
+                _fit_and_predict
+            )
+
+            # Extract predictions from DataFrames
+            predictions = forecast_df["close"].tolist()
+            lower_bound = lower_df["close"].tolist()
+            upper_bound = upper_df["close"].tolist()
 
             # Determine trend
             current_price = prices[-1]
@@ -135,10 +168,12 @@ class PriceForecaster:
                 target_price=round(target_price, 2),
                 support=round(support, 2),
                 resistance=round(resistance, 2),
+                model_name=best_model,
+                mode=mode,
             )
 
         except Exception as e:
-            log.error(f"Prophet forecast failed: {e}")
+            log.error(f"AutoTS forecast failed: {e}")
             return await self._forecast_simple(ticker, prices, dates, days)
 
     async def _forecast_simple(
@@ -150,11 +185,6 @@ class PriceForecaster:
     ) -> ForecastResult | None:
         """Simple moving average based forecast."""
         try:
-            # Calculate moving averages (for future use in trend analysis)
-            # ma_short = np.mean(prices[-5:])
-            # ma_medium = np.mean(prices[-20:])
-            # ma_long = np.mean(prices[-50:]) if len(prices) >= 50 else np.mean(prices)
-
             # Simple trend extrapolation
             recent_trend = (prices[-1] - prices[-5]) / 5
 
@@ -196,6 +226,8 @@ class PriceForecaster:
                 target_price=round(target_price, 2),
                 support=round(min(lower_bound), 2),
                 resistance=round(max(upper_bound), 2),
+                model_name="MA Extrapolation",
+                mode="fast",
             )
 
         except Exception as e:
@@ -206,14 +238,24 @@ class PriceForecaster:
         """Format forecast result as text."""
         trend_symbol = {"bullish": "UP", "bearish": "DOWN", "sideways": "SIDEWAYS"}
 
+        mode_label = "完整模式" if result.mode == "full" else "快速模式"
+
         lines = [
-            f"Forecast: {result.ticker} ({result.forecast_days} hari)",
+            f"預測: {result.ticker} ({result.forecast_days} 天)",
             "",
-            f"Trend: {trend_symbol.get(result.trend, result.trend)}",
-            f"Target: {result.target_price:,.0f}",
-            f"Support: {result.support:,.0f}",
-            f"Resistance: {result.resistance:,.0f}",
-            f"Confidence: {result.confidence:.0f}%",
+            f"模式: {mode_label}",
         ]
+
+        if result.model_name:
+            lines.append(f"模型: {result.model_name}")
+
+        lines.extend([
+            "",
+            f"趨勢: {trend_symbol.get(result.trend, result.trend)}",
+            f"目標價: {result.target_price:,.0f}",
+            f"支撐位: {result.support:,.0f}",
+            f"壓力位: {result.resistance:,.0f}",
+            f"信心度: {result.confidence:.0f}%",
+        ])
 
         return "\n".join(lines)

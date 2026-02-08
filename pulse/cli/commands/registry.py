@@ -205,7 +205,7 @@ class CommandRegistry:
             "forecast",
             self._cmd_forecast,
             "Price forecast (價格預測)",
-            "/forecast <TICKER> [days]",
+            "/forecast <TICKER> [days] [fast|full]",
             aliases=["pred", "predict"],
         )
 

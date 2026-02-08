@@ -519,6 +519,8 @@ def create_forecast_table(
     confidence: float,
     days: int,
     chart_path: str | None = None,
+    mode: str = "fast",
+    model_name: str = "",
 ) -> str:
     """Create a formatted forecast output."""
     change_pct = (target - current) / current * 100
@@ -529,8 +531,18 @@ def create_forecast_table(
     # Confidence bar
     conf_bar = create_progress_bar(confidence, 100, 10)
 
+    mode_label = "完整模式" if mode == "full" else "快速模式"
+
     lines = [
         create_header("價格預測", f"{ticker} ({days}天)"),
+        "",
+        f"模式: {mode_label}",
+    ]
+
+    if model_name:
+        lines.append(f"模型: {model_name}")
+
+    lines.extend([
         "",
         f"現價: NT$ {current:,.2f}",
         f"目標價: NT$ {target:,.2f}",
@@ -540,7 +552,7 @@ def create_forecast_table(
         f"支撐位: NT$ {support:,.2f}",
         f"壓力位: NT$ {resistance:,.2f}",
         f"信心度: [{conf_bar}] {confidence:.0f}%",
-    ]
+    ])
 
     if chart_path:
         lines.append(f"\n圖表已儲存: {chart_path}")

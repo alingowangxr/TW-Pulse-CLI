@@ -79,7 +79,10 @@ dependencies = [
     
     # Charts
     "matplotlib>=3.8.0",
-    
+
+    # Forecasting (AutoTS - M6 competition winner, multi-model auto-selection)
+    "autots>=0.6.0",
+
     # Planetary/Astronomical (SAPTA Astronacci)
     "ephem>=4.1.0",
 ]

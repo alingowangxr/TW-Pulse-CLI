@@ -625,7 +625,9 @@ class SmartAgent:
             log.error(f"Error generating chart for {ticker}: {e}")
             return None
 
-    async def _generate_forecast(self, ticker: str, days: int = 7) -> dict[str, Any] | None:
+    async def _generate_forecast(
+        self, ticker: str, days: int = 7, mode: str = "fast"
+    ) -> dict[str, Any] | None:
         """Generate price forecast with PNG chart."""
         try:
             from pulse.core.chart_generator import ChartGenerator
@@ -642,7 +644,7 @@ class SmartAgent:
             dates = df.index.strftime("%Y-%m-%d").tolist()
 
             forecaster = PriceForecaster()
-            result = await forecaster.forecast(ticker, prices, dates, days)
+            result = await forecaster.forecast(ticker, prices, dates, days, mode=mode)
 
             if not result:
                 return None
@@ -1304,7 +1306,12 @@ Chart saved: {filepath}"""
         if intent == "forecast" and tickers:
             ticker = tickers[0]
             self._last_ticker = ticker  # Remember this ticker
-            forecast = await self._generate_forecast(ticker)
+            # Detect full mode from user message
+            msg_lower = user_message.lower()
+            forecast_mode = "fast"
+            if any(kw in msg_lower for kw in ["完整預測", "詳細預測", "full"]):
+                forecast_mode = "full"
+            forecast = await self._generate_forecast(ticker, mode=forecast_mode)
 
             if forecast:
                 msg = forecast["summary"]

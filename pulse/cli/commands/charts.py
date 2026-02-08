@@ -57,19 +57,24 @@ async def chart_command(app: "PulseApp", args: str) -> str:
 async def forecast_command(app: "PulseApp", args: str) -> str:
     """Forecast command handler - predict future prices and save chart as PNG."""
     if not args:
-        return "請指定股票代碼。用法: /forecast 2330 [7|14|30] (台積電預測)"
+        return "請指定股票代碼。用法: /forecast 2330 [7|14|30] [fast|full] (台積電預測)"
 
     parts = args.strip().upper().split()
     ticker = parts[0]
 
-    # Parse days
+    # Parse mode and days from remaining parts
     days = 7
-    if len(parts) > 1:
-        try:
-            days = int(parts[1])
-            days = min(max(days, 1), 30)  # Clamp between 1-30
-        except ValueError:
-            days = 7
+    mode = "fast"
+    for part in parts[1:]:
+        lower_part = part.lower()
+        if lower_part in ("fast", "full"):
+            mode = lower_part
+        else:
+            try:
+                days = int(part)
+                days = min(max(days, 1), 30)  # Clamp between 1-30
+            except ValueError:
+                pass
 
     from pulse.core.chart_generator import ChartGenerator
     from pulse.core.data.yfinance import YFinanceFetcher
@@ -85,7 +90,7 @@ async def forecast_command(app: "PulseApp", args: str) -> str:
     dates = df.index.strftime("%Y-%m-%d").tolist()
 
     forecaster = PriceForecaster()
-    result = await forecaster.forecast(ticker, prices, dates, days)
+    result = await forecaster.forecast(ticker, prices, dates, days, mode=mode)
 
     if not result:
         return f"{ticker} 預測失敗"
@@ -117,6 +122,8 @@ async def forecast_command(app: "PulseApp", args: str) -> str:
         confidence=result.confidence,
         days=days,
         chart_path=filepath,
+        mode=result.mode,
+        model_name=result.model_name,
     )
 
 
