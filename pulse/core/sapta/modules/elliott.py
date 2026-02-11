@@ -269,7 +269,7 @@ class ElliottModule(BaseModule):
         try:
             from ta.momentum import RSIIndicator
 
-            rsi = RSIIndicator(df["close"], window=14).rsi()
+            rsi = RSIIndicator(df["close"], n=14).rsi()
 
             # Check last 10 bars for divergence
             recent_price = df["close"].tail(10)

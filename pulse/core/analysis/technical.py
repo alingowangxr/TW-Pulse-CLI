@@ -63,12 +63,12 @@ class TechnicalAnalyzer:
 
             # Calculate indicators
             # RSI
-            rsi = RSIIndicator(close, window=14)
+            rsi = RSIIndicator(close, n=14)
             df["RSI_14"] = rsi.rsi()
 
             # Moving Averages
-            df["MA_50"] = SMAIndicator(close, window=50).sma_indicator()
-            df["MA_200"] = SMAIndicator(close, window=200).sma_indicator()
+            df["MA_50"] = SMAIndicator(close, n=50).sma_indicator()
+            df["MA_200"] = SMAIndicator(close, n=200).sma_indicator()
 
             # MACD
             macd = MACD(close)
@@ -77,24 +77,24 @@ class TechnicalAnalyzer:
             df["MACD_hist"] = macd.macd_diff()
 
             # Bollinger Bands
-            bb = BollingerBands(close, window=20, window_dev=2)
+            bb = BollingerBands(close, n=20, ndev=2)
             df["BB_upper"] = bb.bollinger_hband()
             df["BB_middle"] = bb.bollinger_mavg()
             df["BB_lower"] = bb.bollinger_lband()
 
             # ATR
-            atr = AverageTrueRange(high, low, close, window=14)
+            atr = AverageTrueRange(high, low, close, n=14)
             df["ATR"] = atr.average_true_range()
 
             # EMA for crossover strategies
-            df["EMA_9"] = EMAIndicator(close, window=9).ema_indicator()
-            df["EMA_21"] = EMAIndicator(close, window=21).ema_indicator()
+            df["EMA_9"] = EMAIndicator(close, n=9).ema_indicator()
+            df["EMA_21"] = EMAIndicator(close, n=21).ema_indicator()
 
             # MA_20 for strategies
-            df["MA_20"] = SMAIndicator(close, window=20).sma_indicator()
+            df["MA_20"] = SMAIndicator(close, n=20).sma_indicator()
 
             # Volume SMA for volume confirmation
-            df["Volume_SMA_20"] = SMAIndicator(volume.astype(float), window=20).sma_indicator()
+            df["Volume_SMA_20"] = SMAIndicator(volume.astype(float), n=20).sma_indicator()
 
             # ADX (Average Directional Index)
             df["ADX"] = self._calculate_adx_series(high, low, close, n=14)
@@ -170,21 +170,21 @@ class TechnicalAnalyzer:
         # === Trend Indicators ===
 
         # SMA
-        sma_20 = SMAIndicator(close, window=20).sma_indicator().iloc[-1]
-        sma_50 = SMAIndicator(close, window=50).sma_indicator().iloc[-1]
+        sma_20 = SMAIndicator(close, n=20).sma_indicator().iloc[-1]
+        sma_50 = SMAIndicator(close, n=50).sma_indicator().iloc[-1]
         sma_200 = (
-            SMAIndicator(close, window=200).sma_indicator().iloc[-1] if len(df) >= 200 else None
+            SMAIndicator(close, n=200).sma_indicator().iloc[-1] if len(df) >= 200 else None
         )
 
         # EMA
-        ema_9 = EMAIndicator(close, window=9).ema_indicator().iloc[-1]
-        ema_21 = EMAIndicator(close, window=21).ema_indicator().iloc[-1]
-        ema_55 = EMAIndicator(close, window=55).ema_indicator().iloc[-1] if len(df) >= 55 else None
+        ema_9 = EMAIndicator(close, n=9).ema_indicator().iloc[-1]
+        ema_21 = EMAIndicator(close, n=21).ema_indicator().iloc[-1]
+        ema_55 = EMAIndicator(close, n=55).ema_indicator().iloc[-1] if len(df) >= 55 else None
 
         # === Momentum Indicators ===
 
         # RSI
-        rsi = RSIIndicator(close, window=14)
+        rsi = RSIIndicator(close, n=14)
         rsi_14 = float(rsi.rsi().iloc[-1])
 
         # MACD
@@ -201,14 +201,14 @@ class TechnicalAnalyzer:
         # === Volatility Indicators ===
 
         # Bollinger Bands
-        bb = BollingerBands(close, window=20, window_dev=2)
+        bb = BollingerBands(close, n=20, ndev=2)
         bb_upper = float(bb.bollinger_hband().iloc[-1])
         bb_middle = float(bb.bollinger_mavg().iloc[-1])
         bb_lower = float(bb.bollinger_lband().iloc[-1])
         bb_width = float(bb.bollinger_wband().iloc[-1])
 
         # ATR
-        atr = AverageTrueRange(high, low, close, window=14)
+        atr = AverageTrueRange(high, low, close, n=14)
         atr_14 = float(atr.average_true_range().iloc[-1])
 
         # Keltner Channel
@@ -221,7 +221,7 @@ class TechnicalAnalyzer:
         obv_val = float(obv.on_balance_volume().iloc[-1])
 
         # MFI
-        mfi = MFIIndicator(high, low, close, volume, window=14)
+        mfi = MFIIndicator(high, low, close, volume, n=14)
         mfi_14 = float(mfi.money_flow_index().iloc[-1])
 
         # === Advanced Momentum Indicators ===
@@ -236,7 +236,7 @@ class TechnicalAnalyzer:
         ichimoku = self._calculate_ichimoku(df)
 
         # Volume SMA
-        volume_sma = SMAIndicator(volume.astype(float), window=20).sma_indicator().iloc[-1]
+        volume_sma = SMAIndicator(volume.astype(float), n=20).sma_indicator().iloc[-1]
 
         # === Support/Resistance ===
         support_1, support_2, resistance_1, resistance_2 = self._calculate_support_resistance(df)
@@ -553,11 +553,11 @@ class TechnicalAnalyzer:
         """
         try:
             # Calculate EMA for middle band
-            ema = EMAIndicator(close, window=ema_period)
+            ema = EMAIndicator(close, n=ema_period)
             kc_middle = float(ema.ema_indicator().iloc[-1])
 
             # Calculate ATR for band width
-            atr = AverageTrueRange(high, low, close, window=atr_period)
+            atr = AverageTrueRange(high, low, close, n=atr_period)
             atr_value = atr.average_true_range()
 
             # Calculate upper and lower bands
