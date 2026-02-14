@@ -1067,7 +1067,7 @@ Apakah layak dieksekusi? Apa yang perlu diperhatikan?"""
 
             if not result:
                 return AgentResponse(
-                    message=f"Tidak dapat menjalankan analisis SAPTA untuk {ticker}. Pastikan ticker valid."
+                    message=f"無法對 {ticker} 進行 SAPTA 分析。請確保代號正確。"
                 )
 
             # Format the SAPTA result
@@ -1079,29 +1079,28 @@ Apakah layak dieksekusi? Apa yang perlu diperhatikan?"""
             notes_str = (
                 "\n".join(f"- {n}" for n in result.notes[:5])
                 if result.notes
-                else "Tidak ada sinyal khusus"
+                else "無特定訊號"
             )
 
-            ai_prompt = f"""SAPTA Analysis {ticker}:
-Status: {result.status.value}
-Score: {result.final_score:.1f}/100
-Confidence: {result.confidence.value}
-Wave Phase: {result.wave_phase or "N/A"}
+            ai_prompt = f"""SAPTA 分析 {ticker}:
+狀態: {result.status.value}
+分數: {result.final_score:.1f}/100
+信心度: {result.confidence.value}
+波浪階段: {result.wave_phase or "N/A"}
 
-Sinyal terdeteksi:
+偵測到的訊號:
 {notes_str}
 
-User bertanya: "{user_message}"
+使用者問題: "{user_message}"
 
-Berikan interpretasi singkat (2-3 kalimat) tentang hasil analisis SAPTA ini.
-Apakah {ticker} layak untuk dibeli? Kapan waktu yang tepat?"""
+請對此 SAPTA 分析結果提供簡短的解讀（2-3 句話）。
+這檔股票 {ticker} 值得買嗎？什麼是合適的時機？"""
 
             ai_comment = await ai.chat(
                 ai_prompt,
                 system_prompt=(
-                    "Kamu adalah analis teknikal profesional yang ahli dalam deteksi fase pre-markup. "
-                    "Berikan interpretasi singkat dan actionable. "
-                    "Fokus pada apakah saham ini siap breakout dan kapan timing-nya."
+                    "你是一位專業的技術分析師，擅長偵測噴發前兆 (pre-markup phase)。"
+                    "請提供簡短且具備行動建議的解讀。"
                 ),
                 use_history=False,
             )
@@ -1116,15 +1115,11 @@ Apakah {ticker} layak untuk dibeli? Kapan waktu yang tepat?"""
 
         except Exception as e:
             log.error(f"SAPTA analysis error for {ticker}: {e}")
-            return AgentResponse(message=f"Error analisis SAPTA: {e}")
+            return AgentResponse(message=f"SAPTA 分析錯誤: {e}")
 
     async def _handle_sapta_scan(self, user_message: str) -> AgentResponse:
         """
         Scan stocks for SAPTA PRE-MARKUP candidates.
-
-        Supports:
-        - LQ45, IDX80, POPULAR universes
-        - "semua" or "all" for all 955 stocks from database
         """
         try:
             from pulse.core.sapta import SaptaEngine, SaptaStatus
@@ -1136,17 +1131,22 @@ Apakah {ticker} layak untuk dibeli? Kapan waktu yang tepat?"""
             msg_lower = user_message.lower()
 
             # Check for "all" or "semua" - scan all stocks from database
-            if any(kw in msg_lower for kw in ["semua", "all", "955", "seluruh", "semua saham"]):
+            if any(kw in msg_lower for kw in ["semua", "all", "955", "seluruh", "所有", "全部"]):
                 try:
                     from pulse.core.sapta.ml.data_loader import SaptaDataLoader
 
                     loader = SaptaDataLoader()
                     tickers = loader.get_all_tickers()
-                    universe_name = f"ALL ({len(tickers)} saham)"
-                    # For large scans, use SIAP as minimum to reduce noise
-                    min_status = SaptaStatus.SIAP
+                    universe_name = f"全部 ({len(tickers)} 檔)"
+                    # For large scans, use READY as minimum to reduce noise
+                    min_status = SaptaStatus.READY
+                    
                 except Exception:
                     # Fallback to POPULAR if database not available
+                    screener = StockScreener(universe_type=StockUniverse.POPULAR)
+                    tickers = screener.universe
+                    universe_name = "熱門股票"
+                    min_status = SaptaStatus.READY
                     screener = StockScreener(universe_type=StockUniverse.POPULAR)
                     tickers = screener.universe
                     universe_name = "POPULAR"

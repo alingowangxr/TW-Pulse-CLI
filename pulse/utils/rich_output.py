@@ -198,7 +198,7 @@ def create_sapta_table(
     # 狀態翻譯
     status_translation = {
         "PRE-MARKUP": ("PRE-MARKUP", "●", "準備突破"),
-        "SIAP": ("SIAP", "●", "接近突破"),
+        "READY": ("READY", "●", "接近突破"),
         "WATCHLIST": ("WATCHLIST", "●", "觀察中"),
         "SKIP": ("SKIP", "○", "跳過"),
     }
@@ -239,7 +239,7 @@ def create_sapta_table(
                     target1 = current_price * 1.08
                     target2 = current_price * 1.15
                 stop_loss = current_price * 0.97
-            elif status_en == "SIAP":
+            elif status_en == "READY":
                 target1 = current_price * 1.10
                 target2 = current_price * 1.20
                 stop_loss = current_price * 0.97
@@ -422,7 +422,7 @@ def create_sapta_table(
         lines.append("  目標: +8% / +15%")
         lines.append("  RR=1:3 可考慮分批進場")
 
-    elif status_en == "SIAP":
+    elif status_en == "READY":
         lines.append("  入場: 等布林擠壓 + 放量突破")
         lines.append("  停損: 跌破近 5 日低點")
         lines.append("  目標: +10% / +20%")

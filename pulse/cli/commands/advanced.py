@@ -165,7 +165,8 @@ Examples (範例):
 
 Status Levels (狀態等級 - ML學習門檻):
   PRE-MARKUP  (score >= 47)    - Ready to breakout (準備突破)
-  SIAP        (score >= 35)    - Almost ready (接近突破)
+      READY           (score >= 35)    - Almost ready (接近突破)
+  
   WATCHLIST   (score >= 24)    - Monitor (觀察中)
   SKIP        (score < 24)     - Skip (跳過)
 
@@ -297,7 +298,7 @@ Modules (分析模組):
                 loader = SaptaDataLoader()
                 tickers = loader.get_all_tickers()
                 universe_name = f"ALL ({len(tickers)} stocks)"
-                min_status = SaptaStatus.SIAP  # Higher threshold for large scan
+                min_status = SaptaStatus.READY  # Higher threshold for large scan
             except Exception as e:
                 return f"Could not load tickers: {e}"
         else:
@@ -424,6 +425,7 @@ Use /sapta-retrain --walk-forward to retrain with new data.
 
     # Run training
     import sys
+    import subprocess
 
     # Build command
     cmd = [sys.executable, "-m", "pulse.core.sapta.ml.train_model"]
@@ -443,4 +445,9 @@ Use /sapta-retrain --walk-forward to retrain with new data.
         elif part == "--walk-forward":
             cmd.append("--walk-forward")
 
-    return f"Starting SAPTA model training...\nCommand: {' '.join(cmd)}\n\nUse /sapta --status to check model after training completes."
+    try:
+        # Execute in background
+        subprocess.Popen(cmd, stdout=None, stderr=None, close_fds=True)
+        return f"🚀 SAPTA model training started in background.\nCommand: {' '.join(cmd)}\n\nThis may take several minutes. Use /sapta-retrain --status to check model file later."
+    except Exception as e:
+        return f"❌ Failed to start training: {e}"

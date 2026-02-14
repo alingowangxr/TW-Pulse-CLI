@@ -155,9 +155,9 @@ class SaptaEngine:
         """
         results = []
         status_order = [
-            SaptaStatus.ABAIKAN,
+            SaptaStatus.IGNORE,
             SaptaStatus.WATCHLIST,
-            SaptaStatus.SIAP,
+            SaptaStatus.READY,
             SaptaStatus.PRE_MARKUP,
         ]
         min_index = status_order.index(min_status)
@@ -313,7 +313,7 @@ class SaptaEngine:
             elliott=self._score_to_dict(module_scores.get("elliott")),
             time_projection=self._score_to_dict(module_scores.get("time_projection")),
             anti_distribution=self._score_to_dict(module_scores.get("anti_distribution")),
-            status=SaptaStatus.ABAIKAN,  # Will be set in _determine_status
+            status=SaptaStatus.IGNORE,  # Will be set in _determine_status
             confidence=ConfidenceLevel.LOW,
             projected_breakout_window=projected_window,
             projected_dates=projected_dates,
@@ -353,11 +353,11 @@ class SaptaEngine:
             result.reasons.append(
                 f"Score {final:.1f} >= {self.config.threshold_pre_markup} (PRE-MARKUP threshold)"
             )
-        elif final >= self.config.threshold_siap:
-            result.status = SaptaStatus.SIAP
+        elif final >= self.config.threshold_ready:
+            result.status = SaptaStatus.READY
             result.confidence = ConfidenceLevel.MEDIUM
             result.reasons.append(
-                f"Score {final:.1f} >= {self.config.threshold_siap} (SIAP threshold)"
+                f"Score {final:.1f} >= {self.config.threshold_ready} (READY threshold)"
             )
         elif final >= self.config.threshold_watchlist:
             result.status = SaptaStatus.WATCHLIST
@@ -366,7 +366,7 @@ class SaptaEngine:
                 f"Score {final:.1f} >= {self.config.threshold_watchlist} (WATCHLIST threshold)"
             )
         else:
-            result.status = SaptaStatus.ABAIKAN
+            result.status = SaptaStatus.IGNORE
             result.confidence = ConfidenceLevel.LOW
             result.reasons.append(
                 f"Score {final:.1f} < {self.config.threshold_watchlist} (below threshold)"
@@ -447,13 +447,14 @@ class SaptaEngine:
                 with open(thresholds_path) as f:
                     thresholds = json.load(f)
 
+                # Try both new key 'ready' and legacy key 'siap'
                 self.config.threshold_pre_markup = thresholds.get("pre_markup", 80.0)
-                self.config.threshold_siap = thresholds.get("siap", 65.0)
+                self.config.threshold_ready = thresholds.get("ready") or thresholds.get("siap", 65.0)
                 self.config.threshold_watchlist = thresholds.get("watchlist", 50.0)
 
                 log.info(
                     f"Loaded learned thresholds: PRE-MARKUP>={self.config.threshold_pre_markup:.1f}, "
-                    f"SIAP>={self.config.threshold_siap:.1f}, WATCHLIST>={self.config.threshold_watchlist:.1f}"
+                    f"READY>={self.config.threshold_ready:.1f}, WATCHLIST>={self.config.threshold_watchlist:.1f}"
                 )
             except Exception as e:
                 log.debug(f"Could not load thresholds: {e}")
@@ -489,9 +490,9 @@ class SaptaEngine:
         # Status emoji/indicator
         status_icons = {
             SaptaStatus.PRE_MARKUP: "[PRE-MARKUP]",
-            SaptaStatus.SIAP: "[SIAP]",
+            SaptaStatus.READY: "[READY]",
             SaptaStatus.WATCHLIST: "[WATCHLIST]",
-            SaptaStatus.ABAIKAN: "[ABAIKAN]",
+            SaptaStatus.IGNORE: "[IGNORE]",
         }
 
         confidence_icons = {

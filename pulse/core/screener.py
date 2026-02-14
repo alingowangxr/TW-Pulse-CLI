@@ -268,7 +268,7 @@ class StockScreener:
                 "happy_lines": ("exists", True),
                 "happy_zone": "oversold",
             },
-            "sort_by": "happy_position_ratio",
+            "sort_by": "happy_lines.position_ratio",
             "sort_asc": True,
         },
         ScreenPreset.HAPPY_OVERBOUGHT: {
@@ -277,7 +277,7 @@ class StockScreener:
                 "happy_lines": ("exists", True),
                 "happy_zone": "overbought",
             },
-            "sort_by": "happy_position_ratio",
+            "sort_by": "happy_lines.position_ratio",
             "sort_asc": False,
         },
         ScreenPreset.HAPPY_CHEAP: {
@@ -286,7 +286,7 @@ class StockScreener:
                 "happy_lines": ("exists", True),
                 "happy_zone": "cheap",
             },
-            "sort_by": "happy_position_ratio",
+            "sort_by": "happy_lines.position_ratio",
             "sort_asc": True,
         },
         ScreenPreset.HAPPY_EXPENSIVE: {
@@ -295,7 +295,7 @@ class StockScreener:
                 "happy_lines": ("exists", True),
                 "happy_zone": "expensive",
             },
-            "sort_by": "happy_position_ratio",
+            "sort_by": "happy_lines.position_ratio",
             "sort_asc": False,
         },
     }
@@ -331,34 +331,37 @@ class StockScreener:
             return load_all_tickers()
         return TW50_TICKERS  # Default
 
-    async def _fetch_stock_data(self, ticker: str) -> ScreenResult | None:
-        """Fetch all data needed for screening."""
+    async def _fetch_stock_data(
+        self, 
+        ticker: str, 
+        fetcher: Any = None, 
+        analyzer: Any = None
+    ) -> ScreenResult | None:
+        """Fetch all data needed for screening with optimized single-fetch logic."""
         try:
             from datetime import datetime, timedelta
+            import pandas as pd
+            if fetcher is None:
+                from pulse.core.data.stock_data_provider import StockDataProvider
+                fetcher = StockDataProvider()
+            if analyzer is None:
+                from pulse.core.analysis.technical import TechnicalAnalyzer
+                analyzer = TechnicalAnalyzer()
 
-            from pulse.core.analysis.technical import TechnicalAnalyzer
-            from pulse.core.data.stock_data_provider import StockDataProvider
-
-            # Initialize StockDataProvider (token will be managed by config)
-            fetcher = StockDataProvider()
-
-            # Define date range for fetching data (e.g., 1 year history for screening)
+            # Define date range (6 months is enough for most indicators except SMA200)
+            # If a preset specifically needs SMA200, we'll use 1y
+            days_needed = 365 # Keep 1y for safety/SMA200, but fetch only ONCE
             end_date = datetime.now()
-            start_date = end_date - timedelta(days=365)
+            start_date = end_date - timedelta(days=days_needed)
             start_date_str = start_date.strftime("%Y-%m-%d")
             end_date_str = end_date.strftime("%Y-%m-%d")
 
-            # Fetch stock data
-            # Assuming fetch_stock can handle both period and start/end dates
+            # 1. Fetch stock data ONCE (this includes history)
             stock = await fetcher.fetch_stock(
                 ticker, period="1y", start_date=start_date_str, end_date=end_date_str
             )
-            if not stock:
+            if not stock or not stock.history:
                 return None
-
-            # Fetch technical indicators
-            analyzer = TechnicalAnalyzer()
-            technical = await analyzer.analyze(ticker)
 
             result = ScreenResult(
                 ticker=ticker,
@@ -371,6 +374,27 @@ class StockScreener:
                 avg_volume=stock.avg_volume,
             )
 
+            # 2. Convert history to DataFrame for calculations (Reuse memory)
+            # This is much faster than re-fetching
+            history_data = [
+                {
+                    "date": h.date,
+                    "open": h.open,
+                    "high": h.high,
+                    "low": h.low,
+                    "close": h.close,
+                    "volume": h.volume,
+                }
+                for h in stock.history
+            ]
+            df = pd.DataFrame(history_data)
+            df.set_index("date", inplace=True)
+            df.columns = df.columns.str.lower()
+
+            # 3. Calculate technical indicators from the ALREADY fetched data
+            # Use the internal _calculate_indicators which takes a DataFrame
+            technical = analyzer._calculate_indicators(ticker, df)
+
             if technical:
                 result.rsi_14 = technical.rsi_14
                 result.macd = technical.macd
@@ -378,30 +402,28 @@ class StockScreener:
                 result.macd_histogram = technical.macd_histogram
                 result.sma_20 = technical.sma_20
                 result.sma_50 = technical.sma_50
+                result.sma_200 = technical.sma_200
+                result.ema_9 = technical.ema_9
+                result.ema_21 = technical.ema_21
+                result.ema_55 = technical.ema_55
                 result.bb_upper = technical.bb_upper
                 result.bb_lower = technical.bb_lower
                 result.bb_middle = technical.bb_middle
                 result.stoch_k = technical.stoch_k
                 result.stoch_d = technical.stoch_d
+                result.kc_middle = technical.kc_middle
+                result.kc_upper = technical.kc_upper
+                result.kc_lower = technical.kc_lower
                 result.support = technical.support_1
                 result.resistance = technical.resistance_1
 
-                # Calculate Happy Lines
-                try:
-                    from pulse.core.data.stock_data_provider import StockDataProvider
+                # 4. Calculate Happy Lines (Reuse the same DataFrame)
+                happy_lines = analyzer.calculate_happy_lines(df, ticker, period=60)
+                if happy_lines:
+                    result.happy_lines = happy_lines
 
-                    fetcher = StockDataProvider()
-                    df = await fetcher.fetch_history(ticker, period="1y")
-                    if df is not None and not df.empty:
-                        happy_lines = analyzer.calculate_happy_lines(df, ticker, period=60)
-                        if happy_lines:
-                            result.happy_lines = happy_lines
-                except Exception as e:
-                    log.debug(f"Could not calculate Happy Lines for {ticker}: {e}")
-
-            # Fetch fundamental data (optional, may be slow)
+            # 5. Fetch fundamental data (Optional, still separate but could be optimized later)
             try:
-                # Assuming fetch_fundamentals also uses start_date/end_date for FinMind
                 fundamental = await fetcher.fetch_fundamentals(
                     ticker, start_date=start_date_str, end_date=end_date_str
                 )
@@ -984,11 +1006,19 @@ class StockScreener:
         results = []
 
         # Fetch data for all stocks in parallel (with semaphore to limit concurrency)
-        semaphore = asyncio.Semaphore(10)  # Max 10 concurrent requests
+        # Increased to 30 for better throughput
+        semaphore = asyncio.Semaphore(30)
+
+        from pulse.core.analysis.technical import TechnicalAnalyzer
+        from pulse.core.data.stock_data_provider import StockDataProvider
+
+        # Instantiate once to reuse
+        fetcher = StockDataProvider()
+        analyzer = TechnicalAnalyzer()
 
         async def fetch_with_limit(ticker: str) -> ScreenResult | None:
             async with semaphore:
-                return await self._fetch_stock_data(ticker)
+                return await self._fetch_stock_data(ticker, fetcher=fetcher, analyzer=analyzer)
 
         log.info(f"Screening {len(self.universe)} stocks...")
 
@@ -1010,8 +1040,8 @@ class StockScreener:
                 f"Screening {len(self.universe)} stocks...", total=len(self.universe)
             )
 
-            # Process in batches to update progress
-            batch_size = 10
+            # Process in larger batches for better efficiency
+            batch_size = 30
             for i in range(0, len(self.universe), batch_size):
                 batch = self.universe[i : i + batch_size]
                 tasks = [fetch_with_limit(ticker) for ticker in batch]

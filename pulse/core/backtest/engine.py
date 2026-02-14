@@ -83,9 +83,13 @@ class BacktestEngine:
         log.info("Running backtest simulation...")
         signals_generated = 0
 
-        for i in range(len(indicators_df)):
-            row = indicators_df.iloc[i]
-            date = row.name
+        # Pre-calculate data to avoid slow .iloc inside loop
+        records = indicators_df.to_dict('records')
+        index = indicators_df.index
+
+        for i in range(len(records)):
+            row = records[i]
+            date = index[i]
 
             # 準備 K 線數據
             bar = {

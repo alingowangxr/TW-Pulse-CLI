@@ -16,9 +16,9 @@ class SaptaStatus(str, Enum):
     """SAPTA decision status."""
 
     PRE_MARKUP = "PRE-MARKUP"  # >= threshold_high: Ready to breakout
-    SIAP = "SIAP"  # >= threshold_mid: Almost ready
+    READY = "READY"  # >= threshold_mid: Almost ready
     WATCHLIST = "WATCHLIST"  # >= threshold_low: Monitor
-    ABAIKAN = "ABAIKAN"  # < threshold_low: Skip
+    IGNORE = "IGNORE"  # < threshold_low: Skip
 
 
 class ConfidenceLevel(str, Enum):
@@ -77,7 +77,7 @@ class SaptaConfig(BaseModel):
 
     # Threshold settings (will be learned by ML)
     threshold_pre_markup: float = 80.0
-    threshold_siap: float = 65.0
+    threshold_ready: float = 65.0
     threshold_watchlist: float = 50.0
 
     # Module weights (will be learned by ML)
@@ -263,7 +263,7 @@ class MLModelInfo:
 
     # Learned thresholds
     threshold_pre_markup: float = 80.0
-    threshold_siap: float = 65.0
+    threshold_ready: float = 65.0
     threshold_watchlist: float = 50.0
 
     # Feature importance

@@ -188,7 +188,7 @@ class SaptaTrainer:
             f1_score=metrics["f1"],
             auc_roc=metrics["auc_roc"],
             threshold_pre_markup=thresholds.get("pre_markup", 80.0),
-            threshold_siap=thresholds.get("siap", 65.0),
+            threshold_ready=thresholds.get("ready") or thresholds.get("siap", 65.0),
             threshold_watchlist=thresholds.get("watchlist", 50.0),
             feature_importance=importance,
             target_gain_pct=self.config.target_gain_pct,
@@ -381,7 +381,7 @@ class SaptaTrainer:
             f1_score=metrics["f1"],
             auc_roc=metrics["auc_roc"],
             threshold_pre_markup=thresholds.get("pre_markup", 80.0),
-            threshold_siap=thresholds.get("siap", 65.0),
+            threshold_ready=thresholds.get("ready") or thresholds.get("siap", 65.0),
             threshold_watchlist=thresholds.get("watchlist", 50.0),
             feature_importance=importance,
             target_gain_pct=self.config.target_gain_pct,
@@ -454,9 +454,9 @@ class SaptaTrainer:
         pre_markup_idx = int(n * 0.10)
         pre_markup_threshold = probas[sorted_indices[pre_markup_idx]] if pre_markup_idx < n else 0.8
 
-        # SIAP: Top 25%
-        siap_idx = int(n * 0.25)
-        siap_threshold = probas[sorted_indices[siap_idx]] if siap_idx < n else 0.65
+        # READY: Top 25%
+        ready_idx = int(n * 0.25)
+        ready_threshold = probas[sorted_indices[ready_idx]] if ready_idx < n else 0.65
 
         # WATCHLIST: Top 50%
         watchlist_idx = int(n * 0.50)
@@ -465,7 +465,7 @@ class SaptaTrainer:
         # Convert to score scale (0-100)
         return {
             "pre_markup": float(pre_markup_threshold * 100),
-            "siap": float(siap_threshold * 100),
+            "ready": float(ready_threshold * 100),
             "watchlist": float(watchlist_threshold * 100),
         }
 

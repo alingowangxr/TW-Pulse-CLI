@@ -633,7 +633,7 @@ Examples:
 
     print("\n[Learned Thresholds]")
     print(f"  PRE-MARKUP:  >= {result.model_info.threshold_pre_markup:.1f}")
-    print(f"  SIAP:        >= {result.model_info.threshold_siap:.1f}")
+    print(f"  READY:        >= {result.model_info.threshold_ready:.1f}")
     print(f"  WATCHLIST:   >= {result.model_info.threshold_watchlist:.1f}")
 
     # Feature importance
@@ -656,7 +656,7 @@ Examples:
         metrics=result.metrics,
         thresholds={
             "pre_markup": result.model_info.threshold_pre_markup,
-            "siap": result.model_info.threshold_siap,
+            "ready": result.model_info.threshold_ready,
             "watchlist": result.model_info.threshold_watchlist,
         },
         feature_importance=dict(sorted_importance),

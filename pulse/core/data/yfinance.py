@@ -215,7 +215,7 @@ class YFinanceFetcher:
         period: str = "3mo",
     ) -> list[StockData]:
         """
-        Fetch data for multiple tickers.
+        Fetch data for multiple tickers using optimized batch download.
 
         Args:
             tickers: List of stock tickers
@@ -224,14 +224,105 @@ class YFinanceFetcher:
         Returns:
             List of StockData objects
         """
+        if not tickers:
+            return []
+
+        formatted_tickers = [self._format_ticker(t) for t in tickers]
         results = []
 
-        for ticker in tickers:
-            data = await self.fetch_stock(ticker, period)
-            if data:
-                results.append(data)
+        try:
+            log.debug(f"Batch fetching {len(tickers)} stocks from yfinance...")
+            
+            # yf.download is synchronous, but much faster for multiple tickers
+            data = yf.download(
+                tickers=formatted_tickers,
+                period=period,
+                group_by="ticker",
+                threads=True,
+                progress=False
+            )
 
-        return results
+            if data.empty:
+                return []
+
+            for ticker in tickers:
+                formatted = self._format_ticker(ticker)
+                
+                # Handle single vs multiple tickers in download output
+                if len(tickers) == 1:
+                    stock_df = data
+                else:
+                    if formatted not in data.columns.levels[0]:
+                        continue
+                    stock_df = data[formatted]
+
+                if stock_df.empty or stock_df["Close"].dropna().empty:
+                    continue
+
+                # Convert history to OHLCV list
+                history: list[OHLCV] = []
+                # Drop rows with NaN Close (usually for tickers not found)
+                valid_df = stock_df.dropna(subset=["Close"])
+                
+                for date, row in valid_df.iterrows():
+                    history.append(
+                        OHLCV(
+                            date=date.to_pydatetime(),
+                            open=float(row.get("Open", 0)),
+                            high=float(row.get("High", 0)),
+                            low=float(row.get("Low", 0)),
+                            close=float(row.get("Close", 0)),
+                            volume=int(row.get("Volume", 0)),
+                        )
+                    )
+
+                if not history:
+                    continue
+
+                # Get latest data
+                latest = history[-1]
+                prev = history[-2] if len(history) > 1 else latest
+
+                current_price = latest.close
+                previous_close = prev.close
+                change = current_price - previous_close
+                change_percent = (change / previous_close * 100) if previous_close else 0.0
+
+                # Calculate 52-week high/low
+                week_52_data = valid_df.tail(252)
+                week_52_high = float(week_52_data["High"].max()) if not week_52_data.empty else 0.0
+                week_52_low = float(week_52_data["Low"].min()) if not week_52_data.empty else 0.0
+
+                results.append(StockData(
+                    ticker=ticker.upper(),
+                    name=ticker.upper(), # Batch fetch doesn't give names easily
+                    sector=None,
+                    industry=None,
+                    current_price=current_price,
+                    previous_close=previous_close,
+                    change=change,
+                    change_percent=change_percent,
+                    volume=latest.volume,
+                    avg_volume=0, 
+                    day_low=latest.low,
+                    day_high=latest.high,
+                    week_52_low=week_52_low,
+                    week_52_high=week_52_high,
+                    market_cap=None,
+                    shares_outstanding=None,
+                    history=history,
+                ))
+
+            return results
+
+        except Exception as e:
+            log.error(f"Error in batch fetch from yfinance: {e}")
+            # Fallback to sequential if batch fails
+            for ticker in tickers:
+                data = await self.fetch_stock(ticker, period)
+                if data:
+                    results.append(data)
+            return results
 
     async def fetch_history(
         self,

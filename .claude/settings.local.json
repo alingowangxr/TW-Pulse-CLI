@@ -4,7 +4,17 @@
       "Bash(find:*)",
       "Bash(git rm:*)",
       "Bash(python -m pytest:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(del C:Usersmiketw-pulse-clinul)",
+      "WebFetch(domain:github.com)",
+      "Bash(pip install:*)",
+      "Bash(git stash:*)",
+      "Bash(python:*)",
+      "Bash(pip show:*)",
+      "Bash(pip index:*)",
+      "Bash(findstr:*)"
     ]
   }
 }
