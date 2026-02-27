@@ -18,6 +18,7 @@ async def analyze_command(app: "PulseApp", args: str) -> str:
     from pulse.core.analysis.institutional_flow import InstitutionalFlowAnalyzer
     from pulse.core.analysis.technical import TechnicalAnalyzer
     from pulse.core.data.yfinance import YFinanceFetcher
+    from pulse.core.sapta import SaptaEngine
 
     fetcher = YFinanceFetcher()
     stock = await fetcher.fetch_stock(ticker)
@@ -29,15 +30,20 @@ async def analyze_command(app: "PulseApp", args: str) -> str:
     tech_analyzer = TechnicalAnalyzer()
     fundamental_analyzer = FundamentalAnalyzer()
     broker_analyzer = InstitutionalFlowAnalyzer()
+    sapta_engine = SaptaEngine()
 
-    try:
-        technical, fundamental, broker = await asyncio.gather(
-            tech_analyzer.analyze(ticker),
-            fundamental_analyzer.analyze(ticker),
-            broker_analyzer.analyze(ticker),
-        )
-    except Exception as e:
-        return f"分析資料時發生錯誤: {e}"
+    results = await asyncio.gather(
+        tech_analyzer.analyze(ticker),
+        fundamental_analyzer.analyze(ticker),
+        broker_analyzer.analyze(ticker),
+        sapta_engine.analyze(ticker),
+        tech_analyzer.analyze_happy_lines(ticker),
+        return_exceptions=True,
+    )
+
+    technical, fundamental, broker, sapta, happy_lines = [
+        None if isinstance(r, Exception) else r for r in results
+    ]
 
     data = {
         "stock": {
@@ -52,6 +58,8 @@ async def analyze_command(app: "PulseApp", args: str) -> str:
         "technical": technical.to_summary() if technical else None,
         "fundamental": fundamental.to_summary() if fundamental else None,
         "broker": broker if broker else None,
+        "sapta": sapta.to_dict() if sapta else None,
+        "happy_lines": happy_lines.to_summary() if happy_lines else None,
     }
 
     try:

@@ -145,7 +145,7 @@ class SaptaResult(BaseModel):
     anti_distribution: dict[str, Any] | None = None
 
     # Decision
-    status: SaptaStatus = SaptaStatus.ABAIKAN
+    status: SaptaStatus = SaptaStatus.IGNORE
     confidence: ConfidenceLevel = ConfidenceLevel.LOW
     ml_probability: float | None = None  # ML model prediction probability
 
