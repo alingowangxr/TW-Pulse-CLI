@@ -216,6 +216,11 @@ class PulseApp(App):
         margin: 0 0 1 0;
     }
 
+    .ai-msg-stream {
+        color: #c9d1d9;
+        margin: 0 0 1 0;
+    }
+
     .ai-msg Markdown {
         margin: 0;
         padding: 0;
@@ -296,6 +301,7 @@ class PulseApp(App):
         self.command_registry = CommandRegistry(self)
         self.smart_agent = SmartAgent(progress_callback=self._update_progress)
         self._palette_visible = False
+        self._scroll_scheduled = False
 
     def compose(self) -> ComposeResult:
         yield VerticalScroll(id="chat")
@@ -459,6 +465,81 @@ class PulseApp(App):
         except Exception as e:
             log.debug(f"Could not scroll chat to end: {e}")
 
+    def _schedule_scroll(self) -> None:
+        """Schedule a debounced scroll — at most one scroll per event-loop tick."""
+        if not self._scroll_scheduled:
+            self._scroll_scheduled = True
+            self.call_later(self._do_scroll)
+
+    def _do_scroll(self) -> None:
+        """Execute the scheduled scroll and reset the flag."""
+        self._scroll_scheduled = False
+        self._scroll_chat_end()
+
+    async def _stream_to_chat(self, source) -> str:
+        """
+        Consume an event stream and render to chat.
+
+        Improvements over the old per-handler approach:
+        - Uses Static during streaming (zero Markdown parse overhead per chunk)
+        - Batches UI updates to at most once every 50 ms
+        - Debounces scroll via _schedule_scroll()
+        - Replaces the Static with proper Markdown on completion
+
+        Returns the full accumulated response text.
+        """
+        BATCH_INTERVAL = 0.05  # seconds between UI refreshes
+        chat = self.query_one("#chat", VerticalScroll)
+        stream_widget: Static | None = None
+        full_text = ""
+        last_render = 0.0
+        loop = asyncio.get_event_loop()
+
+        async for event in source:
+            event_type = event.get("type")
+
+            if event_type == "progress":
+                await self._update_progress(event["message"])
+
+            elif event_type == "chunk":
+                if stream_widget is None:
+                    # First chunk: swap thinking indicator for a plain-text widget
+                    self._remove_thinking()
+                    stream_widget = Static("", classes="ai-msg-stream")
+                    chat.mount(stream_widget)
+
+                full_text += event["content"]
+
+                # Batch: only refresh the widget every 50 ms
+                now = loop.time()
+                if now - last_render >= BATCH_INTERVAL:
+                    stream_widget.update(full_text)
+                    last_render = now
+                    self._schedule_scroll()
+
+            elif event_type == "response":
+                self._remove_thinking()
+                self._add_response(event["message"])
+                if event.get("chart"):
+                    self._add_chart(f"Chart saved: {event['chart']}")
+
+            elif event_type == "error":
+                self._remove_thinking()
+                self._add_response(event["message"])
+
+            elif event_type == "complete":
+                if event.get("chart"):
+                    full_text += f"\n\nChart saved: {event['chart']}"
+
+        # Stream finished: replace the plain-text widget with rendered Markdown
+        if stream_widget is not None:
+            stream_widget.remove()
+            chat.mount(Markdown(full_text, classes="ai-msg"))
+            self._schedule_scroll()
+
+        self._remove_thinking()
+        return full_text
+
     @on(Input.Submitted, "#input")
     def on_submit(self, event: Input.Submitted) -> None:
         msg = event.value.strip()
@@ -484,124 +565,32 @@ class PulseApp(App):
     async def _run_command(self, cmd: str) -> None:
         """Run command in background with timeout safety."""
         try:
-            chat = self.query_one("#chat", VerticalScroll)
-            response_widget = None
-            full_text = ""
-
-            # Run with timeout (180 seconds)
             async def run_with_timeout():
                 async with asyncio.timeout(180):
                     async for event in self.command_registry.execute_stream(cmd):
                         yield event
 
-            async for event in run_with_timeout():
-                event_type = event.get("type")
-
-                if event_type == "progress":
-                    # Update thinking indicator with progress message
-                    await self._update_progress(event["message"])
-
-                elif event_type == "chunk":
-                    # Stream AI response chunks in real-time
-                    if response_widget is None:
-                        # Remove thinking indicator and create response widget
-                        self._remove_thinking()
-                        response_widget = Markdown("", classes="ai-msg")
-                        chat.mount(response_widget)
-                    
-                    # Append chunk to response
-                    full_text += event["content"]
-                    response_widget.update(full_text)
-                    self.call_later(self._scroll_chat_end)
-
-                elif event_type == "response":
-                    # Complete response (non-streaming)
-                    self._remove_thinking()
-                    self._add_response(event["message"])
-
-                elif event_type == "error":
-                    self._remove_thinking()
-                    self._add_response(event["message"])
-
-            # Remove thinking indicator if still present
-            self._remove_thinking()
-
+            await self._stream_to_chat(run_with_timeout())
         except asyncio.TimeoutError:
             self._remove_thinking()
             self._add_response("分析超時，請稍後再試")
         except Exception as e:
             self._remove_thinking()
             log.error(f"Command error: {e}")
-            error_msg = format_error_response(e)
-            self._add_response(error_msg)
+            self._add_response(format_error_response(e))
         finally:
             self._refocus_input()
 
     @work(exclusive=True)
     async def _handle_chat(self, msg: str) -> None:
-        """
-        Handle chat using SmartAgent with streaming response.
-
-        Flow:
-        1. SmartAgent parses intent & extracts tickers
-        2. SmartAgent fetches REAL data from yfinance
-        3. SmartAgent builds context with real data
-        4. AI analyzes with full context (streaming)
-        5. Response shown to user in real-time
-        """
+        """Handle chat using SmartAgent with streaming response."""
         try:
-            chat = self.query_one("#chat", VerticalScroll)
-            response_widget = None
-            full_text = ""
-
-            # Use SmartAgent for streaming agentic flow
-            async for event in self.smart_agent.run_stream(msg):
-                event_type = event.get("type")
-
-                if event_type == "progress":
-                    # Update thinking indicator with progress message
-                    await self._update_progress(event["message"])
-
-                elif event_type == "chunk":
-                    # Stream AI response chunks in real-time
-                    if response_widget is None:
-                        # Remove thinking indicator and create response widget
-                        self._remove_thinking()
-                        response_widget = Markdown("", classes="ai-msg")
-                        chat.mount(response_widget)
-                    
-                    # Append chunk to response
-                    full_text += event["content"]
-                    response_widget.update(full_text)
-                    self.call_later(self._scroll_chat_end)
-
-                elif event_type == "response":
-                    # Complete response (non-streaming)
-                    self._remove_thinking()
-                    self._add_response(event["message"])
-                    if event.get("chart"):
-                        self._add_chart(f"Chart saved: {event['chart']}")
-
-                elif event_type == "error":
-                    self._remove_thinking()
-                    self._add_response(event["message"])
-
-                elif event_type == "complete":
-                    # Final completion with chart info
-                    if event.get("chart") and response_widget:
-                        full_text += f"\n\nChart saved: {event['chart']}"
-                        response_widget.update(full_text)
-
-            # Remove thinking indicator if still present
-            self._remove_thinking()
-
+            await self._stream_to_chat(self.smart_agent.run_stream(msg))
         except Exception as e:
             self._remove_thinking()
             log.error(f"Chat error: {e}")
-            error_msg = format_error_response(e)
-            self._add_response(error_msg)
+            self._add_response(format_error_response(e))
         finally:
-            # Always refocus input after response
             self._refocus_input()
 
     def action_clear(self) -> None:
