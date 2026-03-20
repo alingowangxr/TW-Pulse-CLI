@@ -70,6 +70,76 @@ async def analyze_command(app: "PulseApp", args: str) -> str:
     return response
 
 
+async def analyze_command_stream(app: "PulseApp", args: str):
+    """Analyze command handler with streaming response."""
+    if not args:
+        yield {"type": "response", "message": "請指定股票代碼。用法: /analyze 2330 (台積電)"}
+        return
+
+    ticker = args.strip().upper()
+
+    yield {"type": "progress", "message": f"正在取得 {ticker} 數據..."}
+
+    from pulse.core.analysis.fundamental import FundamentalAnalyzer
+    from pulse.core.analysis.institutional_flow import InstitutionalFlowAnalyzer
+    from pulse.core.analysis.technical import TechnicalAnalyzer
+    from pulse.core.data.yfinance import YFinanceFetcher
+    from pulse.core.sapta import SaptaEngine
+
+    fetcher = YFinanceFetcher()
+    stock = await fetcher.fetch_stock(ticker)
+
+    if not stock:
+        yield {"type": "error", "message": f"無法取得 {ticker} 的資料"}
+        return
+
+    # Fetch all data in parallel
+    tech_analyzer = TechnicalAnalyzer()
+    fundamental_analyzer = FundamentalAnalyzer()
+    broker_analyzer = InstitutionalFlowAnalyzer()
+    sapta_engine = SaptaEngine()
+
+    yield {"type": "progress", "message": f"正在分析 {ticker} 技術指標、基本面、法人動向..."}
+
+    results = await asyncio.gather(
+        tech_analyzer.analyze(ticker),
+        fundamental_analyzer.analyze(ticker),
+        broker_analyzer.analyze(ticker),
+        sapta_engine.analyze(ticker),
+        tech_analyzer.analyze_happy_lines(ticker),
+        return_exceptions=True,
+    )
+
+    technical, fundamental, broker, sapta, happy_lines = [
+        None if isinstance(r, Exception) else r for r in results
+    ]
+
+    data = {
+        "stock": {
+            "ticker": stock.ticker,
+            "name": stock.name,
+            "price": stock.current_price,
+            "change": stock.change,
+            "change_percent": stock.change_percent,
+            "volume": stock.volume,
+            "market_cap": stock.market_cap,
+        },
+        "technical": technical.to_summary() if technical else None,
+        "fundamental": fundamental.to_summary() if fundamental else None,
+        "broker": broker if broker else None,
+        "sapta": sapta.to_dict() if sapta else None,
+        "happy_lines": happy_lines.to_summary() if happy_lines else None,
+    }
+
+    yield {"type": "progress", "message": "正在進行 AI 分析，請稍候..."}
+
+    try:
+        async for chunk in app.ai_client.analyze_stock_stream(ticker, data):
+            yield {"type": "chunk", "content": chunk}
+    except Exception as e:
+        yield {"type": "error", "message": f"AI 分析時發生錯誤: {e}\n\n請稍後再試或使用其他模型。"}
+
+
 async def technical_command(app: "PulseApp", args: str) -> str:
     """Technical analysis command handler."""
     if not args:

@@ -315,10 +315,11 @@ class SmartAgent:
         ],
     }
 
-    def __init__(self):
+    def __init__(self, progress_callback=None):
         self.ai_client = None  # Lazy load
         self._last_ticker: str | None = None  # Remember last analyzed ticker
         self._last_context: AgentContext | None = None  # Remember last context
+        self._progress_callback = progress_callback  # Callback for progress updates
 
     def _get_ai_client(self):
         """Get AI client lazily."""
@@ -691,6 +692,8 @@ class SmartAgent:
         primary_ticker = tickers[0]
 
         # Always fetch basic stock data
+        if self._progress_callback:
+            await self._progress_callback(f"正在取得 {primary_ticker} 股票數據...")
         ctx.stock_data = await self._fetch_stock_data(primary_ticker)
 
         if not ctx.stock_data:
@@ -699,14 +702,20 @@ class SmartAgent:
 
         # Fetch additional data based on intent
         if intent in ["analyze", "technical", "recommendation"]:
+            if self._progress_callback:
+                await self._progress_callback(f"正在計算 {primary_ticker} 技術指標...")
             ctx.technical_data = await self._fetch_technical(primary_ticker)
 
         if intent in ["analyze", "fundamental", "recommendation"]:
+            if self._progress_callback:
+                await self._progress_callback(f"正在取得 {primary_ticker} 基本面數據...")
             ctx.fundamental_data = await self._fetch_fundamental(primary_ticker)
 
         if intent == "compare" and len(tickers) >= 2:
             comparison = []
             for t in tickers[:4]:  # Max 4 tickers
+                if self._progress_callback:
+                    await self._progress_callback(f"正在取得 {t} 股票數據...")
                 stock = await self._fetch_stock_data(t)
                 if stock:
                     comparison.append(stock)
@@ -1359,6 +1368,10 @@ Chart saved: {filepath}"""
         if is_followup and self._last_context:
             analysis_prompt = f"[前一次分析: {self._last_ticker}]\n\n" + analysis_prompt
 
+        # Notify that we're starting AI analysis
+        if self._progress_callback:
+            await self._progress_callback("正在分析數據，請稍候...")
+
         ai_response = await ai.chat(
             analysis_prompt,
             system_prompt=(
@@ -1393,3 +1406,204 @@ Chart saved: {filepath}"""
                 "fundamental_data": context.fundamental_data,
             },
         )
+
+    async def run_stream(self, user_message: str):
+        """
+        Run the agentic flow with streaming response.
+
+        Yields progress updates and response chunks for real-time display.
+        """
+        log.info(f"SmartAgent processing (stream): {user_message}")
+
+        # Step 1: Detect intent and extract tickers
+        intent, tickers = self._detect_intent(user_message)
+        log.info(f"Detected intent: {intent}, tickers: {tickers}")
+
+        # Step 2: If no tickers found but we have last context, this might be a follow-up
+        is_followup = False
+        if not tickers and self._last_ticker and intent == "general":
+            # Check if this looks like a follow-up question (Chinese patterns)
+            followup_patterns = [
+                r"為什麼",
+                r"怎麼",
+                r"為啥",
+                r"為何",
+                r"所以",
+                r"然後",
+                r"可以嗎",
+                r"好嗎",
+                r"推薦",
+                r"應該",
+                r"漲",
+                r"跌",
+                r"可以買",
+                r"可以賣",
+                r"怎麼看",
+                r"你覺得",
+                r"後續",
+                r"目標",
+                r"支撐",
+                r"壓力",
+                r"看法",
+                r"建議",
+                r"操作",
+            ]
+            msg_lower = user_message.lower()
+            for pattern in followup_patterns:
+                if pattern in msg_lower:
+                    is_followup = True
+                    tickers = [self._last_ticker]
+                    log.info(f"Follow-up detected, using last ticker: {self._last_ticker}")
+                    break
+
+        # If no stock-related intent and not a follow-up, let AI handle with history
+        if intent == "general" and not tickers and not is_followup:
+            ai = self._get_ai_client()
+            yield {"type": "progress", "message": "正在思考..."}
+            async for chunk in ai.chat_stream(
+                user_message,
+                system_prompt=(
+                    "你是 Pulse，台灣股市 AI 分析助理。"
+                    "若使用者詢問股市以外的話題，請禮貌拒絕並引導回台股分析。"
+                    "以繁體中文簡潔回覆。"
+                ),
+                use_history=True,
+            ):
+                yield {"type": "chunk", "content": chunk}
+            return
+
+        # Handle index intent (IHSG, LQ45, etc)
+        if intent == "index" and tickers:
+            yield {"type": "progress", "message": f"正在取得 {tickers[0]} 指數數據..."}
+            response = await self._handle_index(tickers[0], user_message)
+            yield {"type": "response", "message": response.message}
+            return
+
+        # Handle chart intent directly
+        if intent == "chart" and tickers:
+            ticker = tickers[0]
+            self._last_ticker = ticker  # Remember this ticker
+            yield {"type": "progress", "message": f"正在生成 {ticker} K線圖..."}
+            filepath = await self._generate_chart(ticker)
+            stock = await self._fetch_stock_data(ticker)
+
+            if filepath and stock:
+                msg = f"""{ticker}: NT$ {stock["current_price"]:,.2f} ({stock["change"]:+,.2f}, {stock["change_percent"]:+.2f}%)
+
+Chart saved: {filepath}"""
+                yield {"type": "response", "message": msg, "chart": filepath}
+            else:
+                yield {"type": "response", "message": f"無法為 {ticker} 生成圖表"}
+            return
+
+        # Handle forecast intent directly
+        if intent == "forecast" and tickers:
+            ticker = tickers[0]
+            self._last_ticker = ticker  # Remember this ticker
+            # Detect full mode from user message
+            msg_lower = user_message.lower()
+            forecast_mode = "fast"
+            if any(kw in msg_lower for kw in ["完整預測", "詳細預測", "full"]):
+                forecast_mode = "full"
+            yield {"type": "progress", "message": f"正在為 {ticker} 生成價格預測 ({forecast_mode} 模式)..."}
+            forecast = await self._generate_forecast(ticker, mode=forecast_mode)
+
+            if forecast:
+                msg = forecast["summary"]
+                if forecast.get("filepath"):
+                    msg += f"\n\nChart saved: {forecast['filepath']}"
+                yield {"type": "response", "message": msg, "chart": forecast.get("filepath")}
+            else:
+                yield {"type": "response", "message": f"無法為 {ticker} 生成預測"}
+            return
+
+        # Handle screen intent - smart stock screening
+        if intent == "screen":
+            yield {"type": "progress", "message": "正在執行智能選股..."}
+            response = await self._handle_screen(user_message)
+            yield {"type": "response", "message": response.message}
+            return
+
+        # Handle trading plan intent
+        if intent == "trading_plan" and tickers:
+            yield {"type": "progress", "message": f"正在為 {tickers[0]} 生成交易計畫..."}
+            response = await self._handle_trading_plan(tickers[0], user_message)
+            yield {"type": "response", "message": response.message}
+            return
+
+        # Handle SAPTA intent
+        if intent == "sapta" and tickers:
+            yield {"type": "progress", "message": f"正在為 {tickers[0]} 執行 SAPTA 分析..."}
+            response = await self._handle_sapta(tickers[0], user_message)
+            yield {"type": "response", "message": response.message}
+            return
+
+        # Handle SAPTA scan intent
+        if intent == "sapta_scan":
+            yield {"type": "progress", "message": "正在執行 SAPTA 掃描..."}
+            response = await self._handle_sapta_scan(user_message)
+            yield {"type": "response", "message": response.message}
+            return
+
+        # Step 3 & 4: Gather real data
+        context = await self._gather_context(intent, tickers)
+
+        if context.error:
+            yield {"type": "error", "message": context.error}
+            return
+
+        # Remember context for follow-ups
+        if tickers:
+            self._last_ticker = tickers[0]
+            self._last_context = context
+
+        # Step 5: Build prompt with real data and get AI analysis
+        analysis_prompt = self._build_analysis_prompt(user_message, context)
+
+        ai = self._get_ai_client()
+
+        # For follow-up questions, include previous context
+        if is_followup and self._last_context:
+            analysis_prompt = f"[前一次分析: {self._last_ticker}]\n\n" + analysis_prompt
+
+        # Notify that we're starting AI analysis
+        yield {"type": "progress", "message": "正在分析數據，請稍候..."}
+
+        # Stream AI response
+        full_response = ""
+        async for chunk in ai.chat_stream(
+            analysis_prompt,
+            system_prompt=(
+                "你是台灣股市資深分析師。 "
+                "根據提供的真實數據進行分析。 "
+                "用繁體中文回覆，簡潔有力。 "
+                "不要編造數據 - 只能使用提供的數據。"
+            ),
+            use_history=True,
+        ):
+            full_response += chunk
+            yield {"type": "chunk", "content": chunk}
+
+        # Generate chart for any stock-related intent (price, analyze, technical)
+        chart_filepath = None
+        if tickers:
+            chart_filepath = await self._generate_chart(tickers[0])
+
+        # Yield final response with chart info
+        final_message = full_response
+        if chart_filepath:
+            final_message += f"\n\nChart saved: {chart_filepath}"
+
+        yield {
+            "type": "complete",
+            "message": final_message,
+            "chart": chart_filepath,
+            "context": context,
+            "raw_data": {
+                "intent": intent,
+                "tickers": tickers,
+                "stock_data": context.stock_data,
+                "technical_data": context.technical_data,
+                "fundamental_data": context.fundamental_data,
+            },
+        }

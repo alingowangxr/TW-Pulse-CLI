@@ -294,6 +294,46 @@ class AIClient:
             use_history=False,
         )
 
+    async def analyze_stock_stream(
+        self,
+        ticker: str,
+        data: dict[str, Any],
+        analysis_type: str = "comprehensive",
+    ) -> AsyncIterator[str]:
+        """
+        Analyze a stock using AI with streaming response.
+
+        Args:
+            ticker: Stock ticker
+            data: Stock data dictionary
+            analysis_type: Type of analysis (comprehensive, technical, fundamental, broker)
+
+        Yields:
+            Response text chunks
+        """
+        from pulse.ai.prompts import StockAnalysisPrompts
+
+        prompts = StockAnalysisPrompts()
+
+        if analysis_type == "technical":
+            system_prompt = prompts.get_technical_prompt()
+        elif analysis_type == "fundamental":
+            system_prompt = prompts.get_fundamental_prompt()
+        elif analysis_type == "broker":
+            system_prompt = prompts.get_broker_flow_prompt()
+        else:
+            system_prompt = prompts.get_comprehensive_prompt()
+
+        # Format data as message
+        user_message = prompts.format_analysis_request(ticker, data)
+
+        async for chunk in self.chat_stream(
+            message=user_message,
+            system_prompt=system_prompt,
+            use_history=False,
+        ):
+            yield chunk
+
     async def get_recommendation(
         self,
         ticker: str,

@@ -294,7 +294,7 @@ class PulseApp(App):
         super().__init__()
         self.ai_client = AIClient()
         self.command_registry = CommandRegistry(self)
-        self.smart_agent = SmartAgent()
+        self.smart_agent = SmartAgent(progress_callback=self._update_progress)
         self._palette_visible = False
 
     def compose(self) -> ComposeResult:
@@ -429,6 +429,21 @@ class PulseApp(App):
         except Exception as e:
             log.debug(f"Could not remove thinking indicator: {e}")
 
+    async def _update_progress(self, message: str) -> None:
+        """Update the thinking indicator with a progress message."""
+        try:
+            chat = self.query_one("#chat", VerticalScroll)
+            # Find the thinking widget
+            thinking_widgets = list(chat.query(".thinking"))
+            if thinking_widgets:
+                thinking_widgets[0].update(message)
+            else:
+                # If no thinking widget exists, add one
+                chat.mount(Static(message, classes="thinking", id="thinking"))
+            self.call_later(self._scroll_chat_end)
+        except Exception as e:
+            log.debug(f"Could not update progress: {e}")
+
     def _refocus_input(self) -> None:
         """Refocus input widget after response."""
         try:
@@ -469,14 +484,48 @@ class PulseApp(App):
     async def _run_command(self, cmd: str) -> None:
         """Run command in background with timeout safety."""
         try:
+            chat = self.query_one("#chat", VerticalScroll)
+            response_widget = None
+            full_text = ""
+
             # Run with timeout (180 seconds)
             async def run_with_timeout():
-                return await asyncio.wait_for(self.command_registry.execute(cmd), timeout=180.0)
+                async with asyncio.timeout(180):
+                    async for event in self.command_registry.execute_stream(cmd):
+                        yield event
 
-            result = await run_with_timeout()
+            async for event in run_with_timeout():
+                event_type = event.get("type")
+
+                if event_type == "progress":
+                    # Update thinking indicator with progress message
+                    await self._update_progress(event["message"])
+
+                elif event_type == "chunk":
+                    # Stream AI response chunks in real-time
+                    if response_widget is None:
+                        # Remove thinking indicator and create response widget
+                        self._remove_thinking()
+                        response_widget = Markdown("", classes="ai-msg")
+                        chat.mount(response_widget)
+                    
+                    # Append chunk to response
+                    full_text += event["content"]
+                    response_widget.update(full_text)
+                    self.call_later(self._scroll_chat_end)
+
+                elif event_type == "response":
+                    # Complete response (non-streaming)
+                    self._remove_thinking()
+                    self._add_response(event["message"])
+
+                elif event_type == "error":
+                    self._remove_thinking()
+                    self._add_response(event["message"])
+
+            # Remove thinking indicator if still present
             self._remove_thinking()
-            if result:
-                self._add_response(result)
+
         except asyncio.TimeoutError:
             self._remove_thinking()
             self._add_response("分析超時，請稍後再試")
@@ -491,20 +540,60 @@ class PulseApp(App):
     @work(exclusive=True)
     async def _handle_chat(self, msg: str) -> None:
         """
-        Handle chat using SmartAgent - true agentic flow.
+        Handle chat using SmartAgent with streaming response.
 
         Flow:
         1. SmartAgent parses intent & extracts tickers
         2. SmartAgent fetches REAL data from yfinance
         3. SmartAgent builds context with real data
-        4. AI analyzes with full context
-        5. Response shown to user (chart saved as PNG file)
+        4. AI analyzes with full context (streaming)
+        5. Response shown to user in real-time
         """
         try:
-            # Use SmartAgent for agentic flow
-            result = await self.smart_agent.run(msg)
+            chat = self.query_one("#chat", VerticalScroll)
+            response_widget = None
+            full_text = ""
+
+            # Use SmartAgent for streaming agentic flow
+            async for event in self.smart_agent.run_stream(msg):
+                event_type = event.get("type")
+
+                if event_type == "progress":
+                    # Update thinking indicator with progress message
+                    await self._update_progress(event["message"])
+
+                elif event_type == "chunk":
+                    # Stream AI response chunks in real-time
+                    if response_widget is None:
+                        # Remove thinking indicator and create response widget
+                        self._remove_thinking()
+                        response_widget = Markdown("", classes="ai-msg")
+                        chat.mount(response_widget)
+                    
+                    # Append chunk to response
+                    full_text += event["content"]
+                    response_widget.update(full_text)
+                    self.call_later(self._scroll_chat_end)
+
+                elif event_type == "response":
+                    # Complete response (non-streaming)
+                    self._remove_thinking()
+                    self._add_response(event["message"])
+                    if event.get("chart"):
+                        self._add_chart(f"Chart saved: {event['chart']}")
+
+                elif event_type == "error":
+                    self._remove_thinking()
+                    self._add_response(event["message"])
+
+                elif event_type == "complete":
+                    # Final completion with chart info
+                    if event.get("chart") and response_widget:
+                        full_text += f"\n\nChart saved: {event['chart']}"
+                        response_widget.update(full_text)
+
+            # Remove thinking indicator if still present
             self._remove_thinking()
-            self._add_response(result.message)
 
         except Exception as e:
             self._remove_thinking()

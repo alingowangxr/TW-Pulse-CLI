@@ -243,13 +243,13 @@ def analyze_thresholds(thresholds: dict[str, float]) -> str:
     lines.append("📌 CURRENT THRESHOLDS")
     lines.append("-" * 60)
     lines.append(f"PRE-MARKUP (準備突破):   score >= {thresholds.get('pre_markup', 0):.1f}")
-    lines.append(f"SIAP (接近突破):        score >= {thresholds.get('siap', 0):.1f}")
+    lines.append(f"READY (接近突破):       score >= {(thresholds.get('ready') or thresholds.get('siap', 0)):.1f}")
     lines.append(f"WATCHLIST (觀察中):     score >= {thresholds.get('watchlist', 0):.1f}")
     lines.append("")
 
     # Score ranges
     premarkup_min = thresholds.get("pre_markup", 80)
-    siap_min = thresholds.get("siap", 60)
+    siap_min = thresholds.get("ready") or thresholds.get("siap", 60)
     watchlist_min = thresholds.get("watchlist", 40)
 
     lines.append("📏 SCORE RANGES")

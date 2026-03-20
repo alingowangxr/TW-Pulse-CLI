@@ -35,9 +35,10 @@
 |---------|-------------|
 | **Smart Agent** | AI 代理會在分析前獲取真實數據 |
 | **Natural Language** | 支援繁體中文或英文提問 |
-| **Strategy Backtesting** | 🆕 完整的策略回測系統，支援多策略框架與績效報告 |
-| **Dynamic Capital Management** | 🆕 動態資金管理，智能倉位控制 |
-| **Trading Reports** | 🆕 詳細的交易報告與績效分析 |
+| **Streaming Response** | 🆕 即時串流回應，AI 分析過程即時顯示，無需等待 |
+| **Strategy Backtesting** | 完整的策略回測系統，支援多策略框架與績效報告 |
+| **Dynamic Capital Management** | 動態資金管理，智能倉位控制 |
+| **Trading Reports** | 詳細的交易報告與績效分析 |
 
 ### 📊 技術分析
 
@@ -126,7 +127,8 @@ pulse
 
 ### 基本分析
 ```bash
-/analyze 2330                      # 台積電綜合分析
+/analyze 2330                      # 台積電綜合分析（即時串流回應）
+/a 2330                            # 同上，縮寫版本
 /chart 2330                        # 生成 K 線圖
 /inst 2330                         # 法人買賣超
 /plan 2330                         # 交易計畫
@@ -193,7 +195,9 @@ pulse
 
 | Version | Date | Changes |
 |---------|------|---------|
-| **0.4.1** | **2026-02-08** | **AutoTS 預測引擎：取代 Prophet，支援快速/完整兩種模式 + 16 new tests** |
+| **0.4.3** | **2026-03-20** | **Bug fixes: 修正串流超時失效、圖表進度 UI 閃現、SAPTA 閾值鍵名遷移、AI 系統提示語言錯誤** |
+| 0.4.2 | 2026-03-19 | 即時串流回應：AI 分析過程即時顯示，改善使用者體驗 |
+| 0.4.1 | 2026-02-08 | AutoTS 預測引擎：取代 Prophet，支援快速/完整兩種模式 + 16 new tests |
 | 0.3.1 | 2026-02-03 | 三大交易策略：動量突破、均線交叉、布林壓縮 + 42 new tests |
 | 0.3.0 | 2026-01-27 | 策略回測系統、動態資金管理、FinMind Token 自動讀取 |
 | 0.2.1 | 2026-01-22 | Keltner Channel indicator & strategy, 21 new tests |

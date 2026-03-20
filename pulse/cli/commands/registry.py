@@ -21,12 +21,14 @@ class Command:
         description: str = "",
         usage: str = "",
         aliases: list[str] | None = None,
+        stream_handler: Callable | None = None,
     ):
         self.name = name
         self.handler = handler
         self.description = description
         self.usage = usage or f"/{name}"
         self.aliases = aliases or []
+        self.stream_handler = stream_handler
 
 
 class CommandRegistry:
@@ -44,9 +46,10 @@ class CommandRegistry:
         description: str = "",
         usage: str = "",
         aliases: list[str] | None = None,
+        stream_handler: Callable | None = None,
     ) -> None:
         """Register a command."""
-        cmd = Command(name, handler, description, usage, aliases)
+        cmd = Command(name, handler, description, usage, aliases, stream_handler)
         self._commands[name.lower()] = cmd
 
         for alias in aliases or []:
@@ -86,6 +89,39 @@ class CommandRegistry:
             log.error(f"Command {cmd_name} failed: {e}")
             raise
 
+    async def execute_stream(self, command_str: str):
+        """
+        Execute a command string with streaming response.
+        
+        Yields progress updates and response chunks.
+        """
+        parts = command_str.strip().split(maxsplit=1)
+        cmd_name = parts[0].lstrip("/").lower()
+        args = parts[1] if len(parts) > 1 else ""
+
+        cmd = self.get(cmd_name)
+
+        if not cmd:
+            yield {"type": "response", "message": f"Unknown command: /{cmd_name}. Type /help for available commands."}
+            return
+
+        # Check if command supports streaming
+        if cmd.stream_handler:
+            try:
+                async for event in cmd.stream_handler(args):
+                    yield event
+            except Exception as e:
+                log.error(f"Command {cmd_name} stream failed: {e}")
+                yield {"type": "error", "message": f"Command failed: {e}"}
+        else:
+            # Fall back to non-streaming
+            try:
+                result = await cmd.handler(args)
+                yield {"type": "response", "message": result}
+            except Exception as e:
+                log.error(f"Command {cmd_name} failed: {e}")
+                yield {"type": "error", "message": f"Command failed: {e}"}
+
     def _register_builtin_commands(self) -> None:
         """Register built-in commands."""
 
@@ -111,6 +147,7 @@ class CommandRegistry:
             "Analyze a stock (分析股票)",
             "/analyze <TICKER>",
             aliases=["a", "stock"],
+            stream_handler=self._cmd_analyze_stream,
         )
 
         self.register(
@@ -300,6 +337,13 @@ class CommandRegistry:
         from pulse.cli.commands.analysis import analyze_command
 
         return await analyze_command(self.app, args)
+
+    async def _cmd_analyze_stream(self, args: str):
+        """Analyze command handler with streaming response."""
+        from pulse.cli.commands.analysis import analyze_command_stream
+
+        async for event in analyze_command_stream(self.app, args):
+            yield event
 
     async def _cmd_broker(self, args: str) -> str:
         """Broker flow command handler."""
