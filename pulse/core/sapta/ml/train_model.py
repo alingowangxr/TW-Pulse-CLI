@@ -396,9 +396,9 @@ Examples:
         sys.exit(1)
 
     # Print header
-    print("=" * 70)
-    print("SAPTA ML Model Training")
-    print("=" * 70)
+    log.info("=" * 70)
+    log.info("SAPTA ML Model Training")
+    log.info("=" * 70)
 
     # Build config
     config = TrainingConfig(
@@ -419,21 +419,21 @@ Examples:
     )
 
     # Print configuration
-    print("\n[Configuration]")
-    print(f"  Target Gain:      {config.target_gain_pct}%")
-    print(f"  Target Days:      {config.target_days}")
-    print(f"  Window Size:      {config.window_size}")
-    print(f"  Step Size:        {config.step_size}")
-    print(f"  Data Period:      {config.period}")
-    print(f"  Stocks to Load:   {config.stocks}")
-    print(f"  Walk-Forward:     {'Yes' if config.walk_forward else 'No'}")
+    log.info("[Configuration]")
+    log.info("  Target Gain:      %s%%", config.target_gain_pct)
+    log.info("  Target Days:      %s", config.target_days)
+    log.info("  Window Size:      %s", config.window_size)
+    log.info("  Step Size:        %s", config.step_size)
+    log.info("  Data Period:      %s", config.period)
+    log.info("  Stocks to Load:   %s", config.stocks)
+    log.info("  Walk-Forward:     %s", "Yes" if config.walk_forward else "No")
     if config.walk_forward:
-        print(f"    Train Window:  {config.train_months} months")
-        print(f"    Test Window:   {config.test_months} months")
+        log.info("    Train Window:  %s months", config.train_months)
+        log.info("    Test Window:   %s months", config.test_months)
     else:
-        print(f"  Test Size:        {config.test_size * 100:.0f}%")
-    print(f"  Output Directory: {config.output_dir}")
-    print(f"  Workers:          {config.workers}")
+        log.info("  Test Size:        %.0f%%", config.test_size * 100)
+    log.info("  Output Directory: %s", config.output_dir)
+    log.info("  Workers:          %s", config.workers)
 
     # Create output directory
     output_dir = Path(config.output_dir)
@@ -476,11 +476,11 @@ Examples:
         )
 
         report_path = save_training_report(report, output_dir)
-        print(f"\nReport saved: {report_path}")
+        log.info("Report saved: %s", report_path)
 
-        print("\n[Top 15 Feature Importance]")
+        log.info("[Top 15 Feature Importance]")
         for name, imp in sorted_importance[:15]:
-            print(f"  {name}: {imp:.4f}")
+            log.info("  %s: %.4f", name, imp)
 
         return
 
@@ -507,15 +507,15 @@ Examples:
 
     # Get tickers
     all_tickers = loader.get_all_tickers()
-    print("\n[Data Loading]")
-    print(f"  Available stocks: {len(all_tickers)}")
-    print(f"  Loading: {min(config.stocks, len(all_tickers))} stocks...")
+    log.info("[Data Loading]")
+    log.info("  Available stocks: %s", len(all_tickers))
+    log.info("  Loading: %s stocks...", min(config.stocks, len(all_tickers)))
 
     # Select tickers (prioritize liquid ones - first in list are typically more liquid)
     selected_tickers = all_tickers[: min(config.stocks, len(all_tickers))]
 
     # Try to load data with progress
-    print("  Fetching historical data...")
+    log.info("  Fetching historical data...")
 
     try:
         import asyncio
@@ -538,14 +538,14 @@ Examples:
             min_rows=config.min_rows,
         )
 
-    print(f"  Loaded: {len(stock_data)}/{len(selected_tickers)} stocks")
+    log.info("  Loaded: %s/%s stocks", len(stock_data), len(selected_tickers))
 
     if len(stock_data) < 10:
         log.error(f"Too few stocks loaded ({len(stock_data)}). Need at least 10.")
         sys.exit(1)
 
     # Generate samples
-    print("\n[Sample Generation]")
+    log.info("[Sample Generation]")
     all_samples: list[LabeledSample] = []
     errors = []
 
@@ -562,20 +562,20 @@ Examples:
             all_samples.extend(samples)
 
             if (idx + 1) % 20 == 0:
-                print(f"  Processed {idx + 1}/{len(stock_data)} stocks, {len(all_samples)} samples")
+                log.info("  Processed %s/%s stocks, %s samples", idx + 1, len(stock_data), len(all_samples))
 
         except Exception as e:
             errors.append((ticker, str(e)))
             continue
 
-    print(f"  Total samples: {len(all_samples)}")
+    log.info("  Total samples: %s", len(all_samples))
 
     if errors:
-        print(f"  Errors: {len(errors)} stocks failed")
+        log.info("  Errors: %s stocks failed", len(errors))
         for ticker, err in errors[:5]:
-            print(f"    - {ticker}: {err}")
+            log.info("    - %s: %s", ticker, err)
         if len(errors) > 5:
-            print(f"    ... and {len(errors) - 5} more")
+            log.info("    ... and %s more", len(errors) - 5)
 
     if len(all_samples) < 100:
         log.error(f"Not enough samples ({len(all_samples)}). Need at least 100.")
@@ -583,32 +583,30 @@ Examples:
 
     # Calculate label statistics
     label_stats = calculate_label_stats(all_samples)
-    print("\n[Label Distribution]")
-    print(f"  Total Samples:   {label_stats['total_samples']}")
-    print(f"  Positive (hit):  {label_stats['positive_samples']} ({label_stats['hit_rate']:.1f}%)")
-    print(
-        f"  Negative (miss): {label_stats['negative_samples']} ({100 - label_stats['hit_rate']:.1f}%)"
-    )
-    print(f"  Unique Tickers:  {label_stats['unique_tickers']}")
-    print(f"  Avg Forward Return: {label_stats['avg_forward_return']:.2f}%")
-    print(f"  Avg Max Return:     {label_stats['avg_max_return']:.2f}%")
+    log.info("[Label Distribution]")
+    log.info("  Total Samples:   %s", label_stats["total_samples"])
+    log.info("  Positive (hit):  %s (%.1f%%)", label_stats["positive_samples"], label_stats["hit_rate"])
+    log.info("  Negative (miss): %s (%.1f%%)", label_stats["negative_samples"], 100 - label_stats["hit_rate"])
+    log.info("  Unique Tickers:  %s", label_stats["unique_tickers"])
+    log.info("  Avg Forward Return: %.2f%%", label_stats["avg_forward_return"])
+    log.info("  Avg Max Return:     %.2f%%", label_stats["avg_max_return"])
 
     # Train model
-    print("\n[Training Model]")
+    log.info("[Training Model]")
     trainer = SaptaTrainer(
         config=sapta_config,
         model_dir=config.output_dir,
     )
 
     if config.walk_forward:
-        print("  Mode: Walk-Forward Training")
+        log.info("  Mode: Walk-Forward Training")
         result = trainer.walk_forward_train(
             all_samples,
             train_months=config.train_months,
             test_months=config.test_months,
         )
     else:
-        print(f"  Mode: Simple Split ({config.test_size * 100:.0f}% test)")
+        log.info("  Mode: Simple Split (%.0f%% test)", config.test_size * 100)
         result = trainer.train(
             all_samples,
             test_size=config.test_size,
@@ -619,29 +617,29 @@ Examples:
         sys.exit(1)
 
     # Print results
-    print("\n" + "=" * 70)
-    print("Training Complete!")
-    print("=" * 70)
+    log.info("=" * 70)
+    log.info("Training Complete!")
+    log.info("=" * 70)
 
-    print("\n[Model Files]")
-    print(f"  Model:     {result.model_path}")
-    print(f"  Thresholds: {result.thresholds_path}")
+    log.info("[Model Files]")
+    log.info("  Model:      %s", result.model_path)
+    log.info("  Thresholds: %s", result.thresholds_path)
 
-    print("\n[Metrics]")
+    log.info("[Metrics]")
     for metric, value in result.metrics.items():
-        print(f"  {metric}: {value:.4f}")
+        log.info("  %s: %.4f", metric, value)
 
-    print("\n[Learned Thresholds]")
-    print(f"  PRE-MARKUP:  >= {result.model_info.threshold_pre_markup:.1f}")
-    print(f"  READY:        >= {result.model_info.threshold_ready:.1f}")
-    print(f"  WATCHLIST:   >= {result.model_info.threshold_watchlist:.1f}")
+    log.info("[Learned Thresholds]")
+    log.info("  PRE-MARKUP:  >= %.1f", result.model_info.threshold_pre_markup)
+    log.info("  READY:        >= %.1f", result.model_info.threshold_ready)
+    log.info("  WATCHLIST:   >= %.1f", result.model_info.threshold_watchlist)
 
     # Feature importance
     sorted_importance = sorted(result.feature_importance.items(), key=lambda x: x[1], reverse=True)
 
-    print("\n[Top 15 Important Features]")
+    log.info("[Top 15 Important Features]")
     for name, importance in sorted_importance[:15]:
-        print(f"  {name}: {importance:.4f}")
+        log.info("  %s: %.4f", name, importance)
 
     # Save training report
     report = TrainingReport(
@@ -665,27 +663,27 @@ Examples:
     )
 
     report_path = save_training_report(report, output_dir)
-    print("\n[Report]")
-    print(f"  Saved: {report_path}")
+    log.info("[Report]")
+    log.info("  Saved: %s", report_path)
 
     # Verify model can be loaded
     try:
         import joblib
 
         test_model = joblib.load(result.model_path)
-        print("\n[Verification]")
-        print("  Model loaded successfully")
+        log.info("[Verification]")
+        log.info("  Model loaded successfully")
         # feature_names_in_ may not be set if X had non-string feature names
         if hasattr(test_model, "feature_names_in_") and test_model.feature_names_in_ is not None:
-            print(f"  Feature count: {len(test_model.feature_names_in_)}")
+            log.info("  Feature count: %s", len(test_model.feature_names_in_))
         else:
-            print(f"  Feature count: {test_model.n_features_in_}")
+            log.info("  Feature count: %s", test_model.n_features_in_)
     except Exception as e:
-        print(f"\n[WARNING] Model verification failed: {e}")
+        log.warning("Model verification failed: %s", e)
 
-    print("\n" + "=" * 70)
-    print("SAPTA Model Training Complete!")
-    print("=" * 70)
+    log.info("=" * 70)
+    log.info("SAPTA Model Training Complete!")
+    log.info("=" * 70)
 
 
 if __name__ == "__main__":

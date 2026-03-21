@@ -9,13 +9,14 @@ Supports:
 """
 
 import asyncio
-import re
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
 from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeElapsedColumn
 
+from pulse.core.screener_criteria import CriteriaParser
+from pulse.core.screener_filter import calculate_score, matches_criteria
 from pulse.utils.constants import MIDCAP100_TICKERS, TPEX_POPULAR, TW50_TICKERS
 from pulse.utils.logger import get_logger
 
@@ -104,6 +105,7 @@ class ScreenResult:
     kc_upper: float | None = None
     kc_lower: float | None = None
     kc_position: float | None = None  # Price position relative to KC (0-100%)
+    atr_14: float | None = None
 
     # Happy Lines (樂活五線譜) indicators
     happy_lines: Any = None  # Complete Happy Lines data (HappyLinesIndicators)
@@ -168,6 +170,13 @@ class ScreenResult:
         if self.macd > self.macd_signal:
             return "Bullish"
         return "Bearish"
+
+    @property
+    def bb_width(self) -> float | None:
+        """Bollinger Band width as % of middle band."""
+        if self.bb_upper and self.bb_lower and self.bb_middle:
+            return (self.bb_upper - self.bb_lower) / self.bb_middle * 100
+        return None
 
 
 class StockScreener:
@@ -319,6 +328,8 @@ class StockScreener:
         else:
             self.universe = TW50_TICKERS  # Default to TW50
 
+        self._criteria_parser = CriteriaParser(self.PRESETS)
+
     def _get_universe(self, universe_type: StockUniverse) -> list[str]:
         """Get stock universe based on type."""
         if universe_type == StockUniverse.TW50:
@@ -449,405 +460,16 @@ class StockScreener:
         result: ScreenResult,
         criteria: dict[str, Any],
     ) -> tuple[bool, list[str]]:
-        """
-        Check if stock matches all criteria.
-
-        Returns:
-            Tuple of (matches, list of matched signals)
-        """
-        signals = []
-
-        for key, condition in criteria.items():
-            # Handle special conditions
-            if key == "macd_above_signal":
-                if condition and result.macd is not None and result.macd_signal is not None:
-                    if result.macd > result.macd_signal:
-                        signals.append("MACD Bullish")
-                    else:
-                        return False, []
-                continue
-
-            if key == "macd_below_signal":
-                if condition and result.macd is not None and result.macd_signal is not None:
-                    if result.macd < result.macd_signal:
-                        signals.append("MACD Bearish")
-                    else:
-                        return False, []
-                continue
-
-            if key == "price_above_sma20":
-                if condition and result.sma_20 is not None:
-                    if result.price > result.sma_20:
-                        signals.append("Price > SMA20")
-                    else:
-                        return False, []
-                continue
-
-            if key == "price_below_sma20":
-                if condition and result.sma_20 is not None:
-                    if result.price < result.sma_20:
-                        signals.append("Price < SMA20")
-                    else:
-                        return False, []
-                continue
-
-            if key == "volume_spike":
-                if condition and result.volume_ratio > 1.5:
-                    signals.append(f"Volume Spike ({result.volume_ratio:.1f}x)")
-                elif condition:
-                    return False, []
-                continue
-
-            if key == "volume_above_avg":
-                if condition and result.volume_ratio > 1.0:
-                    signals.append("Volume > Avg")
-                elif condition:
-                    return False, []
-                continue
-
-            if key == "near_resistance":
-                if condition and result.resistance and result.price:
-                    pct_to_resistance = (result.resistance - result.price) / result.price * 100
-                    if 0 < pct_to_resistance < 3:  # Within 3% of resistance
-                        signals.append(f"Near Resistance ({pct_to_resistance:.1f}%)")
-                    else:
-                        return False, []
-                continue
-
-            if key == "bb_squeeze":
-                if condition and result.bb_upper and result.bb_lower and result.bb_middle:
-                    bb_width = (result.bb_upper - result.bb_lower) / result.bb_middle * 100
-                    if bb_width < 10:  # Narrow bands = squeeze
-                        signals.append(f"BB Squeeze ({bb_width:.1f}%)")
-                    else:
-                        return False, []
-                continue
-
-            # Keltner Channel conditions
-            if key == "kc_above_upper":
-                # Price just broke above Keltner Upper Band
-                if condition and result.kc_upper and result.price:
-                    if result.price >= result.kc_upper:
-                        signals.append(f"KC Breakout ({result.price:.1f} >= {result.kc_upper:.1f})")
-                    else:
-                        return False, []
-                continue
-
-            if key == "kc_above_middle":
-                # Price above Keltner Middle (EMA)
-                if condition and result.kc_middle and result.price:
-                    if result.price > result.kc_middle:
-                        signals.append(f"KC Middle ({result.kc_middle:.1f})")
-                    else:
-                        return False, []
-                continue
-
-            if key == "kc_below_upper":
-                # Price below Keltner Upper Band (exit condition)
-                if condition and result.kc_upper and result.price:
-                    if result.price < result.kc_upper:
-                        signals.append(
-                            f"KC Below Upper ({result.price:.1f} < {result.kc_upper:.1f})"
-                        )
-                    else:
-                        return False, []
-                continue
-
-            if key == "kc_above_lower":
-                # Price above Keltner Lower Band
-                if condition and result.kc_lower and result.price:
-                    if result.price > result.kc_lower:
-                        signals.append(f"KC Lower ({result.kc_lower:.1f})")
-                    else:
-                        return False, []
-                continue
-
-            if key == "kc_ema_bullish":
-                # EMA bullish alignment: EMA 9 > EMA 21 > EMA 55
-                if condition:
-                    if result.ema_9 and result.ema_21 and result.ema_55:
-                        if result.ema_9 > result.ema_21 > result.ema_55:
-                            signals.append(
-                                f"EMA Bullish ({result.ema_9:.1f} > {result.ema_21:.1f} > {result.ema_55:.1f})"
-                            )
-                        else:
-                            return False, []
-                    else:
-                        return False, []
-                continue
-
-            if key == "kc_position_above_upper":
-                # Price position relative to KC bands (0-100%)
-                # Above upper band = position > 100
-                if (
-                    condition
-                    and result.kc_position is not None
-                    and result.kc_upper
-                    and result.kc_lower
-                ):
-                    if result.kc_position >= 100:
-                        signals.append(f"KC Position: {result.kc_position:.1f}%")
-                    else:
-                        return False, []
-                continue
-
-            if key == "volume_min":
-                # Minimum average daily volume filter
-                if isinstance(condition, (int, float)):
-                    if result.avg_volume < condition:
-                        return False, []
-                    signals.append(f"Vol: {result.avg_volume:,}")
-                continue
-
-            # Market cap categories
-            if key == "market_cap_small":
-                if condition:
-                    if result.market_cap_category in ["micro", "small"]:
-                        signals.append(f"Small Cap ({result.market_cap_category})")
-                    else:
-                        return False, []
-                continue
-
-            if key == "market_cap_mid":
-                if condition:
-                    if result.market_cap_category == "mid":
-                        signals.append("Mid Cap")
-                    else:
-                        return False, []
-                continue
-
-            if key == "market_cap_small_mid":
-                if condition:
-                    if result.market_cap_category in ["micro", "small", "mid"]:
-                        signals.append(f"Cap: {result.market_cap_category}")
-                    else:
-                        return False, []
-                continue
-
-            # High growth
-            if key == "high_growth":
-                if condition:
-                    has_growth = False
-                    if result.earnings_growth and result.earnings_growth > 20:
-                        signals.append(f"Earnings Growth: {result.earnings_growth:.0f}%")
-                        has_growth = True
-                    if result.revenue_growth and result.revenue_growth > 15:
-                        signals.append(f"Revenue Growth: {result.revenue_growth:.0f}%")
-                        has_growth = True
-                    if not has_growth:
-                        return False, []
-                continue
-
-            # Happy Lines (樂活五線譜) criteria
-            if key == "happy_lines":
-                # Check if Happy Lines data exists
-                if condition == ("exists", True):
-                    if result.happy_lines is not None:
-                        signals.append("Has Happy Lines")
-                    else:
-                        return False, []
-                continue
-
-            if key == "happy_zone":
-                # Filter by Happy Lines zone
-                if result.happy_lines is not None:
-                    zone = result.happy_lines.zone
-                    if condition == "oversold" and zone.value == "超跌區":
-                        signals.append(f"Happy Zone: {zone.value}")
-                    elif condition == "undervalued" and zone.value == "偏低區":
-                        signals.append(f"Happy Zone: {zone.value}")
-                    elif condition == "balanced" and zone.value == "平衡區":
-                        signals.append(f"Happy Zone: {zone.value}")
-                    elif condition == "overvalued" and zone.value == "偏高區":
-                        signals.append(f"Happy Zone: {zone.value}")
-                    elif condition == "overbought" and zone.value == "過熱區":
-                        signals.append(f"Happy Zone: {zone.value}")
-                    elif condition == "cheap" and zone.value in ["超跌區", "偏低區"]:
-                        signals.append(f"Happy Zone: {zone.value}")
-                    elif condition == "expensive" and zone.value in ["偏高區", "過熱區"]:
-                        signals.append(f"Happy Zone: {zone.value}")
-                    else:
-                        return False, []
-                else:
-                    return False, []
-                continue
-
-            if key == "happy_position_ratio":
-                # Filter by position ratio threshold
-                if result.happy_lines is not None:
-                    ratio = result.happy_lines.position_ratio
-                    if isinstance(condition, tuple):
-                        operator, threshold = condition
-                        if operator == "<" and ratio >= threshold:
-                            return False, []
-                        elif operator == ">" and ratio <= threshold:
-                            return False, []
-                        elif operator == "<=" and ratio > threshold:
-                            return False, []
-                        elif operator == ">=" and ratio < threshold:
-                            return False, []
-                        else:
-                            signals.append(f"Happy Position: {ratio:.1f}%")
-                    else:
-                        signals.append(f"Happy Position: {ratio:.1f}%")
-                else:
-                    return False, []
-                continue
-
-            # Handle numeric comparisons
-            value = getattr(result, key, None)
-            if value is None:
-                continue  # Skip if no data
-
-            if isinstance(condition, tuple):
-                operator, threshold = condition
-
-                if operator == "<" and value >= threshold:
-                    return False, []
-                elif operator == ">" and value <= threshold:
-                    return False, []
-                elif operator == "<=" and value > threshold:
-                    return False, []
-                elif operator == ">=" and value < threshold:
-                    return False, []
-                elif operator == "between":
-                    low, high = threshold
-                    if not (low <= value <= high):
-                        return False, []
-                    signals.append(f"{key}: {value:.1f}")
-                else:
-                    signals.append(f"{key}: {value:.1f}")
-
-        return True, signals
+        """Check if stock matches all criteria. Delegates to screener_filter."""
+        return matches_criteria(result, criteria)
 
     def _calculate_score(self, result: ScreenResult) -> float:
-        """Calculate overall score for ranking."""
-        score = 50.0  # Base score
-
-        # RSI scoring
-        if result.rsi_14 is not None:
-            if result.rsi_14 < 30:
-                score += 25  # Oversold bonus (strong buying opportunity)
-            elif result.rsi_14 > 70:
-                score -= 10  # Overbought penalty
-            elif 40 <= result.rsi_14 <= 60:
-                score += 5  # Neutral is okay
-
-        # MACD scoring
-        if result.macd is not None and result.macd_signal is not None:
-            # Skip MACD penalty when RSI is oversold (oversold takes precedence as buy signal)
-            is_oversold = result.rsi_14 is not None and result.rsi_14 < 30
-            if result.macd > result.macd_signal:
-                score += 15  # Bullish
-                if result.macd_histogram and result.macd_histogram > 0:
-                    score += 5  # Increasing momentum
-            elif not is_oversold:
-                score -= 10  # Bearish (skip if oversold)
-
-        # Volume scoring
-        if result.volume_ratio > 1.5:
-            score += 10  # High volume interest
-        elif result.volume_ratio < 0.5:
-            score -= 5  # Low interest
-
-        # Trend scoring
-        if result.sma_20 and result.sma_50:
-            if result.price > result.sma_20 > result.sma_50:
-                # Extra bonus for oversold + uptrend (high probability setup)
-                if result.rsi_14 is not None and result.rsi_14 < 30:
-                    score += 20  # Strong uptrend + oversold = high conviction
-                else:
-                    score += 15  # Strong uptrend
-            elif result.price < result.sma_20 < result.sma_50:
-                score -= 10  # Strong downtrend
-
-        # Fundamental scoring
-        if result.pe_ratio:
-            if 0 < result.pe_ratio < 15:
-                score += 10  # Undervalued
-            elif result.pe_ratio > 30:
-                score -= 5  # Expensive
-
-        if result.roe:
-            if result.roe > 15:
-                score += 10  # Good ROE
-
-        return max(0, min(100, score))
+        """Calculate overall score for ranking. Delegates to screener_filter."""
+        return calculate_score(result)
 
     def parse_criteria(self, criteria_str: str) -> dict[str, Any]:
-        """
-        Parse criteria string into dict.
-
-        Examples:
-            "rsi<30" -> {"rsi_14": ("<", 30)}
-            "rsi>70 and pe<15" -> {"rsi_14": (">", 70), "pe_ratio": ("<", 15)}
-            "macd_bullish" -> {"macd_above_signal": True}
-        """
-        criteria = {}
-
-        # Normalize input
-        criteria_str = criteria_str.lower().strip()
-
-        # Handle preset names
-        if criteria_str in [p.value for p in ScreenPreset]:
-            return self.PRESETS[ScreenPreset(criteria_str)]["criteria"]
-
-        # Handle special keywords
-        if "bullish" in criteria_str or "naik" in criteria_str:
-            criteria["macd_above_signal"] = True
-            criteria["price_above_sma20"] = True
-
-        if "bearish" in criteria_str or "turun" in criteria_str:
-            criteria["macd_below_signal"] = True
-            criteria["price_below_sma20"] = True
-
-        if "oversold" in criteria_str:
-            criteria["rsi_14"] = ("<", 30)
-
-        if "overbought" in criteria_str:
-            criteria["rsi_14"] = (">", 70)
-
-        if "squeeze" in criteria_str:
-            criteria["bb_squeeze"] = True
-
-        if "breakout" in criteria_str:
-            criteria["near_resistance"] = True
-            criteria["volume_spike"] = True
-
-        # Smart screen criteria for growth/multibagger
-        if "multibagger" in criteria_str or "growth" in criteria_str:
-            criteria["high_growth"] = True
-            criteria["macd_above_signal"] = True
-
-        # Small cap criteria
-        if "small cap" in criteria_str:
-            criteria["market_cap_small"] = True
-
-        if "volume" in criteria_str and "spike" in criteria_str:
-            criteria["volume_spike"] = True
-
-        # Parse numeric criteria: rsi<30, pe>15, etc
-        # Map common names to field names
-        field_map = {
-            "rsi": "rsi_14",
-            "pe": "pe_ratio",
-            "pb": "pb_ratio",
-            "pbv": "pb_ratio",
-            "roe": "roe",
-            "macd": "macd",
-            "volume": "volume",
-            "price": "price",
-            "change": "change_percent",
-        }
-
-        pattern = r"(\w+)\s*([<>]=?)\s*(\d+\.?\d*)"
-        matches = re.findall(pattern, criteria_str)
-
-        for indicator, operator, value in matches:
-            field_name = field_map.get(indicator, indicator)
-            criteria[field_name] = (operator, float(value))
-
-        return criteria
+        """Parse criteria string into dict. Delegates to CriteriaParser."""
+        return self._criteria_parser.parse(criteria_str)
 
     async def screen_preset(
         self,
@@ -890,98 +512,8 @@ class StockScreener:
         query: str,
         limit: int = 10,
     ) -> tuple[list[ScreenResult], str]:
-        """
-        AI-driven smart screening based on natural language query.
-
-        Returns:
-            Tuple of (results, explanation of criteria used)
-        """
-        query_lower = query.lower()
-
-        # Check specific patterns FIRST (before generic ones like "bagus")
-
-        # Multibagger: small/mid cap, momentum, growth
-        if any(
-            w in query_lower
-            for w in ["multibagger", "multi bagger", "10x", "100x", "大漲", "潛力股"]
-        ):
-            criteria = {
-                "market_cap_small_mid": True,
-                "macd_above_signal": True,
-                "volume_above_avg": True,
-            }
-            explanation = "尋找潛力股 (小型/中型股, 技術面多頭, 成交量活躍)。條件: 非大型股, MACD 多頭, 平均成交量以上。"
-
-        # Small cap
-        elif any(w in query_lower for w in ["small cap", "小型股", "小型"]):
-            criteria = {
-                "market_cap_small": True,
-                "macd_above_signal": True,
-            }
-            explanation = "尋找小型股多頭趨勢"
-
-        # Growth stocks
-        elif any(w in query_lower for w in ["growth", "成長", "高成長"]):
-            criteria = {
-                "high_growth": True,
-                "macd_above_signal": True,
-            }
-            explanation = "尋找高成長股票 (營收/獲利成長率 > 15-20%)"
-
-        # Breakout
-        elif any(w in query_lower for w in ["breakout", "突破", "即將上漲"]):
-            criteria = {
-                "near_resistance": True,
-                "volume_spike": True,
-            }
-            explanation = "尋找即將突破股票 (接近壓力位, 成交量爆發)"
-
-        # Oversold
-        elif any(w in query_lower for w in ["oversold", "超賣", "撿便宜"]):
-            criteria = {"rsi_14": ("<", 30)}
-            explanation = "尋找超賣股票 (RSI < 30)"
-
-        # Undervalued
-        elif any(w in query_lower for w in ["便宜", "低估", "被低估"]):
-            criteria = {
-                "pe_ratio": ("<", 15),
-                "roe": (">", 10),
-            }
-            explanation = "尋找被低估股票 (PE < 15, ROE > 10%)"
-
-        # Bearish
-        elif any(w in query_lower for w in ["下跌", "空頭", "賣出", "避開"]):
-            criteria = {
-                "rsi_14": (">", 70),
-                "macd_below_signal": True,
-            }
-            explanation = "尋找空頭訊號股票 (RSI > 70, MACD 空頭)"
-
-        # Bullish momentum (generic - check last)
-        elif any(w in query_lower for w in ["上漲", "多頭", "看好", "潛力", "買進"]):
-            criteria = {
-                "rsi_14": ("between", (30, 65)),
-                "macd_above_signal": True,
-                "volume_above_avg": True,
-            }
-            explanation = "尋找多頭趨勢股票 (RSI 30-65, MACD 多頭, 成交量增加)"
-
-        else:
-            # Default: momentum screening
-            criteria = {
-                "macd_above_signal": True,
-                "volume_above_avg": True,
-            }
-            explanation = "技術面篩選 (MACD 多頭, 成交量增加)"
-
-        results = await self._run_screen(
-            criteria=criteria,
-            sort_by="score",
-            sort_asc=False,
-            limit=limit,
-        )
-
-        return results, explanation
+        """Natural-language stock screening. Delegates to CriteriaParser."""
+        return await self._criteria_parser.smart_parse(query, self, limit)
 
     async def _run_screen(
         self,
@@ -1063,8 +595,8 @@ class StockScreener:
         # Sort results
         if sort_by == "score":
             results.sort(key=lambda x: x.score, reverse=not sort_asc)
-        elif results and hasattr(results[0], sort_by):
-            results.sort(key=lambda x: getattr(x, sort_by) or 0, reverse=not sort_asc)
+        elif results:
+            results.sort(key=lambda x: getattr(x, sort_by, None) or 0, reverse=not sort_asc)
 
         log.info(f"Found {len(results)} stocks matching criteria")
 

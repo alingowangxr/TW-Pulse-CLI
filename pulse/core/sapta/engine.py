@@ -4,6 +4,7 @@ SAPTA Engine - Main orchestrator for PRE-MARKUP detection.
 Runs all 6 analysis modules, aggregates scores, and determines status.
 """
 
+import asyncio
 from collections.abc import Callable
 from datetime import datetime
 from typing import Any
@@ -202,19 +203,16 @@ class SaptaEngine:
         return results
 
     async def _run_modules(self, df: pd.DataFrame, ticker: str = "") -> dict[str, ModuleScore]:
-        """Run all analysis modules on the data."""
-        scores = {}
+        """Run all analysis modules concurrently on the data."""
+        loop = asyncio.get_event_loop()
 
-        for name, module in self.modules.items():
+        async def _run_one(name: str, module) -> tuple[str, ModuleScore]:
             try:
-                # Standard modules
-                score = module.analyze(df)
-
-                scores[name] = score
+                score = await loop.run_in_executor(None, module.analyze, df)
+                return name, score
             except Exception as e:
                 log.debug(f"Module {name} failed: {e}")
-                # Create empty score on failure
-                scores[name] = ModuleScore(
+                return name, ModuleScore(
                     module_name=name,
                     score=0.0,
                     max_score=module.max_score,
@@ -224,7 +222,10 @@ class SaptaEngine:
                     raw_features={},
                 )
 
-        return scores
+        results = await asyncio.gather(
+            *[_run_one(name, module) for name, module in self.modules.items()]
+        )
+        return dict(results)
 
     def _aggregate_scores(
         self,

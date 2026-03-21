@@ -745,46 +745,55 @@ class TestFetchStockData:
     @pytest.mark.asyncio
     async def test_fetch_stock_data_success(self, screener, mock_screen_result):
         """Test successful stock data fetching."""
-        with (
-            patch("pulse.core.analysis.technical.TechnicalAnalyzer") as MockAnalyzer,
-            patch("pulse.core.data.stock_data_provider.StockDataProvider") as MockProvider,
-        ):
-            # Setup mock stock data
-            mock_stock = MagicMock()
-            mock_stock.ticker = "2330"
-            mock_stock.name = "台積電"
-            mock_stock.sector = "半導體"
-            mock_stock.current_price = 820.0
-            mock_stock.change = 5.0
-            mock_stock.change_percent = 0.61
-            mock_stock.volume = 15234500
-            mock_stock.avg_volume = 12456000
+        from datetime import datetime
+        from pulse.core.models import OHLCV
 
-            mock_provider = MagicMock()
-            mock_provider.fetch_stock = AsyncMock(return_value=mock_stock)
-            mock_provider.fetch_fundamentals = AsyncMock(return_value=None)
-            MockProvider.return_value = mock_provider
+        # Build mock OHLCV history (use timedelta to avoid date overflow)
+        from datetime import timedelta
+        base_date = datetime(2024, 1, 1)
+        mock_history = [
+            OHLCV(date=base_date + timedelta(days=i), open=810.0, high=830.0, low=805.0, close=820.0, volume=15000000)
+            for i in range(60)
+        ]
 
-            # Setup mock technical analysis
-            mock_technical = MagicMock()
-            mock_technical.rsi_14 = 55.0
-            mock_technical.macd = 2.5
-            mock_technical.macd_signal = 1.5
-            mock_technical.macd_histogram = 1.0
-            mock_technical.sma_20 = 810.0
-            mock_technical.sma_50 = 800.0
-            mock_technical.bb_upper = 835.0
-            mock_technical.bb_lower = 805.0
-            mock_technical.bb_middle = 820.0
-            mock_technical.stoch_k = 65.0
-            mock_technical.stoch_d = 58.0
-            mock_technical.support_1 = 805.0
-            mock_technical.resistance_1 = 835.0
+        mock_stock = MagicMock()
+        mock_stock.ticker = "2330"
+        mock_stock.name = "台積電"
+        mock_stock.sector = "半導體"
+        mock_stock.current_price = 820.0
+        mock_stock.change = 5.0
+        mock_stock.change_percent = 0.61
+        mock_stock.volume = 15234500
+        mock_stock.avg_volume = 12456000
+        mock_stock.history = mock_history
 
-            mock_analyzer = MockAnalyzer.return_value
-            mock_analyzer.analyze = AsyncMock(return_value=mock_technical)
+        mock_technical = MagicMock()
+        mock_technical.rsi_14 = 55.0
+        mock_technical.macd = 2.5
+        mock_technical.macd_signal = 1.5
+        mock_technical.macd_histogram = 1.0
+        mock_technical.sma_20 = 810.0
+        mock_technical.sma_50 = 800.0
+        mock_technical.sma_200 = None
+        mock_technical.ema_9 = None
+        mock_technical.ema_21 = None
+        mock_technical.ema_55 = None
+        mock_technical.bb_upper = 835.0
+        mock_technical.bb_lower = 805.0
+        mock_technical.bb_middle = 820.0
+        mock_technical.stoch_k = 65.0
+        mock_technical.stoch_d = 58.0
+        mock_technical.support_1 = 805.0
+        mock_technical.resistance_1 = 835.0
 
-            result = await screener._fetch_stock_data("2330")
+        mock_fetcher = AsyncMock()
+        mock_fetcher.fetch_stock = AsyncMock(return_value=mock_stock)
+        mock_fetcher.fetch_fundamentals = AsyncMock(return_value=None)
+
+        mock_analyzer = MagicMock()
+        mock_analyzer._calculate_indicators = MagicMock(return_value=mock_technical)
+
+        result = await screener._fetch_stock_data("2330", fetcher=mock_fetcher, analyzer=mock_analyzer)
 
         assert result is not None
         assert result.ticker == "2330"

@@ -195,9 +195,9 @@ class TestSaptaEngine:
         assert result is not None
         assert result.status in [
             SaptaStatus.PRE_MARKUP,
-            SaptaStatus.SIAP,
+            SaptaStatus.READY,
             SaptaStatus.WATCHLIST,
-            SaptaStatus.ABAIKAN,
+            SaptaStatus.IGNORE,
         ]
 
         # Restore threshold
@@ -358,7 +358,7 @@ class TestSaptaConfig:
         assert config.target_days == 20
         assert config.min_history_days == 120  # Actual default value
         assert config.threshold_pre_markup == 80.0
-        assert config.threshold_siap == 65.0
+        assert config.threshold_ready == 65.0
         assert config.threshold_watchlist == 50.0
 
     def test_custom_config(self):
@@ -392,16 +392,16 @@ class TestSaptaStatus:
     def test_status_values(self):
         """Test status enum values."""
         assert SaptaStatus.PRE_MARKUP.value == "PRE-MARKUP"
-        assert SaptaStatus.SIAP.value == "SIAP"
+        assert SaptaStatus.READY.value == "READY"
         assert SaptaStatus.WATCHLIST.value == "WATCHLIST"
-        assert SaptaStatus.ABAIKAN.value == "ABAIKAN"
+        assert SaptaStatus.IGNORE.value == "IGNORE"
 
     def test_status_ordering(self):
         """Test status can be ordered by score."""
         status_order = [
-            SaptaStatus.ABAIKAN,
+            SaptaStatus.IGNORE,
             SaptaStatus.WATCHLIST,
-            SaptaStatus.SIAP,
+            SaptaStatus.READY,
             SaptaStatus.PRE_MARKUP,
         ]
 
@@ -434,7 +434,7 @@ class TestSaptaResult:
             ticker="2330",
             total_score=0.0,
             weighted_score=0.0,
-            status=SaptaStatus.ABAIKAN,
+            status=SaptaStatus.IGNORE,
             confidence=ConfidenceLevel.LOW,
         )
 
@@ -520,7 +520,7 @@ class TestSaptaEngineFormatting:
                 ticker="2330",
                 total_score=75.0,
                 weighted_score=75.0,
-                status=SaptaStatus.SIAP,
+                status=SaptaStatus.READY,
                 confidence=ConfidenceLevel.MEDIUM,
                 wave_phase="Wave 3",
             ),

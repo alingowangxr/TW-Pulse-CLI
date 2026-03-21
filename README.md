@@ -11,7 +11,7 @@
 
 *台灣股市分析與策略回測工具 (基於 AI 的終端介面)*
 
-[Features](#features) • [Installation](#installation) • [Usage](USAGE.md) • [Roadmap](TODO.md)
+[Features](#features) • [SAPTA](#sapta-引擎) • [Installation](#quick-start) • [Usage](USAGE.md) • [Roadmap](TODO.md)
 
 [![GitHub](https://img.shields.io/badge/GitHub-alingowangxr%2FTW--Pulse--CLI-181717?style=flat-square&logo=github)](https://github.com/alingowangxr/TW-Pulse-CLI)
 
@@ -35,7 +35,7 @@
 |---------|-------------|
 | **Smart Agent** | AI 代理會在分析前獲取真實數據 |
 | **Natural Language** | 支援繁體中文或英文提問 |
-| **Streaming Response** | 🆕 即時串流回應，AI 分析過程即時顯示，無需等待 |
+| **Streaming Response** | 即時串流回應，AI 分析過程即時顯示，無需等待 |
 | **Strategy Backtesting** | 完整的策略回測系統，支援多策略框架與績效報告 |
 | **Dynamic Capital Management** | 動態資金管理，智能倉位控制 |
 | **Trading Reports** | 詳細的交易報告與績效分析 |
@@ -53,9 +53,8 @@
 
 | Feature | Description |
 |---------|-------------|
-| **SAPTA Engine** | 機器學習預漲偵測 (6 模組 + XGBoost) + `/sapta-retrain` |
-| **SAPTA Feature Analysis** | `/sapta-retrain --report` 特徵重要性 + 閾值分析 |
-| **AutoTS Forecasting** | 🆕 AI 價格預測引擎 (AutoTS)，支援快速/完整兩種模式 |
+| **SAPTA Engine** | 機器學習預漲偵測 (6 模組 + XGBoost)，詳見 [SAPTA 引擎](#sapta-引擎) |
+| **AutoTS Forecasting** | AI 價格預測引擎 (AutoTS)，支援快速/完整兩種模式 |
 | **Smart Money Screener** | 主力足跡選股 (Trend/Volume/Bias) |
 | **Trading Plan** | 自動生成停利/停損/風險報酬計算 |
 
@@ -64,9 +63,9 @@
 | Strategy | Description |
 |----------|-------------|
 | **Farmer Planting** | 進階農夫播種術 - 基準價加減碼策略，適合趨勢股票長期持有 |
-| **Momentum Breakout** | 🆕 動量突破策略 - ADX 強趨勢 + MACD 黃金交叉 + 成交量確認 |
-| **MA Crossover** | 🆕 均線交叉策略 - EMA9/EMA21 交叉 + MA50 趨勢過濾 |
-| **BB Squeeze** | 🆕 布林壓縮策略 - 低波動壓縮後的向上突破 |
+| **Momentum Breakout** | 動量突破策略 - ADX 強趨勢 + MACD 黃金交叉 + 成交量確認 |
+| **MA Crossover** | 均線交叉策略 - EMA9/EMA21 交叉 + MA50 趨勢過濾 |
+| **BB Squeeze** | 布林壓縮策略 - 低波動壓縮後的向上突破 |
 | **Keltner Channel** | 短線突破策略 (BUY/HOLD/SELL/WATCH 信號) |
 | **Happy Lines** | 樂活五線譜 - 基於統計分佈的股價位階判斷工具 |
 | **Custom Strategies** | 支援自定義策略開發與回測 |
@@ -76,7 +75,68 @@
 | Feature | Description |
 |---------|-------------|
 | **Chart Generation** | 匯出價格圖表為 PNG 格式 (支援自訂主題) |
-| **E2E Tests** | 461 tests with comprehensive coverage + 63 strategy tests |
+| **E2E Tests** | 561 tests with comprehensive coverage |
+
+---
+
+## SAPTA 引擎
+
+**SAPTA** = *Smart Money Analysis via Pre-markup Accumulation Tracking Algorithm*
+
+混合式 **規則引擎 + XGBoost 機器學習**的評分系統，偵測股票在主升段啟動前的**吸籌/壓縮階段**，讓使用者在法人佈局完成、爆發前提前進場。
+
+### 決策輸出
+
+| 狀態 | 分數 | 意義 |
+|------|------|------|
+| 🔴 `PRE-MARKUP` | ≥ 80 | 即將啟動，優先進場 |
+| 🟠 `READY` | ≥ 65 | 接近就緒，密切觀察 |
+| 🟡 `WATCHLIST` | ≥ 50 | 跡象初現，加入名單 |
+| ⚫ `IGNORE` | < 50 | 條件不足，略過 |
+
+### 6 個分析模組
+
+```
+模組                   最高分   偵測目標
+────────────────────── ──────  ──────────────────────────────────────
+Supply Absorption       20     爆量後守住 + 高低點墊高 (吸籌型態)
+Compression             15     ATR 斜率收縮 + 振幅縮小 (壓縮型態)
+BB Squeeze              15     布林帶寬度壓至歷史低位 (極度擠壓)
+Elliott Wave            20     費波納契回調 38.2–61.8% + ABC 修正
+Time Projection         15     費波納契時間窗口 (21/34/55/89/144 日) + 月相
+Anti-Distribution       15     過濾派發訊號 (高量弱收、假突破)
+────────────────────── ──────
+合計滿分               100
+```
+
+### 評分流程
+
+```
+6 模組並發執行
+    → 加權彙總 → 0-100 分
+    → 假突破懲罰 (-10 分)
+    → XGBoost 校準信心水準
+    → 輸出 PRE-MARKUP / READY / WATCHLIST / IGNORE
+```
+
+### ML 模型
+
+- **演算法**：XGBoost binary classifier
+- **訓練目標**：20 個交易日內漲幅 ≥ 10%
+- **特徵向量**：70+ 維（各模組原始特徵 + 彙總特徵）
+- **訓練模式**：Walk-Forward（36 月訓練 / 6 月測試）
+- **自動校準**：門檻值由訓練資料學習，寫入 `SaptaConfig`
+
+### SAPTA 指令
+
+```bash
+/sapta 2330                # 分析單支股票
+/sapta TW50                # 掃描台灣 50 成分股
+/sapta-retrain             # 重新訓練 XGBoost 模型
+/sapta-retrain --report    # 輸出特徵重要性報告
+```
+
+> 完整演算法文件：[docs/SAPTA_ALGORITHM.md](docs/SAPTA_ALGORITHM.md)
 
 ---
 
@@ -136,13 +196,20 @@ pulse
 /forecast 2330 14 full             # 完整模式價格預測 (14天)
 ```
 
+### SAPTA 預漲偵測
+```bash
+/sapta 2330                        # 分析台積電是否處於預漲階段
+/sapta TW50                        # 掃描台灣 50，列出 PRE-MARKUP 股票
+/sapta-retrain                     # 重新訓練 ML 模型（需要時間）
+/sapta-retrain --report            # 輸出特徵重要性與門檻分析
+```
+
 ### 策略回測
 ```bash
 /strategy                          # 查看所有可用策略
 /strategy farmerplanting           # 查看農夫播種術策略詳情
 /strategy farmerplanting 2330 backtest  # 執行回測（5年歷史數據）
 
-# 新增策略
 /strategy momentumbreakout 2330 backtest  # 動量突破策略回測
 /strategy macrossover 2330 backtest       # 均線交叉策略回測
 /strategy bbsqueeze 2330 backtest         # 布林壓縮策略回測
@@ -152,8 +219,6 @@ pulse
 ```bash
 /screen                            # 股票篩選
 /smart-money                       # 主力足跡選股
-/sapta TW50                        # SAPTA 預漲偵測（台灣50）
-/sapta-retrain                     # 重新訓練 SAPTA 模型
 ```
 
 ---
@@ -164,11 +229,11 @@ pulse
 |----------|-------------|
 | [USAGE.md](USAGE.md) | 完整安裝與使用說明 |
 | [TODO.md](TODO.md) | 未來改進計劃與路線圖 |
+| [docs/SAPTA_ALGORITHM.md](docs/SAPTA_ALGORITHM.md) | SAPTA 演算法完整技術文件 |
+| [docs/training_guide.md](docs/training_guide.md) | ML 模型訓練指南 |
+| [docs/architecture.md](docs/architecture.md) | 系統架構與設計 |
 | [docs/CONTRIB.md](docs/CONTRIB.md) | 貢獻指南 - 開發工作流與環境設定 |
 | [docs/RUNBOOK.md](docs/RUNBOOK.md) | 運維手冊 - 部署與故障排除 |
-| [docs/SAPTA_ALGORITHM.md](docs/SAPTA_ALGORITHM.md) | SAPTA 算法詳解 |
-| [docs/training_guide.md](docs/training_guide.md) | ML 模型訓練文檔 |
-| [docs/architecture.md](docs/architecture.md) | 系統架構與設計 |
 
 ---
 
@@ -195,7 +260,8 @@ pulse
 
 | Version | Date | Changes |
 |---------|------|---------|
-| **0.4.3** | **2026-03-20** | **Bug fixes: 修正串流超時失效、圖表進度 UI 閃現、SAPTA 閾值鍵名遷移、AI 系統提示語言錯誤** |
+| **0.4.4** | **2026-03-21** | **效能與架構優化：SAPTA 模組並發執行、smart_agent/screener 拆分重構、統一 logger、修正 561 tests 全通過** |
+| 0.4.3 | 2026-03-20 | Bug fixes: 修正串流超時失效、圖表進度 UI 閃現、SAPTA 閾值鍵名遷移、AI 系統提示語言錯誤 |
 | 0.4.2 | 2026-03-19 | 即時串流回應：AI 分析過程即時顯示，改善使用者體驗 |
 | 0.4.1 | 2026-02-08 | AutoTS 預測引擎：取代 Prophet，支援快速/完整兩種模式 + 16 new tests |
 | 0.3.1 | 2026-02-03 | 三大交易策略：動量突破、均線交叉、布林壓縮 + 42 new tests |

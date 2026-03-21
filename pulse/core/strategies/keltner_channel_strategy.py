@@ -330,7 +330,9 @@ class KeltnerChannelStrategy:
         log.info("Starting Keltner Channel strategy screening...")
 
         # Use custom universe or default
-        if universe:
+        if universe is not None:
+            if len(universe) == 0:
+                return []
             self.screener.universe = universe
 
         # Screen for stocks with Keltner Channel data
