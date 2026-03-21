@@ -117,7 +117,8 @@ class CommandRegistry:
             # Fall back to non-streaming
             try:
                 result = await cmd.handler(args)
-                yield {"type": "response", "message": result}
+                if result is not None:
+                    yield {"type": "response", "message": result}
             except Exception as e:
                 log.error(f"Command {cmd_name} failed: {e}")
                 yield {"type": "error", "message": f"Command failed: {e}"}

@@ -380,6 +380,8 @@ class PulseApp(App):
         self.call_later(self._scroll_chat_end)
 
     def _add_response(self, text: str) -> None:
+        if not text or self._closing:
+            return
         chat = self.query_one("#chat", VerticalScroll)
         chat.mount(Markdown(text, classes="ai-msg"))
         self._update_status()
@@ -576,8 +578,9 @@ class PulseApp(App):
             self._add_response("分析超時，請稍後再試")
         except Exception as e:
             self._remove_thinking()
-            log.error(f"Command error: {e}")
-            self._add_response(format_error_response(e))
+            if not self._closing:
+                log.error(f"Command error: {e}")
+                self._add_response(format_error_response(e))
         finally:
             self._refocus_input()
 
