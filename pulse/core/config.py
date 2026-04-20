@@ -69,6 +69,13 @@ class DataSettings(BaseSettings):
 
     cache_dir: Path = Field(default=Path("data/cache"), description="Cache directory")
     cache_ttl: int = Field(default=3600, description="Default cache TTL in seconds (1 hour)")
+    local_warehouse_db: Path | None = Field(
+        default=None,
+        description="Local SQLite warehouse path for preloaded market data",
+    )
+    local_warehouse_enabled: bool = Field(
+        default=True, description="Prefer local warehouse data when available"
+    )
 
     # Specific TTL configurations (in seconds)
     stock_cache_ttl: int = Field(default=1800, description="Stock price data TTL (30 minutes)")

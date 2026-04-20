@@ -280,6 +280,14 @@ class CommandRegistry:
         )
 
         self.register(
+            "warehouse",
+            self._cmd_warehouse,
+            "Local warehouse status (本地資料倉庫狀態)",
+            "/warehouse [sync [--mode=copy|run]]",
+            aliases=["db", "datahub"],
+        )
+
+        self.register(
             "clear",
             self._cmd_clear,
             "Clear chat history",
@@ -451,3 +459,9 @@ class CommandRegistry:
         from pulse.cli.commands.strategy import handle_strategy_command
 
         return await handle_strategy_command(self.app, args)
+
+    async def _cmd_warehouse(self, args: str) -> str:
+        """Local warehouse status command handler."""
+        from pulse.cli.commands.advanced import warehouse_command
+
+        return await warehouse_command(self.app, args)

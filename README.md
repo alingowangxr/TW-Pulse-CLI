@@ -23,7 +23,7 @@
 
 **TW-Pulse-CLI** 是基於 [Pulse-CLI](https://github.com/alingowangxr/Pulse-CLI) 借鑑並重新改寫的台灣股市分析 CLI 工具。
 
-原 Pulse-CLI 專注於印尼股市，本專案針對台灣市場進行優化，整合 FinMind、Yahoo Finance 等數據源，提供技術分析、基本面分析、法人動向、機器學習預測、**策略回測**等功能。
+原 Pulse-CLI 專注於印尼股市，本專案針對台灣市場進行優化，整合 FinMind、Yahoo Finance、Fugle 與本地 SQLite 倉庫，提供技術分析、基本面分析、法人動向、機器學習預測、**策略回測**等功能。
 
 ---
 
@@ -33,9 +33,10 @@
 
 | Feature | Description |
 |---------|-------------|
-| **Smart Agent** | AI 代理會在分析前獲取真實數據 |
-| **Natural Language** | 支援繁體中文或英文提問 |
+| **Smart Agent** | AI 代理會先抓取真實數據，再以固定結構產生繁體中文分析 |
+| **Natural Language** | 支援繁體中文提問與回覆 |
 | **Streaming Response** | 即時串流回應，AI 分析過程即時顯示，無需等待 |
+| **Local Warehouse** | 可直接讀取本地台股 SQLite 倉庫，加速大量篩選與分析 |
 | **Strategy Backtesting** | 完整的策略回測系統，支援多策略框架與績效報告 |
 | **Dynamic Capital Management** | 動態資金管理，智能倉位控制 |
 | **Trading Reports** | 詳細的交易報告與績效分析 |
@@ -56,7 +57,9 @@
 | **SAPTA Engine** | 機器學習預漲偵測 (6 模組 + XGBoost)，詳見 [SAPTA 引擎](#sapta-引擎) |
 | **AutoTS Forecasting** | AI 價格預測引擎 (AutoTS)，支援快速/完整兩種模式 |
 | **Smart Money Screener** | 主力足跡選股 (Trend/Volume/Bias) |
+| **Warehouse Sync** | 可同步本地台股倉庫資料庫到本地分析環境，供分析模組直接使用 |
 | **Trading Plan** | 自動生成停利/停損/風險報酬計算 |
+| **Prompt Hardening** | 股票分析 prompt 已統一為繁體中文、固定輸出結構、資料不足明示 |
 
 ### 📈 策略系統
 
@@ -173,12 +176,25 @@ GEMINI_API_KEY=your_key            # Gemini
 # 數據源
 FINMIND_TOKEN=your_token           # 法人動向數據（推薦取得付費 Token）
 FUGLE_API_KEY=your_key             # Fugle 即時數據（選配）
+
+# 本地台股倉庫（選配）
+PULSE_DATA__LOCAL_WAREHOUSE_DB=path/to/tw_stock_warehouse.db
 ```
 
 ### Launch
 
 ```bash
 pulse
+```
+
+### Local Warehouse
+
+如果本機已有台股倉庫資料，可直接用 `/warehouse sync` 同步。
+
+```bash
+/warehouse
+/warehouse sync --mode=copy
+/warehouse sync --mode=run
 ```
 
 ---
@@ -195,6 +211,12 @@ pulse
 /forecast 2330                     # 快速模式價格預測 (7天)
 /forecast 2330 14 full             # 完整模式價格預測 (14天)
 ```
+
+`/analyze` 與相關 AI 分析指令會：
+- 先抓取真實市場數據，再交由 AI 解讀
+- 統一以繁體中文輸出
+- 固定輸出核心摘要、資料完整度、技術面、基本面/籌碼面、綜合建議與風險追蹤
+- 若資料不足，會直接標示缺少欄位，不會硬猜數字
 
 ### SAPTA 預漲偵測
 ```bash
@@ -245,7 +267,7 @@ pulse
 - **AI**: LiteLLM (DeepSeek/Groq/Gemini/Claude/GPT)
 
 ### Data & Analysis
-- **Data Sources**: FinMind, Yahoo Finance, Fugle
+- **Data Sources**: FinMind, Yahoo Finance, Fugle, local SQLite warehouse
 - **ML/AI**: XGBoost, scikit-learn, AutoTS (M6 competition winner)
 - **Analysis**: pandas, numpy, ta (Technical Analysis Library)
 
@@ -260,6 +282,7 @@ pulse
 
 | Version | Date | Changes |
 |---------|------|---------|
+| **0.4.5** | **2026-04-20** | **AI 分析提示詞重寫、SmartAgent 輸出統一繁中、run/run_stream 整合測試補強** |
 | **0.4.4** | **2026-03-21** | **效能與架構優化：SAPTA 模組並發執行、smart_agent/screener 拆分重構、統一 logger、修正 561 tests 全通過** |
 | 0.4.3 | 2026-03-20 | Bug fixes: 修正串流超時失效、圖表進度 UI 閃現、SAPTA 閾值鍵名遷移、AI 系統提示語言錯誤 |
 | 0.4.2 | 2026-03-19 | 即時串流回應：AI 分析過程即時顯示，改善使用者體驗 |

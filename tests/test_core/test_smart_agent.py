@@ -529,6 +529,8 @@ class TestBuildAnalysisPrompt:
         assert "台積電" in prompt or "ticker" in prompt.lower()
         assert "820" in prompt or "820" in prompt
         assert "你是專業的台灣股市分析師" in prompt
+        assert "資料不足" in prompt
+        assert "本分析僅供參考，不構成投資建議" in prompt
 
     def test_prompt_with_technical_data(self, agent, mock_stock_data, mock_technical_data):
         """Test building prompt with technical data."""
@@ -543,6 +545,7 @@ class TestBuildAnalysisPrompt:
         assert "技術指標" in prompt
         assert "RSI" in prompt
         assert "MACD" in prompt
+        assert "技術面與位階" in prompt
 
     def test_prompt_with_fundamental_data(self, agent, mock_stock_data, mock_fundamental_data):
         """Test building prompt with fundamental data."""
@@ -557,6 +560,7 @@ class TestBuildAnalysisPrompt:
         assert "基本面數據" in prompt
         assert "本益比" in prompt
         assert "25.5" in prompt
+        assert "資料不足" in prompt
 
     def test_prompt_with_comparison_data(self, agent, mock_stock_data):
         """Test building prompt with comparison data."""
@@ -574,6 +578,7 @@ class TestBuildAnalysisPrompt:
         assert "股票比較" in prompt
         assert "2330" in prompt
         assert "2454" in prompt
+        assert "資料不足" in prompt
 
     def test_prompt_includes_user_question(self, agent):
         """Test that user question is included in prompt."""
@@ -589,6 +594,7 @@ class TestBuildAnalysisPrompt:
 
         assert "你是專業的台灣股市分析師" in prompt
         assert "以下是從市場取得的真實數據" in prompt
+        assert "資料不足" in prompt
 
     def test_prompt_contains_all_data_types(
         self, agent, mock_stock_data, mock_technical_data, mock_fundamental_data
@@ -607,6 +613,8 @@ class TestBuildAnalysisPrompt:
         assert "股票數據" in prompt
         assert "技術指標" in prompt
         assert "基本面數據" in prompt
+        assert "核心摘要" in prompt
+        assert "風險與追蹤指標" in prompt
 
     def test_prompt_market_cap_formatting(self, agent, mock_stock_data):
         """Test market cap is formatted correctly (trillion/billion)."""
@@ -1022,6 +1030,85 @@ class TestRunMethod:
         assert response.context.ticker == "2330"
 
 
+class TestRunOutputIntegration:
+    """Integration-style tests for run and run_stream output formatting."""
+
+    @pytest.mark.asyncio
+    async def test_run_returns_chinese_summary_and_chart_message(self, agent, mock_stock_data):
+        """Test run() returns a localized response with chart info."""
+        ctx = AgentContext(
+            ticker="2330",
+            tickers=["2330"],
+            intent="analyze",
+            stock_data=mock_stock_data,
+        )
+
+        with (
+            patch.object(agent, "_detect_intent", return_value=("analyze", ["2330"])),
+            patch.object(agent, "_resolve_followup", return_value=(False, ["2330"])),
+            patch.object(agent, "_gather_context", new_callable=AsyncMock) as mock_gather,
+            patch.object(agent, "_generate_chart", new_callable=AsyncMock) as mock_chart,
+            patch.object(agent, "_get_ai_client") as mock_get_client,
+        ):
+            mock_gather.return_value = ctx
+            mock_chart.return_value = "charts/2330_chart.png"
+
+            mock_client = MagicMock()
+            mock_client.chat = AsyncMock(return_value="核心摘要：看多。資料完整度正常。")
+            mock_get_client.return_value = mock_client
+
+            response = await agent.run("分析 2330")
+
+        assert response.context is not None
+        assert response.context.ticker == "2330"
+        assert response.chart == "charts/2330_chart.png"
+        assert "核心摘要" in response.message
+        assert "圖表已儲存" in response.message
+        assert "Chart saved" not in response.message
+
+    @pytest.mark.asyncio
+    async def test_run_stream_emits_progress_chunks_and_complete(self, agent, mock_stock_data):
+        """Test run_stream() emits localized progress, chunks, and complete payload."""
+        ctx = AgentContext(
+            ticker="2330",
+            tickers=["2330"],
+            intent="analyze",
+            stock_data=mock_stock_data,
+        )
+
+        async def mock_stream():
+            yield "核心摘要："
+            yield "看多。"
+
+        with (
+            patch.object(agent, "_detect_intent", return_value=("analyze", ["2330"])),
+            patch.object(agent, "_resolve_followup", return_value=(False, ["2330"])),
+            patch.object(agent, "_gather_context", new_callable=AsyncMock) as mock_gather,
+            patch.object(agent, "_generate_chart", new_callable=AsyncMock) as mock_chart,
+            patch.object(agent, "_get_ai_client") as mock_get_client,
+        ):
+            mock_gather.return_value = ctx
+            mock_chart.return_value = "charts/2330_chart.png"
+
+            mock_client = MagicMock()
+            mock_client.chat_stream = MagicMock(return_value=mock_stream())
+            mock_get_client.return_value = mock_client
+
+            events = []
+            async for event in agent.run_stream("分析 2330"):
+                events.append(event)
+
+        assert events[0]["type"] == "progress"
+        assert "正在分析數據" in events[0]["message"]
+        chunk_events = [event for event in events if event["type"] == "chunk"]
+        assert "".join(event["content"] for event in chunk_events) == "核心摘要：看多。"
+        complete_event = next(event for event in events if event["type"] == "complete")
+        assert complete_event["chart"] == "charts/2330_chart.png"
+        assert "核心摘要" in complete_event["message"]
+        assert "圖表已儲存" in complete_event["message"]
+        assert "Chart saved" not in complete_event["message"]
+
+
 class TestHandleChart:
     """Test cases for chart generation."""
 
@@ -1101,7 +1188,7 @@ class TestHandleForecast:
         assert response.chart == "charts/2330_forecast.png"
         # The message contains AI response + chart info
         assert response.message is not None
-        assert "Chart saved" in response.message or "AI分析" in response.message
+        assert "圖表已儲存" in response.message or "AI分析" in response.message
 
     @pytest.mark.asyncio
     async def test_handle_forecast_failure(self, agent, mock_stock_data):

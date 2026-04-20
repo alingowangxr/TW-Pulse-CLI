@@ -153,11 +153,17 @@ class SmartAgent:
 
     def _build_analysis_prompt(self, user_message: str, context: AgentContext) -> str:
         """Build prompt for AI with real data context."""
-        parts = []
-
-        parts.append("你是專業的台灣股市分析師。")
-        parts.append("以下是從市場取得的真實數據：")
-        parts.append("")
+        parts = [
+            "你是專業的台灣股市分析師，請一律使用繁體中文回覆。",
+            "你只能根據下面提供的真實數據、上下文與使用者問題進行分析。",
+            "如果資料不足，請直接標示資料不足並說明缺少哪些欄位，不要自行補數字。",
+            "事實與推論要分開寫，不要把猜測包裝成已知事實。",
+            "輸出結構請固定包含：1. 核心摘要 2. 資料完整度與可信度 3. 技術面與位階 4. 基本面或籌碼面 5. 綜合判斷 6. 風險與追蹤指標。",
+            "所有分析都要包含：本分析僅供參考，不構成投資建議。",
+            "",
+            "以下是從市場取得的真實數據：",
+            "",
+        ]
 
         if context.stock_data:
             s = context.stock_data
@@ -183,7 +189,7 @@ class SmartAgent:
         if context.technical_data:
             t = context.technical_data
             parts.append("=== 技術指標 ===")
-            if t.get("rsi_14"):
+            if t.get("rsi_14") is not None:
                 rsi_status = "超賣" if t["rsi_14"] < 30 else "超買" if t["rsi_14"] > 70 else "中性"
                 parts.append(f"RSI(14): {t['rsi_14']:.1f} - {rsi_status}")
             if t.get("macd") is not None:
@@ -191,15 +197,15 @@ class SmartAgent:
                 parts.append(
                     f"MACD: {t['macd']:.2f} (訊號: {t.get('macd_signal', 0):.2f}) - {macd_status}"
                 )
-            if t.get("sma_20"):
+            if t.get("sma_20") is not None:
                 parts.append(f"SMA20: {t['sma_20']:,.2f} | SMA50: {t.get('sma_50', 0):,.2f}")
-            if t.get("bb_upper"):
+            if t.get("bb_upper") is not None:
                 parts.append(
                     f"布林通道: {t['bb_lower']:,.2f} - {t['bb_middle']:,.2f} - {t['bb_upper']:,.2f}"
                 )
-            if t.get("stoch_k"):
+            if t.get("stoch_k") is not None:
                 parts.append(f"隨機指標: K={t['stoch_k']:.1f}, D={t['stoch_d']:.1f}")
-            if t.get("support_1"):
+            if t.get("support_1") is not None:
                 parts.append(f"支撐: {t['support_1']:,.2f} | 壓力: {t.get('resistance_1', 0):,.2f}")
             if t.get("trend"):
                 parts.append(f"趨勢: {t['trend']} | 訊號: {t.get('signal', 'N/A')}")
@@ -208,23 +214,23 @@ class SmartAgent:
         if context.fundamental_data:
             f = context.fundamental_data
             parts.append("=== 基本面數據 ===")
-            if f.get("pe_ratio"):
+            if f.get("pe_ratio") is not None:
                 parts.append(f"本益比: {f['pe_ratio']:.2f}")
-            if f.get("pb_ratio"):
+            if f.get("pb_ratio") is not None:
                 parts.append(f"股價淨值比: {f['pb_ratio']:.2f}")
-            if f.get("roe"):
+            if f.get("roe") is not None:
                 parts.append(f"股東權益報酬率: {f['roe']:.1f}%")
-            if f.get("roa"):
+            if f.get("roa") is not None:
                 parts.append(f"資產報酬率: {f['roa']:.1f}%")
-            if f.get("npm"):
+            if f.get("npm") is not None:
                 parts.append(f"淨利率: {f['npm']:.1f}%")
-            if f.get("debt_to_equity"):
+            if f.get("debt_to_equity") is not None:
                 parts.append(f"負債權益比: {f['debt_to_equity']:.2f}")
-            if f.get("dividend_yield"):
+            if f.get("dividend_yield") is not None:
                 parts.append(f"股利殖利率: {f['dividend_yield']:.2f}%")
-            if f.get("revenue_growth"):
+            if f.get("revenue_growth") is not None:
                 parts.append(f"營收成長率: {f['revenue_growth']:.1f}%")
-            if f.get("earnings_growth"):
+            if f.get("earnings_growth") is not None:
                 parts.append(f"獲利成長率: {f['earnings_growth']:.1f}%")
             parts.append("")
 
@@ -244,11 +250,12 @@ class SmartAgent:
         parts.append("")
         parts.append("=== 指示 ===")
         parts.append("根據上述真實數據，提供分析時請：")
-        parts.append("1. 簡潔直接（最多3-4段）")
+        parts.append("1. 依照固定結構輸出，不要跳章節")
         parts.append("2. 使用數據中的實際數字")
         parts.append("3. 提供可執行的洞察")
         parts.append("4. 如被問及建議，請根據數據說明理由")
         parts.append("5. 提及相關的支撐/壓力位")
+        parts.append("6. 若資料缺漏，明確標示資料不足")
         parts.append("")
         parts.append("不要捏造數據。僅使用上述提供的數據。")
 
@@ -266,7 +273,7 @@ class SmartAgent:
             index_data = await fetcher.fetch_index(index_name)
 
             if not index_data:
-                return AgentResponse(message=f"Tidak dapat mengambil data untuk {index_name}")
+                return AgentResponse(message=f"無法取得 {index_name} 的資料。")
 
             df = fetcher.get_history_df(
                 f"^{self._intent_detector.KNOWN_INDICES.get(index_name, 'JKSE').replace('^', '')}",
@@ -283,31 +290,31 @@ class SmartAgent:
             change_sign = "+" if index_data.change >= 0 else ""
             msg = f"""{index_data.name} ({index_name})
 
-Value: {index_data.current_price:,.2f}
-Change: {change_sign}{index_data.change:,.2f} ({change_sign}{index_data.change_percent:.2f}%)
-Range: {index_data.day_low:,.2f} - {index_data.day_high:,.2f}
-52W Range: {index_data.week_52_low:,.2f} - {index_data.week_52_high:,.2f}"""
+價格：{index_data.current_price:,.2f}
+漲跌：{change_sign}{index_data.change:,.2f} ({change_sign}{index_data.change_percent:.2f}%)
+區間：{index_data.day_low:,.2f} - {index_data.day_high:,.2f}
+52 週區間：{index_data.week_52_low:,.2f} - {index_data.week_52_high:,.2f}"""
 
             if chart_path:
-                msg += f"\n\nChart saved: {chart_path}"
+                msg += f"\n\n圖表已儲存：{chart_path}"
 
             if any(
                 w in user_message.lower()
                 for w in ["gimana", "bagaimana", "kondisi", "analisis", "apa"]
             ):
                 ai = self._get_ai_client()
-                ai_prompt = f"""Data {index_name}:
-- Value: {index_data.current_price:,.2f}
-- Change: {index_data.change_percent:+.2f}%
-- 52W Range: {index_data.week_52_low:,.2f} - {index_data.week_52_high:,.2f}
+                ai_prompt = f"""指數資料 {index_name}：
+- 指數：{index_data.current_price:,.2f}
+- 漲跌幅：{index_data.change_percent:+.2f}%
+- 52 週區間：{index_data.week_52_low:,.2f} - {index_data.week_52_high:,.2f}
 
-User bertanya: "{user_message}"
+使用者問題：「{user_message}」
 
-Berikan analisis singkat (2-3 kalimat) tentang kondisi {index_name} saat ini."""
+請用 2 到 3 句話簡短分析 {index_name} 目前的狀態。"""
 
                 ai_response = await ai.chat(
                     ai_prompt,
-                    system_prompt="Kamu adalah analis pasar Indonesia. Jawab singkat dan to the point.",
+                    system_prompt="你是資深股市分析師。請以繁體中文簡潔回答，重點明確。",
                     use_history=False,
                 )
                 msg = f"{ai_response}\n\n---\n\n{msg}"
@@ -316,7 +323,7 @@ Berikan analisis singkat (2-3 kalimat) tentang kondisi {index_name} saat ini."""
 
         except Exception as e:
             log.error(f"Error handling index {index_name}: {e}")
-            return AgentResponse(message=f"Error: {e}")
+            return AgentResponse(message=f"處理 {index_name} 時發生錯誤：{e}")
 
     async def _handle_screen(self, user_message: str) -> AgentResponse:
         """Handle stock screening request."""
@@ -327,27 +334,27 @@ Berikan analisis singkat (2-3 kalimat) tentang kondisi {index_name} saat ini."""
 
             if any(kw in msg_lower for kw in ["semua", "all", "955", "seluruh"]):
                 screener = StockScreener(universe_type=StockUniverse.ALL)
-                universe_note = f"(scanning {len(screener.universe)} stocks)"
+                universe_note = f"（掃描 {len(screener.universe)} 檔股票）"
             elif any(kw in msg_lower for kw in ["idx80", "80"]):
                 screener = StockScreener(universe_type=StockUniverse.IDX80)
-                universe_note = "(IDX80)"
+                universe_note = "（IDX80）"
             elif any(kw in msg_lower for kw in ["lq45", "lq"]):
                 screener = StockScreener(universe_type=StockUniverse.LQ45)
-                universe_note = "(LQ45)"
+                universe_note = "（LQ45）"
             else:
                 screener = StockScreener(universe_type=StockUniverse.POPULAR)
-                universe_note = f"(scanning {len(screener.universe)} stocks)"
+                universe_note = f"（掃描 {len(screener.universe)} 檔股票）"
 
             results, explanation = await screener.smart_screen(user_message, limit=15)
 
             if not results:
                 return AgentResponse(
-                    message=f"Tidak ditemukan saham yang cocok {universe_note}.\n\nKriteria: {explanation}"
+                    message=f"找不到符合條件的股票 {universe_note}。\n\n條件說明：{explanation}"
                 )
 
             formatted = screener.format_results(
                 results,
-                title=f"Stock Screening Results {universe_note}",
+                title=f"股票篩選結果 {universe_note}",
                 show_details=True,
             )
 
@@ -356,27 +363,29 @@ Berikan analisis singkat (2-3 kalimat) tentang kondisi {index_name} saat ini."""
             ai = self._get_ai_client()
             top_picks = []
             for r in results[:5]:
-                rsi_str = f"{r.rsi_14:.1f}" if r.rsi_14 else "N/A"
+                rsi_str = f"{r.rsi_14:.1f}" if r.rsi_14 is not None else "無"
                 mc_str = ""
                 if hasattr(r, "market_cap") and r.market_cap:
                     mc = r.market_cap
-                    mc_str = f", MCap: {mc / 1e12:.1f}T" if mc >= 1e12 else f", MCap: {mc / 1e9:.0f}B"
+                    mc_str = f", 市值: {mc / 1e12:.1f} 兆" if mc >= 1e12 else f", 市值: {mc / 1e9:.0f} 億"
                 top_picks.append(
-                    f"- {r.ticker}: Rp {r.price:,.0f} ({r.change_percent:+.2f}%), "
-                    f"RSI: {rsi_str}, Score: {r.score:.0f}{mc_str}"
+                    f"- {r.ticker}：NT$ {r.price:,.0f} ({r.change_percent:+.2f}%), "
+                    f"RSI：{rsi_str}, 分數：{r.score:.0f}{mc_str}"
                 )
 
-            ai_prompt = f"""User bertanya: "{user_message}"
+            ai_prompt = f"""使用者問題：「{user_message}」
 
-Hasil screening ({explanation}):
+篩選結果說明：{explanation}
+
+前五檔候選股票：
 {chr(10).join(top_picks)}
 
-Berikan ringkasan singkat (2-3 kalimat) tentang hasil screening ini.
-Sebutkan saham mana yang paling menarik dan mengapa berdasarkan data di atas."""
+請用 2 到 3 句話簡短總結這次篩選結果。
+並說明哪一檔最值得關注，以及原因。"""
 
             ai_summary = await ai.chat(
                 ai_prompt,
-                system_prompt="Kamu adalah analis saham. Berikan ringkasan singkat hasil screening.",
+                system_prompt="你是資深股市分析師。請以繁體中文簡短總結選股結果，並說明重點。",
                 use_history=False,
             )
             msg = f"{ai_summary}\n\n---\n\n{formatted}"
@@ -385,7 +394,7 @@ Sebutkan saham mana yang paling menarik dan mengapa berdasarkan data di atas."""
 
         except Exception as e:
             log.error(f"Screen error: {e}")
-            return AgentResponse(message=f"Error saat screening: {e}")
+            return AgentResponse(message=f"選股篩選時發生錯誤：{e}")
 
     async def _handle_trading_plan(self, ticker: str, user_message: str) -> AgentResponse:
         """Generate trading plan with TP, SL, and Risk/Reward for a ticker."""
@@ -399,34 +408,32 @@ Sebutkan saham mana yang paling menarik dan mengapa berdasarkan data di atas."""
 
             if not plan:
                 return AgentResponse(
-                    message=f"Tidak dapat membuat trading plan untuk {ticker}. Pastikan ticker valid."
+                    message=f"無法為 {ticker} 產生交易計畫，請確認代號是否正確。"
                 )
 
             formatted = generator.format_plan(plan)
 
             ai = self._get_ai_client()
-            ai_prompt = f"""Trading Plan {ticker}:
-Entry: Rp {plan.entry_price:,.0f}
-TP1: Rp {plan.tp1:,.0f} ({plan.tp1_percent:+.2f}%)
-Stop Loss: Rp {plan.stop_loss:,.0f} ({plan.stop_loss_percent:.2f}%)
-R:R Ratio: 1:{plan.rr_ratio_tp1:.1f}
-Trade Quality: {plan.trade_quality.value}
-Trend: {plan.trend.value}
-Signal: {plan.signal.value}
-RSI: {plan.rsi}
-Confidence: {plan.confidence}%
+            ai_prompt = f"""交易計畫 {ticker}：
+進場價：NT$ {plan.entry_price:,.0f}
+第一目標價：NT$ {plan.tp1:,.0f} ({plan.tp1_percent:+.2f}%)
+停損：NT$ {plan.stop_loss:,.0f} ({plan.stop_loss_percent:.2f}%)
+風報比：1:{plan.rr_ratio_tp1:.1f}
+交易品質：{plan.trade_quality.value}
+趨勢：{plan.trend.value}
+訊號：{plan.signal.value}
+RSI：{plan.rsi}
+信心度：{plan.confidence}%
 
-User bertanya: "{user_message}"
+使用者問題：「{user_message}」
 
-Berikan komentar singkat (2-3 kalimat) tentang trading plan ini.
-Apakah layak dieksekusi? Apa yang perlu diperhatikan?"""
+請用 2 到 3 句話簡短評論這份交易計畫。
+說明是否適合執行，以及需要注意什麼。"""
 
             ai_comment = await ai.chat(
                 ai_prompt,
                 system_prompt=(
-                    "Kamu adalah trader saham profesional Indonesia. "
-                    "Berikan komentar singkat dan actionable tentang trading plan. "
-                    "Fokus pada apakah trade ini layak dan apa risikonya."
+                    "你是專業交易員。請以繁體中文提供簡短、可執行的交易建議，聚焦風險與可行性。"
                 ),
                 use_history=False,
             )
@@ -440,7 +447,7 @@ Apakah layak dieksekusi? Apa yang perlu diperhatikan?"""
 
         except Exception as e:
             log.error(f"Trading plan error for {ticker}: {e}")
-            return AgentResponse(message=f"Error membuat trading plan: {e}")
+            return AgentResponse(message=f"產生交易計畫時發生錯誤：{e}")
 
     async def _handle_sapta(self, ticker: str, user_message: str) -> AgentResponse:
         """Run SAPTA PRE-MARKUP analysis for a ticker."""
@@ -463,25 +470,24 @@ Apakah layak dieksekusi? Apa yang perlu diperhatikan?"""
             notes_str = (
                 "\n".join(f"- {n}" for n in result.notes[:5]) if result.notes else "無特定訊號"
             )
-            ai_prompt = f"""SAPTA 分析 {ticker}:
-狀態: {result.status.value}
-分數: {result.final_score:.1f}/100
-信心度: {result.confidence.value}
-波浪階段: {result.wave_phase or "N/A"}
+            ai_prompt = f"""SAPTA 分析 {ticker}：
+狀態：{result.status.value}
+分數：{result.final_score:.1f}/100
+信心度：{result.confidence.value}
+波浪階段：{result.wave_phase or "N/A"}
 
-偵測到的訊號:
+偵測到的訊號：
 {notes_str}
 
-使用者問題: "{user_message}"
+使用者問題：「{user_message}」
 
-請對此 SAPTA 分析結果提供簡短的解讀（2-3 句話）。
-這檔股票 {ticker} 值得買嗎？什麼是合適的時機？"""
+請對這份 SAPTA 結果提供 2 到 3 句話的簡短解讀。
+說明這檔股票是否值得留意，以及較合適的觀察時機。"""
 
             ai_comment = await ai.chat(
                 ai_prompt,
                 system_prompt=(
-                    "你是一位專業的技術分析師，擅長偵測噴發前兆 (pre-markup phase)。"
-                    "請提供簡短且具備行動建議的解讀。"
+                    "你是一位專業技術分析師，擅長偵測噴發前兆。請以繁體中文簡短解讀並給出行動建議。"
                 ),
                 use_history=False,
             )
@@ -539,32 +545,32 @@ Apakah layak dieksekusi? Apa yang perlu diperhatikan?"""
 
             if not results:
                 return AgentResponse(
-                    message=f"Tidak ditemukan saham di {universe_name} yang memenuhi kriteria SAPTA (WATCHLIST atau lebih tinggi)."
+                    message=f"在 {universe_name} 中找不到符合 SAPTA 條件（WATCHLIST 以上）的股票。"
                 )
 
             formatted = engine.format_scan_results(
-                results, title=f"SAPTA Scan: {universe_name} ({len(results)} ditemukan)"
+                results, title=f"SAPTA 掃描：{universe_name}（{len(results)} 檔）"
             )
 
             ai = self._get_ai_client()
             top_picks = [
-                f"- {r.ticker}: {r.status.value}, Score: {r.final_score:.0f}, "
-                f"Wave: {r.wave_phase or 'N/A'}"
+                f"- {r.ticker}：{r.status.value}，分數：{r.final_score:.0f}，"
+                f"波段：{r.wave_phase or '無'}"
                 for r in results[:5]
             ]
-            ai_prompt = f"""Hasil SAPTA Scan {universe_name}:
+            ai_prompt = f"""SAPTA 掃描結果 {universe_name}：
 {chr(10).join(top_picks)}
 
-Total: {len(results)} saham memenuhi kriteria.
+總計：{len(results)} 檔股票符合條件。
 
-User bertanya: "{user_message}"
+使用者問題：「{user_message}」
 
-Berikan ringkasan singkat (2-3 kalimat) tentang hasil scan ini.
-Saham mana yang paling menarik untuk diperhatikan?"""
+請用 2 到 3 句話簡短總結這次掃描結果。
+並說明哪幾檔最值得關注。"""
 
             ai_summary = await ai.chat(
                 ai_prompt,
-                system_prompt="Kamu adalah analis teknikal. Berikan ringkasan singkat hasil SAPTA scan.",
+                system_prompt="你是技術分析師。請以繁體中文簡短總結 SAPTA 掃描結果與關注重點。",
                 use_history=False,
             )
 
@@ -574,7 +580,7 @@ Saham mana yang paling menarik untuk diperhatikan?"""
 
         except Exception as e:
             log.error(f"SAPTA scan error: {e}")
-            return AgentResponse(message=f"Error SAPTA scan: {e}")
+            return AgentResponse(message=f"SAPTA 掃描時發生錯誤：{e}")
 
     # ── Core flow ─────────────────────────────────────────────────────────────
 
@@ -614,10 +620,9 @@ Saham mana yang paling menarik untuk diperhatikan?"""
             response = await ai.chat(
                 user_message,
                 system_prompt=(
-                    "Kamu adalah Pulse, asisten analisis saham Indonesia. "
-                    "Jika user bertanya hal di luar saham Indonesia, "
-                    "tolak dengan sopan dan arahkan kembali ke topik saham IDX. "
-                    "Jawab singkat dalam 1-2 kalimat."
+                    "你是 PULSE，台灣股市分析助理。"
+                    "如果使用者詢問與台股無關的內容，請禮貌拒絕並引導回股票分析。"
+                    "請用繁體中文簡潔回覆。"
                 ),
                 use_history=True,
             )
@@ -632,11 +637,11 @@ Saham mana yang paling menarik untuk diperhatikan?"""
             filepath = await self._generate_chart(ticker)
             stock = await self._fetch_stock_data(ticker)
             if filepath and stock:
-                msg = f"""{ticker}: Rp {stock["current_price"]:,.0f} ({stock["change"]:+,.0f}, {stock["change_percent"]:+.2f}%)
+                msg = f"""{ticker}: NT$ {stock["current_price"]:,.0f} ({stock["change"]:+,.0f}, {stock["change_percent"]:+.2f}%)
 
-Chart saved: {filepath}"""
+圖表已儲存：{filepath}"""
                 return AgentResponse(message=msg, chart=filepath)
-            return AgentResponse(message=f"Tidak dapat membuat chart untuk {ticker}")
+            return AgentResponse(message=f"無法為 {ticker} 生成圖表。")
 
         if intent == "forecast" and tickers:
             ticker = tickers[0]
@@ -647,9 +652,9 @@ Chart saved: {filepath}"""
             if forecast:
                 msg = forecast["summary"]
                 if forecast.get("filepath"):
-                    msg += f"\n\nChart saved: {forecast['filepath']}"
+                    msg += f"\n\n圖表已儲存：{forecast['filepath']}"
                 return AgentResponse(message=msg, chart=forecast.get("filepath"))
-            return AgentResponse(message=f"無法為 {ticker} 生成預測")
+            return AgentResponse(message=f"無法為 {ticker} 生成預測。")
 
         if intent == "screen":
             return await self._handle_screen(user_message)
@@ -684,10 +689,10 @@ Chart saved: {filepath}"""
         ai_response = await ai.chat(
             analysis_prompt,
             system_prompt=(
-                "你是台灣股市資深分析師。 "
-                "根據提供的真實數據進行分析。 "
-                "用繁體中文回覆，簡潔有力。 "
-                "不要編造數據 - 只能使用提供的數據。"
+                "你是台灣股市資深分析師。"
+                "請根據提供的真實數據進行分析。"
+                "請用繁體中文回覆，簡潔有力。"
+                "不要編造數據，只能使用提供的數據。"
             ),
             use_history=True,
         )
@@ -695,7 +700,7 @@ Chart saved: {filepath}"""
         chart_filepath = await self._generate_chart(tickers[0]) if tickers else None
         final_message = ai_response
         if chart_filepath:
-            final_message += f"\n\nChart saved: {chart_filepath}"
+            final_message += f"\n\n圖表已儲存：{chart_filepath}"
 
         return AgentResponse(
             message=final_message,
@@ -753,10 +758,10 @@ Chart saved: {filepath}"""
             if filepath and stock:
                 msg = f"""{ticker}: NT$ {stock["current_price"]:,.2f} ({stock["change"]:+,.2f}, {stock["change_percent"]:+.2f}%)
 
-Chart saved: {filepath}"""
+圖表已儲存：{filepath}"""
                 yield {"type": "response", "message": msg, "chart": filepath}
             else:
-                yield {"type": "response", "message": f"無法為 {ticker} 生成圖表"}
+                yield {"type": "response", "message": f"無法為 {ticker} 生成圖表。"}
             return
 
         if intent == "forecast" and tickers:
@@ -769,10 +774,10 @@ Chart saved: {filepath}"""
             if forecast:
                 msg = forecast["summary"]
                 if forecast.get("filepath"):
-                    msg += f"\n\nChart saved: {forecast['filepath']}"
+                    msg += f"\n\n圖表已儲存：{forecast['filepath']}"
                 yield {"type": "response", "message": msg, "chart": forecast.get("filepath")}
             else:
-                yield {"type": "response", "message": f"無法為 {ticker} 生成預測"}
+                yield {"type": "response", "message": f"無法為 {ticker} 生成預測。"}
             return
 
         if intent == "screen":
@@ -821,10 +826,10 @@ Chart saved: {filepath}"""
         async for chunk in ai.chat_stream(
             analysis_prompt,
             system_prompt=(
-                "你是台灣股市資深分析師。 "
-                "根據提供的真實數據進行分析。 "
-                "用繁體中文回覆，簡潔有力。 "
-                "不要編造數據 - 只能使用提供的數據。"
+                "你是台灣股市資深分析師。"
+                "請根據提供的真實數據進行分析。"
+                "請用繁體中文回覆，簡潔有力。"
+                "不要編造數據，只能使用提供的數據。"
             ),
             use_history=True,
         ):
@@ -834,7 +839,7 @@ Chart saved: {filepath}"""
         chart_filepath = await self._generate_chart(tickers[0]) if tickers else None
         final_message = full_response
         if chart_filepath:
-            final_message += f"\n\nChart saved: {chart_filepath}"
+            final_message += f"\n\n圖表已儲存：{chart_filepath}"
 
         yield {
             "type": "complete",

@@ -112,6 +112,7 @@ class TechnicalAnalyzer:
         self,
         ticker: str,
         period: str = "1y",
+        df: pd.DataFrame | None = None,
     ) -> TechnicalIndicators | None:
         """
         Perform full technical analysis on a stock.
@@ -119,6 +120,7 @@ class TechnicalAnalyzer:
         Args:
             ticker: Stock ticker
             period: Historical data period
+            df: Optional preloaded OHLCV DataFrame
 
         Returns:
             TechnicalIndicators object or None
@@ -127,18 +129,22 @@ class TechnicalAnalyzer:
             log.error("ta library not installed. Run: pip install ta")
             return None
 
-        from datetime import datetime, timedelta
+        if df is None:
+            from datetime import datetime, timedelta
 
-        # Define date range for fetching data (e.g., 1 year history)
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=365)
-        start_date_str = start_date.strftime("%Y-%m-%d")
-        end_date_str = end_date.strftime("%Y-%m-%d")
+            # Define date range for fetching data (e.g., 1 year history)
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=365)
+            start_date_str = start_date.strftime("%Y-%m-%d")
+            end_date_str = end_date.strftime("%Y-%m-%d")
 
-        # Get historical data
-        df = await self.fetcher.fetch_history(
-            ticker, period, start_date=start_date_str, end_date=end_date_str
-        )
+            # Get historical data
+            df = await self.fetcher.fetch_history(
+                ticker, period, start_date=start_date_str, end_date=end_date_str
+            )
+        else:
+            df = df.copy()
+            df.columns = [str(col).lower() for col in df.columns]
 
         if df is None or df.empty:
             log.warning(f"No data available for {ticker}")

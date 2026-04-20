@@ -95,6 +95,98 @@ async def sector_command(app: "PulseApp", args: str) -> str:
     return "\n".join(lines)
 
 
+async def warehouse_command(app: "PulseApp", args: str) -> str:
+    """Local warehouse status command handler."""
+    from pulse.core.data.local_warehouse import LocalWarehouseFetcher
+    from pulse.core.data.warehouse_sync import WarehouseSyncService
+
+    args_lower = args.lower().strip()
+
+    if args_lower.startswith("sync"):
+        mode = "copy"
+        if "--run" in args_lower or "--mode=run" in args_lower:
+            mode = "run"
+
+        service = WarehouseSyncService()
+        result = service.sync_market(mode=mode)
+
+        if not result.success:
+            return (
+                f"倉庫同步失敗: {result.message}\n\n"
+                f"mode: {result.mode}\n"
+                f"source: {result.source_dir or '(auto)'}\n"
+                f"source db: {result.source_db or '(not found)'}\n"
+                f"local db: {result.local_db or '(not set)'}"
+            )
+
+        details = result.details
+        lines = [
+            "倉庫同步完成",
+            f"mode: {result.mode}",
+            f"source: {result.source_dir or '(auto)'}",
+            f"source db: {result.source_db}",
+            f"local db: {result.local_db}",
+            f"tables: {', '.join(details.get('tables', []))}",
+        ]
+        if "info_rows" in details:
+            lines.append(f"stock_info rows: {details['info_rows']}")
+        if "price_rows" in details:
+            lines.append(f"stock_prices rows: {details['price_rows']}")
+        if "symbols" in details:
+            lines.append(f"symbols: {details['symbols']}")
+        date_range = details.get("date_range")
+        if isinstance(date_range, dict):
+            lines.append(f"date range: {date_range.get('min')} -> {date_range.get('max')}")
+        markets = details.get("markets")
+        if markets:
+            lines.append(f"markets: {', '.join(markets)}")
+        if details.get("downloader_output"):
+            lines.append("")
+            lines.append("downloader output:")
+            lines.append(details["downloader_output"][-600:])
+        return "\n".join(lines)
+
+    fetcher = LocalWarehouseFetcher()
+    status = fetcher.get_status()
+
+    if not status.get("available"):
+        error = status.get("error", "unknown error")
+        db_path = status.get("db_path") or "(not set)"
+        return (
+            "本地倉庫未啟用或找不到。\n\n"
+            f"DB: {db_path}\n"
+            f"原因: {error}\n\n"
+            "可用法：\n"
+            "  - 將 warehouse DB 放到 data/local_warehouse/tw_stock_warehouse.db\n"
+            "  - 或設定 PULSE_DATA__LOCAL_WAREHOUSE_DB"
+        )
+
+    lines = ["本地倉庫狀態\n"]
+    lines.append(f"DB: {status.get('db_path')}")
+    lines.append(f"Tables: {', '.join(status.get('tables', []))}")
+
+    if "info_rows" in status:
+        lines.append(f"stock_info rows: {status['info_rows']}")
+    if "price_rows" in status:
+        lines.append(f"stock_prices rows: {status['price_rows']}")
+    if "symbols" in status:
+        lines.append(f"symbols: {status['symbols']}")
+
+    date_range = status.get("date_range")
+    if isinstance(date_range, dict):
+        lines.append(f"date range: {date_range.get('min')} -> {date_range.get('max')}")
+
+    markets = status.get("markets")
+    if markets:
+        lines.append(f"markets: {', '.join(markets)}")
+
+    lines.append("\n用途：smart-money / analyze 會優先讀本地資料，再 fallback 到網路資料源。")
+    lines.append("同步用法: /warehouse sync [--mode=copy|run]")
+    lines.append("  - copy：複製本地 data/local_warehouse/tw_stock_warehouse.db")
+    lines.append("  - run：執行本地內建 downloader_tw.py，再同步更新後的 DB")
+    return "\n".join(lines)
+
+
 async def plan_command(app: "PulseApp", args: str) -> str:
     """Trading plan command handler."""
     if not args:

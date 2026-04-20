@@ -366,8 +366,87 @@ class TestCommandRegistration:
             "models",
             "sector",
             "taiex",
+            "warehouse",
         ]
 
         for cmd_name in required_commands:
             cmd = command_registry.get(cmd_name)
             assert cmd is not None, f"Required command '{cmd_name}' not registered"
+
+    @pytest.mark.asyncio
+    async def test_execute_warehouse_command(self, command_registry, mock_app, monkeypatch):
+        """Test warehouse command returns status text."""
+        from pulse.core.data.local_warehouse import LocalWarehouseFetcher
+
+        monkeypatch.setattr(
+            LocalWarehouseFetcher,
+            "get_status",
+            lambda self: {
+                "available": True,
+                "db_path": "D:/test/tw_stock_warehouse.db",
+                "tables": ["stock_info", "stock_prices"],
+                "info_rows": 2,
+                "price_rows": 3,
+                "symbols": 1,
+                "date_range": {"min": "2024-01-01", "max": "2024-01-31"},
+                "markets": ["listed", "otc"],
+            },
+        )
+
+        result = await command_registry.execute("/warehouse")
+
+        assert result is not None
+        assert "本地倉庫狀態" in result
+        assert "stock_prices rows" in result
+
+    @pytest.mark.asyncio
+    async def test_execute_warehouse_sync_command(self, command_registry, mock_app, monkeypatch):
+        """Test warehouse sync command returns success text."""
+        from pulse.core.data.warehouse_sync import WarehouseSyncService
+        import shutil
+        from pathlib import Path
+        from uuid import uuid4
+
+        base = Path(__file__).resolve().parent / f"_warehouse_tmp_{uuid4().hex}"
+        source_dir = base / "warehouse"
+        target_dir = base / "local"
+        source_dir.mkdir(parents=True)
+        target_dir.mkdir(parents=True)
+        (source_dir / "tw_stock_warehouse.db").write_bytes(b"sqlite-placeholder")
+
+        monkeypatch.setattr(
+            WarehouseSyncService,
+            "__init__",
+            lambda self, source_dir=None, target_dir=None: None,
+        )
+
+        def fake_sync_market(self, market="tw", mode="copy"):
+            from types import SimpleNamespace
+
+            local_db = target_dir / "tw_stock_warehouse.db"
+            local_db.write_bytes(b"sqlite-placeholder")
+            return SimpleNamespace(
+                success=True,
+                market=market,
+                mode=mode,
+                source_dir=str(source_dir),
+                source_db=str(source_dir / "tw_stock_warehouse.db"),
+                local_db=str(local_db),
+                details={
+                    "tables": ["stock_info", "stock_prices"],
+                    "info_rows": 1,
+                    "price_rows": 1,
+                    "symbols": 1,
+                    "date_range": {"min": "2024-01-01", "max": "2024-01-01"},
+                    "markets": ["listed"],
+                },
+            )
+
+        monkeypatch.setattr(WarehouseSyncService, "sync_market", fake_sync_market)
+
+        result = await command_registry.execute(f"/warehouse sync --mode=copy --source-dir={source_dir}")
+
+        assert result is not None
+        assert "倉庫同步完成" in result
+        assert "stock_prices rows" in result
+        shutil.rmtree(base, ignore_errors=True)

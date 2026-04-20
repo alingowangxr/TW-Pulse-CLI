@@ -5,7 +5,9 @@ import pandas as pd
 
 from pulse.core.data.finmind_data import FinMindFetcher
 from pulse.core.data.fugle import FugleFetcher
+from pulse.core.data.local_warehouse import LocalWarehouseFetcher
 from pulse.core.data.yfinance import YFinanceFetcher
+from pulse.core.config import settings
 from pulse.core.models import FundamentalData, StockData
 from pulse.utils.error_handler import RateLimitError
 from pulse.utils.logger import get_logger
@@ -43,6 +45,7 @@ class StockDataProvider:
         self.finmind_fetcher = FinMindFetcher(token=finmind_token)
         self.yfinance_fetcher = YFinanceFetcher()
         self.fugle_fetcher = FugleFetcher(api_key=fugle_api_key)
+        self.local_warehouse = LocalWarehouseFetcher()
         self._quota_warning_shown: bool = False
         self._fugle_warning_shown: bool = False
 
@@ -52,13 +55,26 @@ class StockDataProvider:
         period: str = "3mo",
         start_date: str | None = None,
         end_date: str | None = None,
+        history_df: pd.DataFrame | None = None,
     ) -> StockData | None:
         """
         Fetches stock data for a ticker.
 
-        Attempts FinMind first, then yfinance, then Fugle.
+        Attempts local warehouse first, then FinMind, then yfinance, then Fugle.
         FinMind uses start_date/end_date, yfinance uses period.
         """
+        if settings.data.local_warehouse_enabled:
+            local_stock = await self.local_warehouse.fetch_stock(
+                ticker,
+                period=period,
+                start_date=start_date,
+                end_date=end_date,
+                history_df=history_df,
+            )
+            if local_stock:
+                log.debug(f"Fetched {ticker} from local warehouse.")
+                return local_stock
+
         # Check if FinMind quota was exceeded
         if FinMindFetcher.is_quota_exceeded():
             if not self._quota_warning_shown:
@@ -265,8 +281,16 @@ class StockDataProvider:
         """
         Fetches historical data as DataFrame.
 
-        Attempts FinMind first, then yfinance, then Fugle.
+        Attempts local warehouse first, then FinMind, then yfinance, then Fugle.
         """
+        if settings.data.local_warehouse_enabled:
+            local_history = await self.local_warehouse.fetch_history(
+                ticker, period=period, start_date=start_date, end_date=end_date
+            )
+            if local_history is not None and not local_history.empty:
+                log.debug(f"Fetched history for {ticker} from local warehouse.")
+                return local_history
+
         # Try FinMind first
         if start_date and end_date:
             df = await self.finmind_fetcher.fetch_history(ticker, start_date, end_date)

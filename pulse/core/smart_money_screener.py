@@ -210,15 +210,27 @@ class SmartMoneyScreener:
             if not stock:
                 return None
 
-            # Get technical indicators
-            technical = await self.analyzer.analyze(ticker)
-            if not technical:
-                return None
-
             # Get historical data for additional analysis
             df = await self.fetcher.fetch_history(
                 ticker, period="1y", start_date=start_date_str, end_date=end_date_str
             )
+            if df is None or df.empty:
+                return None
+
+            stock = await self.fetcher.fetch_stock(
+                ticker,
+                period="1y",
+                start_date=start_date_str,
+                end_date=end_date_str,
+                history_df=df,
+            )
+            if not stock:
+                return None
+
+            # Get technical indicators from the same data to avoid duplicate fetches
+            technical = await self.analyzer.analyze(ticker, df=df)
+            if not technical:
+                return None
 
             result = SmartMoneyResult(
                 ticker=ticker,
@@ -237,8 +249,7 @@ class SmartMoneyScreener:
             )
 
             # Additional analysis from historical data (skip OBV in fast mode)
-            if df is not None and not df.empty:
-                result = self._analyze_from_dataframe(result, df, fast_mode)
+            result = self._analyze_from_dataframe(result, df, fast_mode)
 
             return result
 

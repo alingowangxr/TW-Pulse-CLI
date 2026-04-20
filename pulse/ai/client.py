@@ -357,11 +357,11 @@ class AIClient:
         import json
 
         user_message = f"""
-根據以下數據為股票 {ticker} 提供建議:
+請根據以下數據，為股票 {ticker} 產生投資建議：
 
 {json.dumps(analysis_result, indent=2, default=str)}
 
-以 JSON 格式回應，結構如下:
+請只輸出 JSON，並符合以下結構：
 {{
     "signal": "Strong Buy/Buy/Neutral/Sell/Strong Sell",
     "confidence": 0-100,
@@ -369,8 +369,9 @@ class AIClient:
     "stop_loss": number,
     "risk_level": "Low/Medium/High",
     "holding_period": "Short/Medium/Long",
-    "key_reasons": ["reason1", "reason2", ...],
-    "risks": ["risk1", "risk2", ...]
+    "key_reasons": ["原因1", "原因2", ...],
+    "risks": ["風險1", "風險2", ...],
+    "summary": "繁體中文摘要"
 }}
 """
 

@@ -14,7 +14,19 @@
       "Bash(python:*)",
       "Bash(pip show:*)",
       "Bash(pip index:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(.venv/Scripts/pip install:*)",
+      "Bash(.venv/Scripts/python:*)",
+      "Bash(wc -l pulse/core/*.py pulse/cli/*.py pulse/core/sapta/*.py)",
+      "Bash(xargs wc:*)",
+      "Bash(ls -lh .env*)",
+      "Bash(xargs grep:*)",
+      "Bash(ls -lh pulse/core/sapta/ml/*.py)",
+      "Bash(grep -v \":0$\")",
+      "Bash(sort -t: -k2 -rn)",
+      "Bash(grep -E \"FAILED|_{5,}|Error|assert\")",
+      "Bash(grep -v \"DeprecationWarning\\\\|Pydantic\\\\|pydantic\\\\|site-packages\\\\|UserWarning\\\\|_warn\\\\|warnings summary\\\\|^$\")",
+      "Bash(awk 'NR>=266 && NR<=280' /c/Users/szmik/TW-Pulse-CLI/pulse/core/sapta/ml/train_model.py)"
     ]
   }
 }

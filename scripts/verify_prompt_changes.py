@@ -18,18 +18,18 @@ checks = []
 
 # Check 1: CHAT_SYSTEM_PROMPT
 print("[1] Check CHAT_SYSTEM_PROMPT...")
-if "MUST USE Traditional Chinese" in CHAT_SYSTEM_PROMPT:
+if "所有回覆一律使用繁體中文" in CHAT_SYSTEM_PROMPT:
     print("    [OK] Contains forced Chinese instruction")
     checks.append(True)
 else:
     print("    [FAIL] Missing forced Chinese instruction")
     checks.append(False)
 
-if "ALWAYS respond in Traditional Chinese" in CHAT_SYSTEM_PROMPT:
-    print("    [OK] Contains ALWAYS rule")
+if "只回答與台灣股市、投資、交易相關的內容" in CHAT_SYSTEM_PROMPT:
+    print("    [OK] Contains scope rule")
     checks.append(True)
 else:
-    print("    [FAIL] Missing ALWAYS rule")
+    print("    [FAIL] Missing scope rule")
     checks.append(False)
 
 print()
@@ -38,19 +38,19 @@ print()
 print("[2] Check get_system_base()...")
 base_prompt = StockAnalysisPrompts.get_system_base()
 
-if "MUST respond in Traditional Chinese" in base_prompt:
+if "必須使用繁體中文回答" in base_prompt:
     print("    [OK] Contains forced Chinese requirement")
     checks.append(True)
 else:
     print("    [FAIL] Missing forced Chinese requirement")
     checks.append(False)
 
-if "English or Traditional Chinese" in base_prompt:
-    print("    [FAIL] Still allows English option (incorrect)")
-    checks.append(False)
-else:
-    print("    [OK] English option removed")
+if "資料不足" in base_prompt and "不要自行補齊" in base_prompt:
+    print("    [OK] Contains data sufficiency rules")
     checks.append(True)
+else:
+    print("    [FAIL] Missing data sufficiency rules")
+    checks.append(False)
 
 print()
 
@@ -58,11 +58,18 @@ print()
 print("[3] Check get_comprehensive_prompt()...")
 comp_prompt = StockAnalysisPrompts.get_comprehensive_prompt()
 
-if "CRITICAL" in comp_prompt and "Traditional Chinese" in comp_prompt:
-    print("    [OK] Contains CRITICAL language reminder")
+if "核心摘要" in comp_prompt and "資料完整度與可信度" in comp_prompt:
+    print("    [OK] Contains structured sections")
     checks.append(True)
 else:
-    print("    [FAIL] Missing CRITICAL language reminder")
+    print("    [FAIL] Missing structured sections")
+    checks.append(False)
+
+if "資料不足" in comp_prompt and "不要自行補數字" in comp_prompt:
+    print("    [OK] Contains missing-data rule")
+    checks.append(True)
+else:
+    print("    [FAIL] Missing missing-data rule")
     checks.append(False)
 
 print()
@@ -71,15 +78,11 @@ print()
 print("[4] Check format_analysis_request()...")
 analysis_req = StockAnalysisPrompts.format_analysis_request("2330", {})
 
-# Check if contains Chinese characters or Traditional Chinese keywords
-has_chinese = any('\u4e00' <= c <= '\u9fff' for c in analysis_req) or "Traditional Chinese" in analysis_req
-has_language_reminder = "Traditional Chinese" in analysis_req or "Chinese" in analysis_req or len(analysis_req) > 50
-
-if has_chinese and has_language_reminder:
-    print("    [OK] User message uses Chinese with language reminder")
+if "請分析股票 2330" in analysis_req and "完整分析" not in analysis_req:
+    print("    [OK] User message is localized and structured")
     checks.append(True)
 else:
-    print("    [FAIL] User message missing Chinese or language reminder")
+    print("    [FAIL] User message missing localized structure")
     checks.append(False)
 
 print()
@@ -88,14 +91,31 @@ print()
 print("[5] Check format_comparison_request()...")
 comp_req = StockAnalysisPrompts.format_comparison_request(["2330"], {})
 
-has_chinese = any('\u4e00' <= c <= '\u9fff' for c in comp_req) or "Traditional Chinese" in comp_req
-has_language_reminder = "Traditional Chinese" in comp_req or "Chinese" in comp_req or len(comp_req) > 50
-
-if has_chinese and has_language_reminder:
-    print("    [OK] User message uses Chinese with language reminder")
+if "請比較以下股票：2330" in comp_req and "不要硬選" in comp_req:
+    print("    [OK] Comparison request is localized and constrained")
     checks.append(True)
 else:
-    print("    [FAIL] User message missing Chinese or language reminder")
+    print("    [FAIL] Comparison request missing localized constraint")
+    checks.append(False)
+
+print()
+
+# Check 6: Recommendation prompt
+print("[6] Check get_recommendation_prompt()...")
+rec_prompt = StockAnalysisPrompts.get_recommendation_prompt()
+
+if "唯一一個有效 JSON" in rec_prompt and "signal" in rec_prompt:
+    print("    [OK] Contains strict JSON instruction")
+    checks.append(True)
+else:
+    print("    [FAIL] Missing strict JSON instruction")
+    checks.append(False)
+
+if "summary、key_reasons、risks 必須是繁體中文" in rec_prompt:
+    print("    [OK] Contains Chinese field rule")
+    checks.append(True)
+else:
+    print("    [FAIL] Missing Chinese field rule")
     checks.append(False)
 
 print()
