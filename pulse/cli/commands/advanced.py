@@ -109,42 +109,7 @@ async def warehouse_command(app: "PulseApp", args: str) -> str:
 
         service = WarehouseSyncService()
         result = service.sync_market(mode=mode)
-
-        if not result.success:
-            return (
-                f"倉庫同步失敗: {result.message}\n\n"
-                f"mode: {result.mode}\n"
-                f"source: {result.source_dir or '(auto)'}\n"
-                f"source db: {result.source_db or '(not found)'}\n"
-                f"local db: {result.local_db or '(not set)'}"
-            )
-
-        details = result.details
-        lines = [
-            "倉庫同步完成",
-            f"mode: {result.mode}",
-            f"source: {result.source_dir or '(auto)'}",
-            f"source db: {result.source_db}",
-            f"local db: {result.local_db}",
-            f"tables: {', '.join(details.get('tables', []))}",
-        ]
-        if "info_rows" in details:
-            lines.append(f"stock_info rows: {details['info_rows']}")
-        if "price_rows" in details:
-            lines.append(f"stock_prices rows: {details['price_rows']}")
-        if "symbols" in details:
-            lines.append(f"symbols: {details['symbols']}")
-        date_range = details.get("date_range")
-        if isinstance(date_range, dict):
-            lines.append(f"date range: {date_range.get('min')} -> {date_range.get('max')}")
-        markets = details.get("markets")
-        if markets:
-            lines.append(f"markets: {', '.join(markets)}")
-        if details.get("downloader_output"):
-            lines.append("")
-            lines.append("downloader output:")
-            lines.append(details["downloader_output"][-600:])
-        return "\n".join(lines)
+        return _format_warehouse_result(result)
 
     fetcher = LocalWarehouseFetcher()
     status = fetcher.get_status()
@@ -161,6 +126,147 @@ async def warehouse_command(app: "PulseApp", args: str) -> str:
             "  - 或設定 PULSE_DATA__LOCAL_WAREHOUSE_DB"
         )
 
+    lines = ["本地倉庫狀態\n"]
+    lines.append(f"DB: {status.get('db_path')}")
+    lines.append(f"Tables: {', '.join(status.get('tables', []))}")
+
+    if "info_rows" in status:
+        lines.append(f"stock_info rows: {status['info_rows']}")
+    if "price_rows" in status:
+        lines.append(f"stock_prices rows: {status['price_rows']}")
+    if "symbols" in status:
+        lines.append(f"symbols: {status['symbols']}")
+
+    date_range = status.get("date_range")
+    if isinstance(date_range, dict):
+        lines.append(f"date range: {date_range.get('min')} -> {date_range.get('max')}")
+
+    markets = status.get("markets")
+    if markets:
+        lines.append(f"markets: {', '.join(markets)}")
+
+    lines.append("\n用途：smart-money / analyze 會優先讀本地資料，再 fallback 到網路資料源。")
+    lines.append("同步用法: /warehouse sync [--mode=copy|run]")
+    lines.append("  - copy：複製本地 data/local_warehouse/tw_stock_warehouse.db")
+    lines.append("  - run：執行本地內建 downloader_tw.py，再同步更新後的 DB")
+    return "\n".join(lines)
+
+
+async def warehouse_command_stream(app: "PulseApp", args: str):
+    """Local warehouse command handler with streaming progress."""
+    from pulse.core.data.local_warehouse import LocalWarehouseFetcher
+    from pulse.core.data.warehouse_sync import WarehouseSyncService
+
+    args_lower = args.lower().strip()
+
+    if args_lower.startswith("sync"):
+        mode = "copy"
+        if "--run" in args_lower or "--mode=run" in args_lower:
+            mode = "run"
+
+        service = WarehouseSyncService()
+
+        if mode == "run":
+            async for event in service.sync_market_stream(mode=mode):
+                if event.get("type") == "response":
+                    result = event.get("result", {})
+                    yield {"type": "response", "message": _format_warehouse_sync_payload(result)}
+                else:
+                    yield event
+            return
+
+        result = service.sync_market(mode=mode)
+        if result.success:
+            yield {"type": "response", "message": _format_warehouse_result(result)}
+        else:
+            yield {"type": "error", "message": _format_warehouse_result(result)}
+        return
+
+    fetcher = LocalWarehouseFetcher()
+    status = fetcher.get_status()
+    if not status.get("available"):
+        yield {
+            "type": "response",
+            "message": (
+                "本地倉庫未啟用或找不到。\n\n"
+                f"DB: {status.get('db_path') or '(not set)'}\n"
+                f"原因: {status.get('error', 'unknown error')}\n\n"
+                "可用法：\n"
+                "  - 將 warehouse DB 放到 data/local_warehouse/tw_stock_warehouse.db\n"
+                "  - 或設定 PULSE_DATA__LOCAL_WAREHOUSE_DB"
+            ),
+        }
+        return
+
+    yield {"type": "response", "message": _format_warehouse_status(status)}
+
+
+def _format_warehouse_result(result) -> str:
+    if not getattr(result, "success", False):
+        return (
+            f"倉庫同步失敗: {result.message}\n\n"
+            f"mode: {result.mode}\n"
+            f"source: {result.source_dir or '(auto)'}\n"
+            f"source db: {result.source_db or '(not found)'}\n"
+            f"local db: {result.local_db or '(not set)'}"
+        )
+
+    details = result.details
+    lines = [
+        "倉庫同步完成",
+        f"mode: {result.mode}",
+        f"source: {result.source_dir or '(auto)'}",
+        f"source db: {result.source_db}",
+        f"local db: {result.local_db}",
+        f"tables: {', '.join(details.get('tables', []))}",
+    ]
+    if "info_rows" in details:
+        lines.append(f"stock_info rows: {details['info_rows']}")
+    if "price_rows" in details:
+        lines.append(f"stock_prices rows: {details['price_rows']}")
+    if "symbols" in details:
+        lines.append(f"symbols: {details['symbols']}")
+    date_range = details.get("date_range")
+    if isinstance(date_range, dict):
+        lines.append(f"date range: {date_range.get('min')} -> {date_range.get('max')}")
+    markets = details.get("markets")
+    if markets:
+        lines.append(f"markets: {', '.join(markets)}")
+    if details.get("downloader_output"):
+        lines.append("")
+        lines.append("downloader output:")
+        lines.append(details["downloader_output"][-600:])
+    return "\n".join(lines)
+
+
+def _format_warehouse_sync_payload(result: dict[str, object]) -> str:
+    details = result.get("details", {}) if isinstance(result, dict) else {}
+    if not isinstance(details, dict):
+        details = {}
+    lines = [
+        "倉庫同步完成",
+        f"mode: {result.get('mode', 'run')}",
+        f"source: {result.get('source_dir', '(auto)')}",
+        f"source db: {result.get('source_db', '(not found)')}",
+        f"local db: {result.get('local_db', '(not set)')}",
+        f"tables: {', '.join(details.get('tables', []))}",
+    ]
+    if "info_rows" in details:
+        lines.append(f"stock_info rows: {details['info_rows']}")
+    if "price_rows" in details:
+        lines.append(f"stock_prices rows: {details['price_rows']}")
+    if "symbols" in details:
+        lines.append(f"symbols: {details['symbols']}")
+    date_range = details.get("date_range")
+    if isinstance(date_range, dict):
+        lines.append(f"date range: {date_range.get('min')} -> {date_range.get('max')}")
+    markets = details.get("markets")
+    if markets:
+        lines.append(f"markets: {', '.join(markets)}")
+    return "\n".join(lines)
+
+
+def _format_warehouse_status(status: dict[str, object]) -> str:
     lines = ["本地倉庫狀態\n"]
     lines.append(f"DB: {status.get('db_path')}")
     lines.append(f"Tables: {', '.join(status.get('tables', []))}")

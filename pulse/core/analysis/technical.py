@@ -19,6 +19,7 @@ from pulse.core.data.stock_data_provider import StockDataProvider
 from pulse.core.models import (
     HappyLinesIndicators,
     HappyZone,
+    LohasChannel,
     SignalType,
     TechnicalIndicators,
     TrendType,
@@ -858,6 +859,9 @@ class TechnicalAnalyzer:
             # Determine signal
             signal = self._determine_happy_signal(zone, trend)
 
+            # Calculate LOHAS Channel (樂活通道) - 20MA +/- 2SD
+            channel = self._calculate_lohas_channel(df)
+
             return HappyLinesIndicators(
                 ticker=ticker,
                 line_1=line_1,
@@ -865,6 +869,7 @@ class TechnicalAnalyzer:
                 line_3=line_3,
                 line_4=line_4,
                 line_5=line_5,
+                channel=channel,
                 current_price=current_price,
                 position_ratio=position_ratio,
                 zone=zone,
@@ -878,6 +883,47 @@ class TechnicalAnalyzer:
 
         except Exception as e:
             log.error(f"Error calculating Happy Lines for {ticker}: {e}")
+            return None
+
+    def _calculate_lohas_channel(self, df: pd.DataFrame, period_days: int = 20) -> LohasChannel | None:
+        """Calculate LOHAS Channel (樂活通道).
+
+        樂活通道由 20 日移動平均線組成：
+        - 中線：20 日收盤價平均線 (MA20)
+        - 上限 (UB)：20 日高點平均線
+        - 下限 (LB)：20 日低點平均線
+
+        Args:
+            df: DataFrame with OHLCV data
+            period_days: Calculation period in days (default: 20 days)
+
+        Returns:
+            LohasChannel object or None if calculation fails
+        """
+        try:
+            if len(df) < period_days:
+                log.warning(f"Insufficient data for LOHAS Channel (needs {period_days} days)")
+                return None
+
+            close = df["close"]
+            high = df["high"]
+            low = df["low"]
+
+            # Calculate Moving Averages (20-day)
+            mid_band = float(close.rolling(window=period_days).mean().iloc[-1])
+            upper_band = float(high.rolling(window=period_days).mean().iloc[-1])
+            lower_band = float(low.rolling(window=period_days).mean().iloc[-1])
+
+            bandwidth = (upper_band - lower_band) / mid_band if mid_band > 0 else 0.0
+
+            return LohasChannel(
+                upper_band=upper_band,
+                lower_band=lower_band,
+                mid_band=mid_band,
+                bandwidth=bandwidth,
+            )
+        except Exception as e:
+            log.error(f"Error calculating LOHAS Channel: {e}")
             return None
 
     def _determine_happy_zone(

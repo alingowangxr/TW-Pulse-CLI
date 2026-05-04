@@ -117,13 +117,13 @@ mypy pulse/
 
 | 變數名稱 | 預設值 | 說明 |
 |----------|--------|------|
-| `PULSE_AI__DEFAULT_MODEL` | `deepseek/deepseek-chat` | 預設 AI 模型 |
+| `PULSE_AI__DEFAULT_MODEL` | `deepseek/deepseek-v4-flash` | 預設 AI 模型 |
 | `PULSE_AI__TEMPERATURE` | `0.7` | 溫度參數 (0.0-2.0) |
 | `PULSE_AI__MAX_TOKENS` | `4096` | 最大回應字數 |
 | `PULSE_AI__TIMEOUT` | `120` | 請求超時（秒） |
 
 **可用模型列表：**
-- `deepseek/deepseek-chat` - 預設，成本效益高
+- `deepseek/deepseek-v4-flash` - 預設，成本效益高
 - `gemini/gemini-2.0-flash`
 - `gemini/gemini-2.5-flash-preview-05-20`
 - `anthropic/claude-sonnet-4-20250514`

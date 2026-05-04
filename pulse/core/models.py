@@ -466,6 +466,21 @@ class HappyZone(str, Enum):
     OVERBOUGHT = "過熱區"  # Line 5
 
 
+class LohasChannel(BaseModel):
+    """樂活通道 (LOHAS Channel).
+
+    由 20 日移動平均線 (MA20) 及其上下限組成：
+    - 中線：20 日收盤價平均線
+    - 上限 (UB)：20 日高點平均線
+    - 下限 (LB)：20 日低點平均線
+    """
+
+    upper_band: float  # 20日高點平均線 (UB)
+    lower_band: float  # 20日低點平均線 (LB)
+    mid_band: float  # 20日收盤平均線 (20MA)
+    bandwidth: float = 0.0
+
+
 class HappyLinesIndicators(BaseModel):
     """樂活五線譜技術指標.
 
@@ -483,6 +498,9 @@ class HappyLinesIndicators(BaseModel):
     line_4: float | None = None  # 偏高線 (中軌 + 1σ)
     line_5: float | None = None  # 過熱線 (中軌 + 2σ)
 
+    # 樂活通道 (LOHAS Channel)
+    channel: LohasChannel | None = None
+
     # 當前狀態
     current_price: float = 0.0
     position_ratio: float = 0.0  # 位階百分比 (0-100%)
@@ -499,6 +517,27 @@ class HappyLinesIndicators(BaseModel):
     # 趨勢與訊號
     trend: TrendType = TrendType.SIDEWAYS
     signal: SignalType = SignalType.NEUTRAL
+
+    @property
+    def is_in_channel(self) -> bool:
+        """Check if price is within LOHAS channel."""
+        if self.channel:
+            return self.channel.lower_band <= self.current_price <= self.channel.upper_band
+        return True
+
+    @property
+    def is_above_channel(self) -> bool:
+        """Check if price is above LOHAS channel (Short-term overbought)."""
+        if self.channel:
+            return self.current_price > self.channel.upper_band
+        return False
+
+    @property
+    def is_below_channel(self) -> bool:
+        """Check if price is below LOHAS channel (Short-term oversold)."""
+        if self.channel:
+            return self.current_price < self.channel.lower_band
+        return False
 
     @property
     def line_width(self) -> float:
@@ -519,18 +558,34 @@ class HappyLinesIndicators(BaseModel):
 
     def to_summary(self) -> dict[str, Any]:
         """Generate summary dict for display."""
-        return {
+        summary = {
             "當前價格": self.current_price,
             "位階": self.zone.value,
             "位階百分比": f"{self.position_ratio:.1f}%",
-            "過熱線(5)": self.line_5,
-            "偏高線(4)": self.line_4,
-            "平衡線(3)": self.line_3,
-            "偏低線(2)": self.line_2,
-            "超跌線(1)": self.line_1,
+            "五線譜": {
+                "過熱線(5)": self.line_5,
+                "偏高線(4)": self.line_4,
+                "平衡線(3)": self.line_3,
+                "偏低線(2)": self.line_2,
+                "超跌線(1)": self.line_1,
+            },
             "趨勢": self.trend.value,
             "訊號": self.signal.value,
         }
+
+        if self.channel:
+            summary["樂活通道"] = {
+                "上限(UB)": self.channel.upper_band,
+                "中線(20MA)": self.channel.mid_band,
+                "下限(LB)": self.channel.lower_band,
+                "狀態": "突破上限(強勢)"
+                if self.is_above_channel
+                else "跌破下限(弱勢)"
+                if self.is_below_channel
+                else "通道內",
+            }
+
+        return summary
 
 
 class TradingPlan(BaseModel):

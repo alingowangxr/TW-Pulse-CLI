@@ -285,6 +285,7 @@ class CommandRegistry:
             "Local warehouse status (本地資料倉庫狀態)",
             "/warehouse [sync [--mode=copy|run]]",
             aliases=["db", "datahub"],
+            stream_handler=self._cmd_warehouse_stream,
         )
 
         self.register(
@@ -465,3 +466,10 @@ class CommandRegistry:
         from pulse.cli.commands.advanced import warehouse_command
 
         return await warehouse_command(self.app, args)
+
+    async def _cmd_warehouse_stream(self, args: str):
+        """Local warehouse status command handler with streaming response."""
+        from pulse.cli.commands.advanced import warehouse_command_stream
+
+        async for event in warehouse_command_stream(self.app, args):
+            yield event

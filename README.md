@@ -46,6 +46,7 @@
 | Feature | Description |
 |---------|-------------|
 | **Technical Analysis** | RSI, MACD, 布林通道, SMA/EMA, ADX, CCI, Ichimoku, Keltner Channel, **Happy Lines (樂活五線譜)** 等 20+ 指標 |
+| **LOHAS Channel** | **樂活通道** - 20 日高低點平均線系統 (UB/MA20/LB)，精準判斷止跌站穩與強勢噴出 |
 | **Fundamental Analysis** | PE, PB, ROE/ROA, 股息率, 營收成長 |
 | **Institutional Flow** | 外資、投信、自營商買賣超分析（支援 API Token） |
 | **Stock Screening** | 多條件篩選股票，支援 CSV 匯出，進度條顯示 |
@@ -70,7 +71,7 @@
 | **MA Crossover** | 均線交叉策略 - EMA9/EMA21 交叉 + MA50 趨勢過濾 |
 | **BB Squeeze** | 布林壓縮策略 - 低波動壓縮後的向上突破 |
 | **Keltner Channel** | 短線突破策略 (BUY/HOLD/SELL/WATCH 信號) |
-| **Happy Lines** | 樂活五線譜 - 基於統計分佈的股價位階判斷工具 |
+| **Happy Lines +** | **樂活五線譜 + 樂活通道** - 長線位階結合短線動能，實作「站回 LB 買進、跌破 UB 賣出」專業規則 |
 | **Custom Strategies** | 支援自定義策略開發與回測 |
 
 ### 🛠️ 其他工具
@@ -168,7 +169,7 @@ cp .env.example .env
 
 ```env
 # AI 模型（擇一設定）
-DEEPSEEK_API_KEY=your_key          # 預設 AI 模型（推薦）
+DEEPSEEK_API_KEY=your_key          # 預設 AI 模型（推薦，deepseek-v4-flash）
 ANTHROPIC_API_KEY=your_key         # Claude
 OPENAI_API_KEY=your_key            # GPT
 GEMINI_API_KEY=your_key            # Gemini
@@ -189,7 +190,8 @@ pulse
 
 ### Local Warehouse
 
-如果本機已有台股倉庫資料，可直接用 `/warehouse sync` 同步。
+如果你希望使用本地股票資料，請先執行 `/warehouse` 或 `/warehouse sync` 來建立 `tw_stock_warehouse.db`。
+這個檔案不會隨 repository 一起上傳，因為資料庫可能很大，且內容通常是本機環境專用。
 
 ```bash
 /warehouse
@@ -282,6 +284,7 @@ pulse
 
 | Version | Date | Changes |
 |---------|------|---------|
+| **0.4.6** | **2026-05-04** | **樂活通道 (LOHAS Channel) 整合：實作 20 日高低點平均線、站回 LB 買進/跌破 UB 賣出策略規則、AI 分析同步支援** |
 | **0.4.5** | **2026-04-20** | **AI 分析提示詞重寫、SmartAgent 輸出統一繁中、run/run_stream 整合測試補強** |
 | **0.4.4** | **2026-03-21** | **效能與架構優化：SAPTA 模組並發執行、smart_agent/screener 拆分重構、統一 logger、修正 561 tests 全通過** |
 | 0.4.3 | 2026-03-20 | Bug fixes: 修正串流超時失效、圖表進度 UI 閃現、SAPTA 閾值鍵名遷移、AI 系統提示語言錯誤 |

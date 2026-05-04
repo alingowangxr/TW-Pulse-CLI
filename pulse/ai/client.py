@@ -8,7 +8,7 @@ import litellm
 from litellm import acompletion
 
 from pulse.ai.prompts import CHAT_SYSTEM_PROMPT
-from pulse.core.config import settings
+from pulse.core.config import normalize_model_id, settings
 from pulse.utils.logger import get_logger
 
 # Suppress LiteLLM verbose logging
@@ -46,7 +46,7 @@ def get_available_providers() -> set[str]:
 
 def _check_api_keys():
     """Check if required API keys are set for the current model."""
-    model = settings.ai.default_model
+    model = normalize_model_id(settings.ai.default_model)
 
     for prefix, env_vars in API_KEY_MAP.items():
         if model.startswith(prefix):
@@ -83,7 +83,7 @@ class AIClient:
                    - GEMINI_API_KEY for Google
                    - GROQ_API_KEY for Groq
         """
-        self.model = model or settings.ai.default_model
+        self.model = normalize_model_id(model or settings.ai.default_model)
         self.temperature = settings.ai.temperature
         self.max_tokens = settings.ai.max_tokens
         self.timeout = settings.ai.timeout
@@ -97,9 +97,11 @@ class AIClient:
         Args:
             model: Model ID
         """
-        if model in settings.ai.available_models:
-            self.model = model
-            log.info(f"Model switched to: {settings.get_model_display_name(model)}")
+        canonical_model = normalize_model_id(model)
+
+        if canonical_model in settings.ai.available_models:
+            self.model = canonical_model
+            log.info(f"Model switched to: {settings.get_model_display_name(canonical_model)}")
         else:
             log.warning(f"Unknown model: {model}")
 

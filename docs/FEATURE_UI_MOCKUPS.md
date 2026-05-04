@@ -7,7 +7,7 @@
 ┌──────────────────────────────────────────────┐
 │              Select Model                     │
 ├──────────────────────────────────────────────┤
-│  > DeepSeek Chat (DeepSeek)                  │
+│  > DeepSeek V4 Flash (DeepSeek)              │
 │    Claude Sonnet 4 (Anthropic)               │
 │    Claude Haiku 4 (Anthropic)                │
 │    GPT-4o (OpenAI)                           │
@@ -38,7 +38,7 @@
 ┌──────────────────────────────────────────────┐
 │              Select Model                     │
 ├──────────────────────────────────────────────┤
-│  > DeepSeek Chat (DeepSeek)                  │
+│  > DeepSeek V4 Flash (DeepSeek)              │
 │                                               │
 │                                               │
 │                                               │
@@ -57,7 +57,7 @@
 ┌──────────────────────────────────────────────┐
 │              Select Model                     │
 ├──────────────────────────────────────────────┤
-│  > DeepSeek Chat (DeepSeek)                  │
+│  > DeepSeek V4 Flash (DeepSeek)              │
 │    Gemini 2.5 Flash (Google)                 │
 │    Gemini 2.5 Pro (Google)                   │
 │    Gemini 3 Flash Preview (Google)           │
@@ -109,7 +109,7 @@
 │              Select Model                     │
 ├──────────────────────────────────────────────┤
 │  ✓ Available Models (3)                      │
-│  > DeepSeek Chat (DeepSeek)                  │
+│  > DeepSeek V4 Flash (DeepSeek)              │
 │    Gemini 2.5 Flash (Google)                 │
 │    Llama 3.3 70B (Groq)                      │
 │                                               │
@@ -151,7 +151,7 @@
 ┌──────────────────────────────────────────────┐
 │              Select Model                     │
 ├──────────────────────────────────────────────┤
-│  > DeepSeek Chat (DeepSeek)         ✓       │
+│  > DeepSeek V4 Flash (DeepSeek)     ✓       │
 │    Claude Sonnet 4 (Anthropic)      ⚠       │
 │    Claude Haiku 4 (Anthropic)       ⚠       │
 │    GPT-4o (OpenAI)                  ⚠       │

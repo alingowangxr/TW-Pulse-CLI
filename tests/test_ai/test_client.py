@@ -37,7 +37,7 @@ def mock_litellm():
 @pytest.fixture
 def ai_client(mock_litellm):
     """Create AI client with mocked litellm."""
-    client = AIClient(model="deepseek/deepseek-chat")
+    client = AIClient(model="deepseek/deepseek-v4-flash")
     return client
 
 
@@ -46,7 +46,7 @@ class TestAIClientInitialization:
 
     def test_default_initialization(self, ai_client):
         """Test default initialization."""
-        assert ai_client.model == "deepseek/deepseek-chat"
+        assert ai_client.model == "deepseek/deepseek-v4-flash"
         assert ai_client.temperature is not None
         assert ai_client.max_tokens is not None
         assert ai_client.timeout is not None
@@ -55,6 +55,11 @@ class TestAIClientInitialization:
         """Test initialization with custom model."""
         client = AIClient(model="anthropic/claude-sonnet-4-20250514")
         assert client.model == "anthropic/claude-sonnet-4-20250514"
+
+    def test_legacy_deepseek_alias_normalized(self):
+        """Test legacy DeepSeek model aliases normalize to the new canonical id."""
+        client = AIClient(model="deepseek/deepseek-chat")
+        assert client.model == "deepseek/deepseek-v4-flash"
 
     def test_empty_history_on_init(self, ai_client):
         """Test conversation history starts empty."""
@@ -97,7 +102,8 @@ class TestListModels:
         """Test that expected models are in the list."""
         result = ai_client.list_models()
         model_ids = [m["id"] for m in result]
-        assert any("deepseek" in m for m in model_ids)
+        assert "deepseek/deepseek-v4-flash" in model_ids
+        assert "deepseek/deepseek-v4-pro" in model_ids
         assert any("groq" in m for m in model_ids)
 
 

@@ -63,7 +63,7 @@ pulse/cli/app.py
 **改善後：**
 ```
 用戶只設置了 DeepSeek API Key
--> 只看到 1 個模型選項：DeepSeek Chat
+-> 只看到 1 個模型選項：DeepSeek V4 Flash
 -> 明確知道哪些模型可用
 -> 避免選擇錯誤模型導致的失敗
 ```
@@ -316,7 +316,7 @@ def compose(self) -> ComposeResult:
 │         Select Model                │
 ├─────────────────────────────────────┤
 │ ✓ Available (3)                     │
-│   > DeepSeek Chat (DeepSeek)        │
+│   > DeepSeek V4 Flash (DeepSeek)     │
 │     Gemini 2.5 Flash (Google)       │
 │     Llama 3.3 70B (Groq)            │
 │                                      │

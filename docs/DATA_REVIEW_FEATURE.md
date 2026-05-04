@@ -123,7 +123,7 @@
 ### 6. AI 分析（流式輸出）
 
 ```
-⏳ 步驟 3/3: AI 深度分析中 (DeepSeek Chat)...
+⏳ 步驟 3/3: AI 深度分析中 (DeepSeek V4 Flash)...
 
 [分析內容逐字顯示...]
 
@@ -378,7 +378,7 @@ RSI 62，MACD 多頭
 
 ### AI 模型
 支援多種模型：
-- DeepSeek Chat（預設）
+- DeepSeek V4 Flash（預設）
 - Claude Haiku 4 / Sonnet 4
 - GPT-4o / GPT-4o Mini
 - Gemini 2.0 / 2.5 Flash

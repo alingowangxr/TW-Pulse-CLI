@@ -10,6 +10,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from dotenv import load_dotenv
 
+from pulse.core.config import normalize_model_id
+
 
 def check_api_keys():
     """Check all API key configurations."""
@@ -62,7 +64,7 @@ def check_api_keys():
         },
         "DEEPSEEK_API_KEY": {
             "name": "DeepSeek",
-            "models": ["deepseek/deepseek-chat"],
+            "models": ["deepseek/deepseek-v4-flash", "deepseek/deepseek-v4-pro"],
             "url": "https://platform.deepseek.com/api-keys",
         },
     }
@@ -95,7 +97,9 @@ def check_api_keys():
         return False
 
     # Check default model
-    default_model = os.getenv("PULSE_AI__DEFAULT_MODEL", "deepseek/deepseek-chat")
+    default_model = normalize_model_id(
+        os.getenv("PULSE_AI__DEFAULT_MODEL", "deepseek/deepseek-v4-flash")
+    )
     print(f"Default model: {default_model}")
 
     # Verify the default model has a corresponding API key

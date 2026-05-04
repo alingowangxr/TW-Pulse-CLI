@@ -62,7 +62,7 @@ cp .env.example .env
 
 ```env
 # AI API Key (選擇一個或多個)
-DEEPSEEK_API_KEY=your_key          # 預設，詳細分析
+DEEPSEEK_API_KEY=your_key          # 預設，詳細分析（deepseek-v4-flash）
 # GROQ_API_KEY=your_key            # 免費，快速
 # GEMINI_API_KEY=your_key
 # ANTHROPIC_API_KEY=your_key
@@ -72,14 +72,14 @@ DEEPSEEK_API_KEY=your_key          # 預設，詳細分析
 FINMIND_TOKEN=your_token
 
 # 預設模型
-PULSE_AI__DEFAULT_MODEL=deepseek/deepseek-chat
+PULSE_AI__DEFAULT_MODEL=deepseek/deepseek-v4-flash
 ```
 
 ### 取得 API Key
 
 | Provider | 網址 | 特性 |
 |----------|------|------|
-| DeepSeek | https://platform.deepseek.com/api-keys | 預設，詳細分析 |
+| DeepSeek | https://platform.deepseek.com/api-keys | 預設，詳細分析（deepseek-v4-flash） |
 | Groq | https://console.groq.com/keys | 免費額度，快速 |
 | Google | https://aistudio.google.com/apikey | 免費額度有限 |
 | Anthropic | https://console.anthropic.com/ | 付費，高品質 |
@@ -140,6 +140,9 @@ python -m pulse.cli.app
 | `/screen` | `/s`, `/filter` | 股票篩選 | `/screen oversold` |
 | `/smart-money` | `/tvb`, `/主力` | 主力足跡選股 | `/smart-money --tw50` |
 | `/warehouse` | `/db`, `/datahub` | 本地台股倉庫狀態/同步 | `/warehouse sync --mode=copy` |
+
+如果你要使用本地股票資料，請先執行 `/warehouse` 或 `/warehouse sync` 來建立 `data/local_warehouse/tw_stock_warehouse.db`。
+這個檔案不會隨著 GitHub repository 一起提供，因為它是本機環境專用的資料庫檔。
 
 ### 系統命令
 
@@ -316,6 +319,7 @@ python -m pulse.cli.app
 如果本機有可用的 warehouse SQLite，`smart-money` 會優先讀本地資料。
 `/warehouse` 用來查看狀態或同步本地倉庫，`copy` 複製現成 DB，`run` 先執行本地內建 downloader 再同步。
 預設會自動尋找 `data/local_warehouse/tw_stock_warehouse.db`，也可用 `PULSE_DATA__LOCAL_WAREHOUSE_DB` 指定自訂路徑。
+如果這個檔案尚未建立，請先執行 `/warehouse` 或 `/warehouse sync`。
 
 ### 輸出範例
 
@@ -856,7 +860,7 @@ export PULSE_AI__DEFAULT_MODEL="groq/llama-3.3-70b-versatile"
 export PULSE_AI__DEFAULT_MODEL="groq/llama-3.3-70b-versatile"
 
 # 方法3: 編輯 .env
-PULSE_AI__DEFAULT_MODEL=deepseek/deepseek-chat
+PULSE_AI__DEFAULT_MODEL=deepseek/deepseek-v4-flash
 ```
 
 ### Q4: 法人動向沒有數據？

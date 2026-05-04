@@ -249,21 +249,37 @@ async def happy_lines_command(app: "PulseApp", args: str) -> str:
                         if price < upper_line and price >= line_price:
                             indicator = " ← 你在這裡"
 
-                output_lines.append(f"{line_name} ({zone_name}): {line_price:,.0f}{indicator}")
+                output_lines.append(f"{line_name} ({zone_name}): {line_price:,.2f}{indicator}")
+
+        # LOHAS Channel display
+        if happy_lines.channel:
+            status = "正常"
+            if happy_lines.is_above_channel:
+                status = "突破上限 (UB) - 強勢"
+            elif happy_lines.is_below_channel:
+                status = "跌破下限 (LB) - 弱勢"
+
+            output_lines.extend(
+                [
+                    "",
+                    "【樂活通道 (20 日高低點平均線)】",
+                    f"  上限 (UB): {happy_lines.channel.upper_band:,.2f}",
+                    f"  中線 (MA20): {happy_lines.channel.mid_band:,.2f}",
+                    f"  下限 (LB): {happy_lines.channel.lower_band:,.2f}",
+                    f"  通道狀態: {status}",
+                ]
+            )
 
         # Summary section
         output_lines.extend(
             [
                 "",
                 "【分析摘要】",
-                f"  當前價格: NT$ {price:,.0f}",
+                f"  當前價格: NT$ {price:,.2f}",
                 f"  位階百分比: {position_ratio:.1f}%",
-                f"  所在區域: {happy_lines.zone.value}",
-                f"  計算週期: {period}日",
-                "",
-                "【交易訊號】",
-                f"  趨勢: {happy_lines.trend.value}",
-                f"  訊號: {happy_lines.signal.value}",
+                f"  所在位階: {happy_lines.zone.value}",
+                f"  目前趨勢: {happy_lines.trend.value}",
+                f"  建議訊號: {happy_lines.signal.value}",
             ]
         )
 

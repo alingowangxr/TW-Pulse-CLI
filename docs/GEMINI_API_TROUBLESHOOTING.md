@@ -91,7 +91,7 @@ Pulse CLI 支援多個 AI 提供商。你可以切換到其他已配置的模型
    ```bash
    # 在 Pulse CLI 中切換模型
    /model
-   # 選擇: DeepSeek Chat (DeepSeek)
+   # 選擇: DeepSeek V4 Flash (DeepSeek)
    ```
 
 2. **Groq Llama** (已配置，免費且速度超快)
@@ -148,7 +148,7 @@ API 金鑰無效或未設定。
    ```bash
    # 設定為默認模型
    # 編輯 .env 文件：
-   PULSE_AI__DEFAULT_MODEL=deepseek/deepseek-chat
+   PULSE_AI__DEFAULT_MODEL=deepseek/deepseek-v4-flash
    # 或
    PULSE_AI__DEFAULT_MODEL=groq/llama-3.3-70b-versatile
    ```

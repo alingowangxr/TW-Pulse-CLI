@@ -11,7 +11,7 @@
 | **Claude Haiku 4** | 4-6秒 | ⚡⚡ | $0.001/1K | ANTHROPIC_API_KEY | 快速、高品質 |
 | **Gemini 2.0 Flash** | 5-10秒 | ⚡⚡ | 免費/付費 | GEMINI_API_KEY | Google 生態整合 |
 | **GPT-4o Mini** | 6-12秒 | ⚡ | $0.003/1K | OPENAI_API_KEY | OpenAI 用戶 |
-| **DeepSeek Chat** | 10-20秒 | ⚡ | $0.0003/1K | DEEPSEEK_API_KEY | 性價比高、深度分析 |
+| **DeepSeek V4 Flash** | 10-20秒 | ⚡ | $0.0003/1K | DEEPSEEK_API_KEY | 性價比高、深度分析 |
 | **Claude Sonnet 4** | 8-15秒 | ⚡ | $0.015/1K | ANTHROPIC_API_KEY | 最高品質 |
 | **GPT-4o** | 10-20秒 | ⚡ | $0.015/1K | OPENAI_API_KEY | 複雜分析 |
 
@@ -50,7 +50,7 @@ ai:
 ### 場景 3：深度分析（DeepSeek/Sonnet）
 ```yaml
 ai:
-  default_model: "deepseek/deepseek-chat"  # 或 claude-sonnet-4
+  default_model: "deepseek/deepseek-v4-flash"  # 或 claude-sonnet-4
 ```
 
 **優勢：**
@@ -118,7 +118,7 @@ ai:
 - 成本低
 
 **專業投資者：**
-→ 使用 **Claude Sonnet 4** 或 **DeepSeek Chat**
+→ 使用 **Claude Sonnet 4** 或 **DeepSeek V4 Flash**
 - 最深度分析
 - 更準確的技術指標解讀
 - 適合重要決策

@@ -85,6 +85,12 @@ class HappyLinesStrategyResult:
     position_ratio: float = 0.0  # 位階百分比 (0-100%)
     zone: HappyZone = HappyZone.BALANCED
 
+    # LOHAS Channel Data
+    channel_upper: float | None = None
+    channel_lower: float | None = None
+    channel_mid: float | None = None
+    is_outside_channel: bool = False
+
     # Technical Data
     rsi_14: float | None = None
     trend: TrendType = TrendType.SIDEWAYS
@@ -142,6 +148,9 @@ class HappyLinesStrategyResult:
             "line_3": self.line_3,
             "line_4": self.line_4,
             "line_5": self.line_5,
+            "channel_upper": self.channel_upper,
+            "channel_lower": self.channel_lower,
+            "is_outside_channel": self.is_outside_channel,
             "position_ratio": self.position_ratio,
             "zone": self.zone.value,
             "rsi_14": self.rsi_14,
@@ -205,15 +214,11 @@ class HappyLinesStrategy:
         result: ScreenResult,
     ) -> tuple[HappyLinesSignal, list[str]]:
         """
-        Determine Happy Lines strategy signal.
+        Determine Happy Lines strategy signal with LOHAS Channel rules.
 
-        Logic:
-        - STRONG_BUY: Price in oversold zone (Line 1) + Bullish trend
-        - BUY: Price in undervalued zone (Line 2) or oversold + sideways
-        - HOLD: Price in balanced zone or favorable trend continuation
-        - SELL: Price in overvalued zone (Line 4) + bearish trend
-        - STRONG_SELL: Price in overbought zone (Line 5)
-        - WATCH: Unclear signals
+        LOHAS Channel Rules:
+        1. Buy: Price < LB is extreme oversold, WAIT. Buy ONLY when price returns > LB.
+        2. Sell: Price > UB is extreme bullish, HOLD. Sell ONLY when price returns < UB.
         """
         notes = []
 
@@ -228,17 +233,32 @@ class HappyLinesStrategy:
         happy = result.happy_lines
         zone = happy.zone
         trend = happy.trend
+        price = happy.current_price
 
-        # Signal determination based on zone
+        # Channel info
+        has_channel = happy.channel is not None
+        is_below_lb = happy.is_below_channel if has_channel else False
+        is_above_ub = happy.is_above_channel if has_channel else False
+
+        # Signal determination based on zone and channel
         if zone == HappyZone.OVERSOLD:
-            if trend == TrendType.BULLISH:
-                notes.append(f"超跌區 ({happy.position_ratio:.1f}%) + 多頭趨勢")
-                return HappyLinesSignal.STRONG_BUY, notes
+            if is_below_lb:
+                notes.append(f"超跌區 ({happy.position_ratio:.1f}%) + 跌破通道下限 - 跌勢未止，請等待站回下限")
+                return HappyLinesSignal.WATCH, notes
             else:
-                notes.append(f"超跌區 ({happy.position_ratio:.1f}%) - 等待趨勢確認")
-                return HappyLinesSignal.BUY, notes
+                # Price is in Oversold but above LB (potentially just returned or never broke)
+                if trend == TrendType.BULLISH:
+                    notes.append(f"超跌區 ({happy.position_ratio:.1f}%) + 多頭趨勢 + 通道內 - 強烈買進")
+                    return HappyLinesSignal.STRONG_BUY, notes
+                else:
+                    notes.append(f"超跌區 ({happy.position_ratio:.1f}%) + 通道內 - 建議止跌站穩後布局")
+                    return HappyLinesSignal.BUY, notes
 
         elif zone == HappyZone.UNDERVALUED:
+            if is_below_lb:
+                notes.append(f"偏低區 ({happy.position_ratio:.1f}%) + 跌破通道下限 - 觀望")
+                return HappyLinesSignal.WATCH, notes
+            
             if trend in [TrendType.BULLISH, TrendType.SIDEWAYS]:
                 notes.append(f"偏低區 ({happy.position_ratio:.1f}%) - 可分批布局")
                 return HappyLinesSignal.BUY, notes
@@ -251,6 +271,10 @@ class HappyLinesStrategy:
             return HappyLinesSignal.HOLD, notes
 
         elif zone == HappyZone.OVERVALUED:
+            if is_above_ub:
+                notes.append(f"偏高區 ({happy.position_ratio:.1f}%) + 突破通道上限 - 強勢噴出，續抱待回落")
+                return HappyLinesSignal.HOLD, notes
+
             if trend == TrendType.BEARISH:
                 notes.append(f"偏高區 ({happy.position_ratio:.1f}%) + 空頭趨勢")
                 return HappyLinesSignal.SELL, notes
@@ -259,8 +283,12 @@ class HappyLinesStrategy:
                 return HappyLinesSignal.HOLD, notes
 
         elif zone == HappyZone.OVERBOUGHT:
-            notes.append(f"過熱區 ({happy.position_ratio:.1f}%) - 考慮減碼")
-            return HappyLinesSignal.STRONG_SELL, notes
+            if is_above_ub:
+                notes.append(f"過熱區 ({happy.position_ratio:.1f}%) + 突破通道上限 - 極度強勢，跌破上限再賣")
+                return HappyLinesSignal.HOLD, notes
+            else:
+                notes.append(f"過熱區 ({happy.position_ratio:.1f}%) - 建議減碼獲利")
+                return HappyLinesSignal.STRONG_SELL, notes
 
         return HappyLinesSignal.WATCH, notes
 
@@ -340,6 +368,10 @@ class HappyLinesStrategy:
                 line_3=happy.line_3,
                 line_4=happy.line_4,
                 line_5=happy.line_5,
+                channel_upper=happy.channel.upper_band if happy.channel else None,
+                channel_lower=happy.channel.lower_band if happy.channel else None,
+                channel_mid=happy.channel.mid_band if happy.channel else None,
+                is_outside_channel=not happy.is_in_channel if happy.channel else False,
                 position_ratio=happy.position_ratio,
                 zone=happy.zone,
                 rsi_14=result.rsi_14,

@@ -184,7 +184,7 @@ PULSE_AI__DEFAULT_MODEL=gemini/gemini-3-flash-preview
 
 ### 成本優化（免費且高效）
 ```bash
-PULSE_AI__DEFAULT_MODEL=deepseek/deepseek-chat
+PULSE_AI__DEFAULT_MODEL=deepseek/deepseek-v4-flash
 # 或
 PULSE_AI__DEFAULT_MODEL=groq/llama-3.3-70b-versatile
 ```

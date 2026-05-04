@@ -194,7 +194,10 @@ ls -la .env
 export DEEPSEEK_API_KEY="sk-xxx"
 # 或編輯 .env 檔案
 
-# 3. 驗證
+# 3. 預設模型建議使用新版 DeepSeek
+export PULSE_AI__DEFAULT_MODEL="deepseek/deepseek-v4-flash"
+
+# 4. 驗證
 python scripts/check_api_keys.py
 ```
 

@@ -7,6 +7,29 @@ import yaml
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+DEEPSEEK_MODEL_ALIASES = {
+    "deepseek/deepseek-chat": "deepseek/deepseek-v4-flash",
+    "deepseek/deepseek-reasoner": "deepseek/deepseek-v4-flash",
+}
+
+AI_MODEL_DISPLAY_NAMES = {
+    "deepseek/deepseek-v4-flash": "DeepSeek V4 Flash (DeepSeek)",
+    "deepseek/deepseek-v4-pro": "DeepSeek V4 Pro (DeepSeek)",
+    "anthropic/claude-sonnet-4-20250514": "Claude Sonnet 4 (Anthropic)",
+    "anthropic/claude-haiku-4-20250514": "Claude Haiku 4 (Anthropic)",
+    "openai/gpt-4o": "GPT-4o (OpenAI)",
+    "openai/gpt-4o-mini": "GPT-4o Mini (OpenAI)",
+    "gemini/gemini-2.5-flash": "Gemini 2.5 Flash (Google)",
+    "gemini/gemini-3-flash-preview": "Gemini 3 Flash Preview (Google)",
+    "groq/llama-3.3-70b-versatile": "Llama 3.3 70B (Groq)",
+    "groq/llama-3.1-8b-instant": "Llama 3.1 8B (Groq)",
+}
+
+
+def normalize_model_id(model_id: str) -> str:
+    """Return the canonical model ID for legacy-compatible aliases."""
+    return DEEPSEEK_MODEL_ALIASES.get(model_id, model_id)
+
 
 # Load .env file early before settings initialization
 _env_loaded = False
@@ -26,7 +49,7 @@ class AISettings(BaseSettings):
 
     # Default provider and model (uses LiteLLM format: provider/model)
     default_model: str = Field(
-        default="deepseek/deepseek-chat",
+        default="deepseek/deepseek-v4-flash",
         description="Default AI model (format: provider/model)",
     )
     temperature: float = Field(
@@ -46,8 +69,9 @@ class AISettings(BaseSettings):
     # - DEEPSEEK_API_KEY for DeepSeek models
     available_models: dict[str, str] = Field(
         default={
-            # DeepSeek (Cost-effective, high performance)
-            "deepseek/deepseek-chat": "DeepSeek Chat (DeepSeek)",
+            # DeepSeek (OpenAI-compatible API)
+            "deepseek/deepseek-v4-flash": "DeepSeek V4 Flash (DeepSeek)",
+            "deepseek/deepseek-v4-pro": "DeepSeek V4 Pro (DeepSeek)",
             # Anthropic
             "anthropic/claude-sonnet-4-20250514": "Claude Sonnet 4 (Anthropic)",
             "anthropic/claude-haiku-4-20250514": "Claude Haiku 4 (Anthropic)",
@@ -170,6 +194,7 @@ class Settings(BaseSettings):
             data["env_file"] = str(base / ".env")
         super().__init__(**data)
         self._load_config_file()
+        self.ai.default_model = normalize_model_id(self.ai.default_model)
         self._ensure_directories()
 
     def _load_config_file(self) -> None:
@@ -212,7 +237,11 @@ class Settings(BaseSettings):
 
     def get_model_display_name(self, model_id: str) -> str:
         """Get display name for a model."""
-        return self.ai.available_models.get(model_id, model_id)
+        canonical_model_id = normalize_model_id(model_id)
+        return self.ai.available_models.get(
+            canonical_model_id,
+            AI_MODEL_DISPLAY_NAMES.get(canonical_model_id, canonical_model_id),
+        )
 
     def list_models(self, filter_by_api_key: bool = True) -> list[dict[str, str]]:
         """

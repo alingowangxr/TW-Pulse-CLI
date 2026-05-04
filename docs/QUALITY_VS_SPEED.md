@@ -9,7 +9,7 @@
 
 ### 實際測試對比
 
-| 指標 | DeepSeek Chat | Claude Haiku 4 | Gemini 2.5 Flash |
+| 指標 | DeepSeek V4 Flash | Claude Haiku 4 | Gemini 2.5 Flash |
 |------|--------------|----------------|------------------|
 | **響應速度** | 10-20秒 | 4-6秒 ⚡ | 5-10秒 |
 | **技術指標解讀** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
@@ -21,7 +21,7 @@
 
 ### 真實案例測試：/analyze 2330
 
-#### DeepSeek Chat（10-15秒）
+#### DeepSeek V4 Flash（10-15秒）
 ```
 ✅ 優勢：
 - 深度技術分析，考慮多個時間框架
@@ -82,10 +82,10 @@
 - 品質與 DeepSeek 相當
 - 成本低
 
-### 場景 2：重要決策深度分析 → DeepSeek Chat
+### 場景 2：重要決策深度分析 → DeepSeek V4 Flash
 ```bash
 /models
-# 選擇: DeepSeek Chat
+# 選擇: DeepSeek V4 Flash
 
 /analyze 2330
 ```
@@ -110,7 +110,7 @@
 /analyze 2454
 
 # 重要決策時切換 DeepSeek（深度）
-/models → DeepSeek Chat
+/models → DeepSeek V4 Flash
 /analyze 2330  # 詳細分析
 ```
 

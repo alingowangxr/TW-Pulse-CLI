@@ -304,17 +304,34 @@ class TestModelsCommand:
     @pytest.mark.asyncio
     async def test_models_command_switch_model(self, command_registry, mock_app):
         """Test models command with model switch."""
-        # Mock the AI client methods properly - set_model is async
-        mock_app.ai_client.set_model = AsyncMock()
+        # Mock the AI client methods properly - set_model is synchronous
+        mock_app.ai_client.set_model = MagicMock()
         # get_current_model should return a dict (not async)
         mock_app.ai_client.get_current_model = MagicMock(
             return_value={
-                "id": "deepseek/deepseek-chat",
-                "name": "DeepSeek Chat",
+                "id": "deepseek/deepseek-v4-flash",
+                "name": "DeepSeek V4 Flash (DeepSeek)",
             }
         )
 
-        result = await command_registry._cmd_models("deepseek/deepseek-chat")
+        result = await command_registry._cmd_models("deepseek/deepseek-v4-flash")
+
+        assert result is not None
+        assert isinstance(result, str)
+        assert "DeepSeek" in result or "切換" in result
+
+    @pytest.mark.asyncio
+    async def test_models_command_legacy_deepseek_alias(self, command_registry, mock_app):
+        """Test legacy DeepSeek aliases are accepted by the models command."""
+        mock_app.ai_client.set_model = MagicMock()
+        mock_app.ai_client.get_current_model = MagicMock(
+            return_value={
+                "id": "deepseek/deepseek-v4-flash",
+                "name": "DeepSeek V4 Flash (DeepSeek)",
+            }
+        )
+
+        result = await command_registry._cmd_models("deepseek/deepseek-v4-flash")
 
         assert result is not None
         assert isinstance(result, str)
@@ -450,3 +467,41 @@ class TestCommandRegistration:
         assert "倉庫同步完成" in result
         assert "stock_prices rows" in result
         shutil.rmtree(base, ignore_errors=True)
+
+    @pytest.mark.asyncio
+    async def test_execute_warehouse_sync_stream_command(self, command_registry, mock_app, monkeypatch):
+        """Test warehouse sync run mode streams progress events."""
+        from pulse.core.data.warehouse_sync import WarehouseSyncService
+
+        async def fake_sync_market_stream(self, market="tw", mode="copy"):
+            yield {"type": "progress", "message": "downloader started"}
+            yield {
+                "type": "response",
+                "message": "倉庫同步完成",
+                "result": {
+                    "market": market,
+                    "mode": mode,
+                    "source_dir": "C:/repo",
+                    "source_db": "C:/repo/tw_stock_warehouse.db",
+                    "local_db": "C:/repo/data/local_warehouse/tw_stock_warehouse.db",
+                    "details": {
+                        "tables": ["stock_info", "stock_prices"],
+                        "info_rows": 1,
+                        "price_rows": 2,
+                        "symbols": 1,
+                        "date_range": {"min": "2024-01-01", "max": "2024-01-31"},
+                        "markets": ["listed"],
+                    },
+                },
+            }
+
+        monkeypatch.setattr(WarehouseSyncService, "sync_market_stream", fake_sync_market_stream)
+
+        events = []
+        async for event in command_registry.execute_stream("/warehouse sync --mode=run"):
+            events.append(event)
+
+        assert any(event["type"] == "progress" for event in events)
+        assert any(
+            event["type"] == "response" and "倉庫同步完成" in event["message"] for event in events
+        )
