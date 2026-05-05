@@ -13,7 +13,7 @@
 
 [Features](#features) • [SAPTA](#sapta-引擎) • [Installation](#quick-start) • [Usage](USAGE.md) • [Roadmap](TODO.md)
 
-[![GitHub](https://img.shields.io/badge/GitHub-alingowangxr%2FTW--Pulse--CLI-181717?style=flat-square&logo=github)](https://github.com/alingowangxr/TW-Pulse-CLI)
+[![GitHub](https://img.shields.io/badge/GitHub-alingowangxr%2FTW-Pulse-CLI-181717?style=flat-square&logo=github)](https://github.com/alingowangxr/TW-Pulse-CLI)
 
 </div>
 
@@ -79,7 +79,7 @@
 | Feature | Description |
 |---------|-------------|
 | **Chart Generation** | 匯出價格圖表為 PNG 格式 (支援自訂主題) |
-| **E2E Tests** | 561 tests with comprehensive coverage |
+| **E2E Tests** | 584 tests with comprehensive coverage |
 
 ---
 
@@ -284,6 +284,7 @@ pulse
 
 | Version | Date | Changes |
 |---------|------|---------|
+| **0.5.0** | **2026-05-05** | **效能優化：快取單例模式、FinMind 向量化、yfinance 非同步化、技術指標快取、SMA 向量加速、TUI 滾動修復、投資人友善版 AI 提示詞** |
 | **0.4.6** | **2026-05-04** | **樂活通道 (LOHAS Channel) 整合：實作 20 日高低點平均線、站回 LB 買進/跌破 UB 賣出策略規則、AI 分析同步支援** |
 | **0.4.5** | **2026-04-20** | **AI 分析提示詞重寫、SmartAgent 輸出統一繁中、run/run_stream 整合測試補強** |
 | **0.4.4** | **2026-03-21** | **效能與架構優化：SAPTA 模組並發執行、smart_agent/screener 拆分重構、統一 logger、修正 561 tests 全通過** |
@@ -298,7 +299,7 @@ pulse
 | 0.1.9 | 2026-01-22 | New indicators: ADX, CCI, Ichimoku Cloud; Cache TTL optimization |
 | 0.1.8 | 2026-01-20 | Smart Money Screener, JSON 股票清單 |
 | 0.1.7 | 2026-01-20 | SAPTA 圖表、基本面數據補救 |
-| 0.1.6 | 2026-01-20 | DeepSeek 模型、測試覆蓋率提升 |
+| 0.1.6 | 2026-01-16 | DeepSeek 模型、測試覆蓋率提升 |
 | 0.1.5 | 2026-01-20 | 環境變數修復、超時處理 |
 | 0.1.4 | 2026-01-16 | CSV 匯出、類型提示 |
 | 0.1.3 | 2026-01-15 | SAPTA 輸出優化 |
@@ -312,7 +313,7 @@ pulse
 
 ### 🙏 Special Thanks
 
-- **[@stanford201807](https://github.com/stanford201807)** - 感謝提供策略回測系統、農夫播種術策略、動態資金管理等核心代碼，大幅提升了本專案的功能完整性
+- **[@stanford201807](https://github.com/stanford201807)** - 感感謝提供策略回測系統、農夫播種術策略、動態資金管理等核心代碼，大幅提升了本專案的功能完整性
 
 ### 📚 Open Source Projects
 

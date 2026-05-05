@@ -2,6 +2,7 @@
 
 import asyncio
 import hashlib
+import threading
 from collections.abc import Callable
 from functools import wraps
 from pathlib import Path
@@ -15,6 +16,20 @@ from pulse.utils.logger import get_logger
 log = get_logger(__name__)
 
 T = TypeVar("T")
+
+# Module-level singleton lock and instance for cache reuse
+_cache_singleton: DataCache | None = None
+_cache_lock = threading.Lock()
+
+
+def _get_cache_instance() -> DataCache:
+    """Get the global cache instance (thread-safe singleton)."""
+    global _cache_singleton
+    if _cache_singleton is None:
+        with _cache_lock:
+            if _cache_singleton is None:
+                _cache_singleton = DataCache()
+    return _cache_singleton
 
 
 class DataCache:
@@ -201,6 +216,11 @@ class DataCache:
         self._cache.close()
 
 
+# Global cache instance
+_cache_instance = DataCache()
+cache = _cache_instance
+
+
 def cached(
     prefix: str,
     ttl: int | None = None,
@@ -221,7 +241,7 @@ def cached(
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         @wraps(func)
         async def async_wrapper(*args: Any, **kwargs: Any) -> T:
-            cache = DataCache()
+            cache = _get_cache_instance()
 
             # Build cache key
             if key_args:
@@ -248,7 +268,7 @@ def cached(
 
         @wraps(func)
         def sync_wrapper(*args: Any, **kwargs: Any) -> T:
-            cache = DataCache()
+            cache = _get_cache_instance()
 
             if key_args:
                 cache_kwargs = {k: kwargs.get(k) for k in key_args if k in kwargs}
@@ -277,7 +297,3 @@ def cached(
         return sync_wrapper
 
     return decorator
-
-
-# Global cache instance
-cache = DataCache()

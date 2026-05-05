@@ -1,5 +1,7 @@
 """yfinance data fetcher for Taiwan stocks (fallback)."""
 
+import asyncio
+
 import pandas as pd
 import yfinance as yf
 
@@ -83,10 +85,10 @@ class YFinanceFetcher:
         try:
             log.debug(f"Fetching {formatted_ticker} from yfinance...")
 
-            stock = yf.Ticker(formatted_ticker)
+            stock = await asyncio.to_thread(yf.Ticker, formatted_ticker)
 
             # Get historical data
-            hist = stock.history(period=period)
+            hist = await asyncio.to_thread(stock.history, period=period)
 
             if hist.empty:
                 log.warning(f"No data found for {ticker}")
@@ -167,8 +169,8 @@ class YFinanceFetcher:
         clean_ticker = self._clean_ticker(ticker)
 
         try:
-            stock = yf.Ticker(formatted_ticker)
-            info = stock.info or {}
+            stock = await asyncio.to_thread(yf.Ticker, formatted_ticker)
+            info = await asyncio.to_thread(lambda s: s.info or {}, stock)
 
             if not info:
                 return None
@@ -232,14 +234,15 @@ class YFinanceFetcher:
 
         try:
             log.debug(f"Batch fetching {len(tickers)} stocks from yfinance...")
-            
+
             # yf.download is synchronous, but much faster for multiple tickers
-            data = yf.download(
+            data = await asyncio.to_thread(
+                yf.download,
                 tickers=formatted_tickers,
                 period=period,
                 group_by="ticker",
                 threads=True,
-                progress=False
+                progress=False,
             )
 
             if data.empty:
@@ -247,7 +250,7 @@ class YFinanceFetcher:
 
             for ticker in tickers:
                 formatted = self._format_ticker(ticker)
-                
+
                 # Handle single vs multiple tickers in download output
                 if len(tickers) == 1:
                     stock_df = data
@@ -263,7 +266,7 @@ class YFinanceFetcher:
                 history: list[OHLCV] = []
                 # Drop rows with NaN Close (usually for tickers not found)
                 valid_df = stock_df.dropna(subset=["Close"])
-                
+
                 for date, row in valid_df.iterrows():
                     history.append(
                         OHLCV(
@@ -293,25 +296,27 @@ class YFinanceFetcher:
                 week_52_high = float(week_52_data["High"].max()) if not week_52_data.empty else 0.0
                 week_52_low = float(week_52_data["Low"].min()) if not week_52_data.empty else 0.0
 
-                results.append(StockData(
-                    ticker=ticker.upper(),
-                    name=ticker.upper(), # Batch fetch doesn't give names easily
-                    sector=None,
-                    industry=None,
-                    current_price=current_price,
-                    previous_close=previous_close,
-                    change=change,
-                    change_percent=change_percent,
-                    volume=latest.volume,
-                    avg_volume=0, 
-                    day_low=latest.low,
-                    day_high=latest.high,
-                    week_52_low=week_52_low,
-                    week_52_high=week_52_high,
-                    market_cap=None,
-                    shares_outstanding=None,
-                    history=history,
-                ))
+                results.append(
+                    StockData(
+                        ticker=ticker.upper(),
+                        name=ticker.upper(),  # Batch fetch doesn't give names easily
+                        sector=None,
+                        industry=None,
+                        current_price=current_price,
+                        previous_close=previous_close,
+                        change=change,
+                        change_percent=change_percent,
+                        volume=latest.volume,
+                        avg_volume=0,
+                        day_low=latest.low,
+                        day_high=latest.high,
+                        week_52_low=week_52_low,
+                        week_52_high=week_52_high,
+                        market_cap=None,
+                        shares_outstanding=None,
+                        history=history,
+                    )
+                )
 
             return results
 
@@ -344,10 +349,10 @@ class YFinanceFetcher:
             DataFrame with OHLCV data
         """
         # Convert datetime to string if necessary
-        if start is not None and hasattr(start, 'strftime'):
-            start = start.strftime('%Y-%m-%d')
-        if end is not None and hasattr(end, 'strftime'):
-            end = end.strftime('%Y-%m-%d')
+        if start is not None and hasattr(start, "strftime"):
+            start = start.strftime("%Y-%m-%d")
+        if end is not None and hasattr(end, "strftime"):
+            end = end.strftime("%Y-%m-%d")
 
         return self.get_history_df(ticker, period, start, end)
 
@@ -423,10 +428,10 @@ class YFinanceFetcher:
         try:
             log.debug(f"Fetching index {yf_ticker} from yfinance...")
 
-            stock = yf.Ticker(yf_ticker)
+            stock = await asyncio.to_thread(yf.Ticker, yf_ticker)
 
             # Get historical data
-            hist = stock.history(period=period)
+            hist = await asyncio.to_thread(stock.history, period=period)
 
             if hist.empty:
                 log.warning(f"No data found for index {index_name}")

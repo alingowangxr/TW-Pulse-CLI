@@ -1,18 +1,10 @@
-"""
-Chart generator - creates PNG/JPG charts saved to disk.
-
-Uses matplotlib for high-quality chart generation.
-Supports:
-- Multiple chart themes (dark/light)
-- Customizable colors and styles
-- Technical indicator overlays
-"""
-
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any
+
+import numpy as np
 
 from pulse.utils.logger import get_logger
 
@@ -867,15 +859,16 @@ class ChartGenerator:
             plt.close("all")
             return None
 
-    def _moving_average(self, data: list[float], window: int) -> list[float]:
-        """Calculate simple moving average."""
-        result = []
-        for i in range(len(data)):
-            if i < window - 1:
-                result.append(None)
-            else:
-                result.append(sum(data[i - window + 1 : i + 1]) / window)
-        return result
+
+import numpy as np
+
+
+def _moving_average(data: list[float], window: int) -> list[float]:
+    """Calculate moving average using numpy for vectorized performance."""
+    arr = np.array(data, dtype=np.float64)
+    weights = np.ones(window) / window
+    ma = np.convolve(arr, weights, mode="valid")
+    return ([None] * (window - 1)) + ma.tolist()
 
 
 # Convenience functions

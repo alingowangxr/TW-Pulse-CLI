@@ -174,19 +174,38 @@ class TechnicalAnalyzer:
 
         latest_close = float(close.iloc[-1])
 
+    def _calculate_indicators(
+        self,
+        ticker: str,
+        df: pd.DataFrame,
+    ) -> TechnicalIndicators:
+        """Calculate all technical indicators."""
+        # Ensure we have the required columns
+        df = df.copy()
+
+        # Get latest values
+        close = df["close"]
+        high = df["high"]
+        low = df["low"]
+        volume = df["volume"]
+
+        latest_close = float(close.iloc[-1])
+
         # === Trend Indicators ===
 
-        # SMA
-        sma_20 = SMAIndicator(close, n=20).sma_indicator().iloc[-1]
-        sma_50 = SMAIndicator(close, n=50).sma_indicator().iloc[-1]
-        sma_200 = (
-            SMAIndicator(close, n=200).sma_indicator().iloc[-1] if len(df) >= 200 else None
-        )
+        # SMA - cache rolling window computations
+        rolling_20 = close.rolling(window=20)
+        rolling_50 = close.rolling(window=50)
+        rolling_200 = close.rolling(window=200)
 
-        # EMA
-        ema_9 = EMAIndicator(close, n=9).ema_indicator().iloc[-1]
-        ema_21 = EMAIndicator(close, n=21).ema_indicator().iloc[-1]
-        ema_55 = EMAIndicator(close, n=55).ema_indicator().iloc[-1] if len(df) >= 55 else None
+        sma_20 = rolling_20.mean().iloc[-1]
+        sma_50 = rolling_50.mean().iloc[-1]
+        sma_200 = rolling_200.mean().iloc[-1] if len(df) >= 200 else None
+
+        # EMA - cached computations
+        ema_9 = close.ewm(span=9, adjust=False).mean().iloc[-1]
+        ema_21 = close.ewm(span=21, adjust=False).mean().iloc[-1]
+        ema_55 = close.ewm(span=55, adjust=False).mean().iloc[-1] if len(df) >= 55 else None
 
         # === Momentum Indicators ===
 
@@ -885,7 +904,9 @@ class TechnicalAnalyzer:
             log.error(f"Error calculating Happy Lines for {ticker}: {e}")
             return None
 
-    def _calculate_lohas_channel(self, df: pd.DataFrame, period_days: int = 20) -> LohasChannel | None:
+    def _calculate_lohas_channel(
+        self, df: pd.DataFrame, period_days: int = 20
+    ) -> LohasChannel | None:
         """Calculate LOHAS Channel (樂活通道).
 
         樂活通道由 20 日移動平均線組成：

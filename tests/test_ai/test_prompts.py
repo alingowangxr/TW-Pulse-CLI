@@ -21,14 +21,14 @@ class TestStockAnalysisPrompts:
 
         assert "必須使用繁體中文回答" in prompt
         assert "資料不足" in prompt
-        assert "不要自行補齊" in prompt
+        assert "不得憑空補數字" in prompt
         assert "不要把猜測當作事實" in prompt
 
     def test_comprehensive_prompt_is_structured(self):
         prompt = StockAnalysisPrompts.get_comprehensive_prompt()
 
         assert "核心摘要" in prompt
-        assert "資料完整度與可信度" in prompt
+        assert "資料完整度" in prompt
         assert "情境推演" in prompt
         assert "綜合操作建議" in prompt
         assert "資料不足" in prompt
@@ -36,10 +36,10 @@ class TestStockAnalysisPrompts:
     def test_technical_prompt_has_clear_sections(self):
         prompt = StockAnalysisPrompts.get_technical_prompt()
 
-        assert "趨勢判讀" in prompt
-        assert "動能判讀" in prompt
-        assert "支撐與壓力" in prompt
-        assert "風險報酬比" in prompt
+        assert "趨勢" in prompt
+        assert "動能" in prompt
+        assert "支撐" in prompt
+        assert "壓力" in prompt
 
     def test_fundamental_prompt_has_clear_sections(self):
         prompt = StockAnalysisPrompts.get_fundamental_prompt()

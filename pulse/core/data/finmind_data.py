@@ -228,22 +228,19 @@ class FinMindFetcher:
             # Get stock info
             stock_info = self._get_stock_info(formatted_ticker)
 
-            # Convert to OHLCV list
-            history: list[OHLCV] = []
-            for _, row in df.iterrows():
-                try:
-                    ohlcv = OHLCV(
-                        date=pd.to_datetime(row["date"]),
-                        open=float(row.get("open", 0)),
-                        high=float(row.get("max", 0)),  # FinMind uses 'max' for high
-                        low=float(row.get("min", 0)),  # FinMind uses 'min' for low
-                        close=float(row.get("close", 0)),
-                        volume=int(row.get("Trading_Volume", 0)),
-                    )
-                    history.append(ohlcv)
-                except Exception as e:
-                    log.debug(f"Error parsing row: {e}")
-                    continue
+            # Convert to OHLCV list using vectorized operations
+            records = df.to_dict("records")
+            history = [
+                OHLCV(
+                    date=pd.to_datetime(r["date"]),
+                    open=float(r.get("open", 0) or 0),
+                    high=float(r.get("max", r.get("high", 0)) or 0),
+                    low=float(r.get("min", r.get("low", 0)) or 0),
+                    close=float(r.get("close", 0) or 0),
+                    volume=int(r.get("Trading_Volume", 0) or 0),
+                )
+                for r in records
+            ]
 
             if not history:
                 log.warning(f"No valid OHLCV data for {ticker}")
@@ -754,7 +751,9 @@ class FinMindFetcher:
                 FinMindFetcher.set_quota_exceeded(error_msg)
                 return None
             else:
-                log.error(f"Error fetching institutional investor data for {ticker} from FinMind: {e}")
+                log.error(
+                    f"Error fetching institutional investor data for {ticker} from FinMind: {e}"
+                )
                 return None
         except Exception as e:
             log.error(f"Error fetching institutional investor data for {ticker} from FinMind: {e}")

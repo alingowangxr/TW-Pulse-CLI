@@ -1,6 +1,7 @@
 """Retry utilities for API calls with exponential backoff."""
 
 import asyncio
+import random
 from collections.abc import Callable
 from functools import wraps
 from typing import Any, TypeVar
@@ -56,7 +57,7 @@ def with_retry(
                         delay = min(initial_delay * (exponential_base**attempt), max_delay)
 
                         # Add jitter (random variation) to avoid thundering herd
-                        jitter = delay * 0.1 * (0.5 + asyncio.random())
+                        jitter = delay * 0.1 * (0.5 + random.random())
                         total_delay = delay + jitter
 
                         log.warning(
@@ -126,7 +127,7 @@ class RetryPolicy:
         """Calculate delay for a given attempt number."""
         delay = min(self.initial_delay * (self.exponential_base**attempt), self.max_delay)
         # Add 10% jitter
-        jitter = delay * 0.1 * (0.5 + asyncio.random())
+        jitter = delay * 0.1 * (0.5 + random.random())
         return delay + jitter
 
 

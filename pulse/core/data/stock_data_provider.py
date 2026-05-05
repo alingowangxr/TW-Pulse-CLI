@@ -1,6 +1,8 @@
 """Centralized data provider to fetch stock data from FinMind (primary), yfinance (fallback), or Fugle (tertiary)."""
 
 import os
+from datetime import datetime, timedelta
+
 import pandas as pd
 
 from pulse.core.data.finmind_data import FinMindFetcher
@@ -13,6 +15,16 @@ from pulse.utils.error_handler import RateLimitError
 from pulse.utils.logger import get_logger
 
 log = get_logger(__name__)
+
+
+def _resolve_date_range(
+    start_date: str | None, end_date: str | None, default_days: int = 90
+) -> tuple[str, str]:
+    """Resolve date range with defaults."""
+    now = datetime.now()
+    end = end_date or now.strftime("%Y-%m-%d")
+    start = start_date or (now - timedelta(days=default_days)).strftime("%Y-%m-%d")
+    return start, end
 
 
 class StockDataProvider:
@@ -95,12 +107,7 @@ class StockDataProvider:
                         return data
                 else:
                     # Calculate date range for Fugle
-                    from datetime import datetime, timedelta
-
-                    if not end_date:
-                        end_date = datetime.now().strftime("%Y-%m-%d")
-                    if not start_date:
-                        start_date = (datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d")
+                    start_date, end_date = _resolve_date_range(start_date, end_date)
                     data = await self.fugle_fetcher.fetch_stock(ticker, start_date, end_date)
                     if data:
                         log.debug(f"Fetched {ticker} from Fugle (tertiary fallback)")
@@ -129,23 +136,12 @@ class StockDataProvider:
 
         # Try Fugle as tertiary fallback
         log.debug(f"yfinance failed for {ticker}, trying Fugle...")
-        if start_date and end_date:
-            data = await self.fugle_fetcher.fetch_stock(ticker, start_date, end_date)
-            if data:
-                log.debug(f"Fetched {ticker} from Fugle (tertiary fallback).")
-                return data
-        else:
-            # Calculate date range for Fugle
-            from datetime import datetime, timedelta
-
-            if not end_date:
-                end_date = datetime.now().strftime("%Y-%m-%d")
-            if not start_date:
-                start_date = (datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d")
-            data = await self.fugle_fetcher.fetch_stock(ticker, start_date, end_date)
-            if data:
-                log.debug(f"Fetched {ticker} from Fugle (tertiary fallback).")
-                return data
+        if not (start_date and end_date):
+            start_date, end_date = _resolve_date_range(start_date, end_date)
+        data = await self.fugle_fetcher.fetch_stock(ticker, start_date, end_date)
+        if data:
+            log.debug(f"Fetched {ticker} from Fugle (tertiary fallback).")
+            return data
 
         log.error(f"Failed to fetch {ticker} from FinMind, yfinance, and Fugle.")
         return None
@@ -216,12 +212,7 @@ class StockDataProvider:
                         if t not in {s.ticker for s in yfinance_results}
                     ]
                     if missing_from_yfinance:
-                        from datetime import datetime, timedelta
-
-                        fugle_end = end_date or datetime.now().strftime("%Y-%m-%d")
-                        fugle_start = start_date or (datetime.now() - timedelta(days=90)).strftime(
-                            "%Y-%m-%d"
-                        )
+                        fugle_start, fugle_end = _resolve_date_range(start_date, end_date)
                         fugle_results = (
                             await self.fugle_fetcher.fetch_stock(
                                 missing_from_yfinance[0], fugle_start, fugle_end
@@ -245,28 +236,16 @@ class StockDataProvider:
 
         # Try Fugle as tertiary fallback
         log.debug("yfinance failed for all stocks, trying Fugle...")
-        if start_date and end_date:
-            fugle_results = []
-            for ticker in tickers:
-                data = await self.fugle_fetcher.fetch_stock(ticker, start_date, end_date)
-                if data:
-                    fugle_results.append(data)
-            if fugle_results:
-                log.debug(f"Fetched {len(fugle_results)} stocks from Fugle (tertiary fallback).")
-                return fugle_results
-        else:
-            from datetime import datetime, timedelta
-
-            fugle_end = datetime.now().strftime("%Y-%m-%d")
-            fugle_start = (datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d")
-            fugle_results = []
-            for ticker in tickers:
-                data = await self.fugle_fetcher.fetch_stock(ticker, fugle_start, fugle_end)
-                if data:
-                    fugle_results.append(data)
-            if fugle_results:
-                log.debug(f"Fetched {len(fugle_results)} stocks from Fugle (tertiary fallback).")
-                return fugle_results
+        if not (start_date and end_date):
+            start_date, end_date = _resolve_date_range(start_date, end_date)
+        fugle_results = []
+        for ticker in tickers:
+            data = await self.fugle_fetcher.fetch_stock(ticker, start_date, end_date)
+            if data:
+                fugle_results.append(data)
+        if fugle_results:
+            log.debug(f"Fetched {len(fugle_results)} stocks from Fugle (tertiary fallback).")
+            return fugle_results
 
         log.error("Failed to fetch multiple tickers from FinMind, yfinance, and Fugle.")
         return []

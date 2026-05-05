@@ -197,7 +197,7 @@ class PulseApp(App):
     #chat {
         layer: base;
         height: 1fr;
-        padding: 1 2;
+        padding: 1 2 3 2;
         scrollbar-size: 1 1;
         scrollbar-color: #30363d;
         overflow-y: auto;
@@ -464,14 +464,20 @@ class PulseApp(App):
         try:
             chat = self.query_one("#chat", VerticalScroll)
             chat.scroll_end(animate=False)
+            # Ensure last child is fully visible by scrolling to it explicitly
+            children = list(chat.children)
+            if children:
+                chat.scroll_to_widget(children[-1], animate=False)
         except Exception as e:
             log.debug(f"Could not scroll chat to end: {e}")
 
     def _get_command_timeout(self, cmd: str) -> int | None:
         """Return a timeout for a command, or None for no timeout."""
         normalized = cmd.strip().lower()
-        if normalized.startswith("/warehouse") and "sync" in normalized and (
-            "--run" in normalized or "--mode=run" in normalized
+        if (
+            normalized.startswith("/warehouse")
+            and "sync" in normalized
+            and ("--run" in normalized or "--mode=run" in normalized)
         ):
             return 7200
         if normalized.startswith("/warehouse") and "sync" in normalized:
@@ -578,6 +584,7 @@ class PulseApp(App):
     async def _run_command(self, cmd: str) -> None:
         """Run command in background with timeout safety."""
         try:
+
             async def run_with_timeout():
                 timeout_seconds = self._get_command_timeout(cmd)
                 if timeout_seconds is None:
