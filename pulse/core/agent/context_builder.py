@@ -4,6 +4,7 @@ ContextBuilder - Fetches real market data and assembles AgentContext.
 Extracted from SmartAgent to keep data-fetching logic self-contained.
 """
 
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 from pulse.utils.logger import get_logger
@@ -94,8 +95,14 @@ class ContextBuilder:
     async def fetch_fundamental(self, ticker: str) -> dict[str, Any] | None:
         """Fetch fundamental data."""
         try:
-            fetcher = self._get_fetcher()
-            fund = await fetcher.fetch_fundamentals(ticker)
+            from pulse.core.data.stock_data_provider import StockDataProvider
+
+            provider = StockDataProvider()
+            fund = await provider.fetch_fundamentals(
+                ticker,
+                start_date=(datetime.now() - timedelta(days=365 * 5)).strftime("%Y-%m-%d"),
+                end_date=datetime.now().strftime("%Y-%m-%d"),
+            )
 
             if not fund:
                 return None
@@ -104,17 +111,25 @@ class ContextBuilder:
                 "pe_ratio": fund.pe_ratio,
                 "pb_ratio": fund.pb_ratio,
                 "ps_ratio": fund.ps_ratio,
+                "peg_ratio": fund.peg_ratio,
+                "ev_ebitda": fund.ev_ebitda,
                 "roe": fund.roe,
                 "roa": fund.roa,
                 "npm": fund.npm,
+                "opm": fund.opm,
+                "gpm": fund.gpm,
                 "debt_to_equity": fund.debt_to_equity,
                 "current_ratio": fund.current_ratio,
+                "quick_ratio": fund.quick_ratio,
                 "dividend_yield": fund.dividend_yield,
+                "payout_ratio": fund.payout_ratio,
                 "eps": fund.eps,
                 "bvps": fund.bvps,
+                "dps": fund.dps,
                 "revenue_growth": fund.revenue_growth,
                 "earnings_growth": fund.earnings_growth,
                 "market_cap": fund.market_cap,
+                "enterprise_value": fund.enterprise_value,
             }
         except Exception as e:
             log.error(f"Error fetching fundamental data for {ticker}: {e}")

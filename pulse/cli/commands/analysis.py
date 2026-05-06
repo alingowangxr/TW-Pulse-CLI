@@ -7,6 +7,39 @@ if TYPE_CHECKING:
     from pulse.cli.app import PulseApp
 
 
+def _build_fundamental_payload(fundamental) -> dict | None:
+    """Build a richer fundamental payload for LLM prompts."""
+    if not fundamental:
+        return None
+
+    return {
+        "ticker": fundamental.ticker,
+        "pe_ratio": fundamental.pe_ratio,
+        "pb_ratio": fundamental.pb_ratio,
+        "ps_ratio": fundamental.ps_ratio,
+        "peg_ratio": fundamental.peg_ratio,
+        "ev_ebitda": fundamental.ev_ebitda,
+        "roe": fundamental.roe,
+        "roa": fundamental.roa,
+        "npm": fundamental.npm,
+        "opm": fundamental.opm,
+        "gpm": fundamental.gpm,
+        "eps": fundamental.eps,
+        "bvps": fundamental.bvps,
+        "dps": fundamental.dps,
+        "revenue_growth": fundamental.revenue_growth,
+        "earnings_growth": fundamental.earnings_growth,
+        "debt_to_equity": fundamental.debt_to_equity,
+        "current_ratio": fundamental.current_ratio,
+        "quick_ratio": fundamental.quick_ratio,
+        "dividend_yield": fundamental.dividend_yield,
+        "payout_ratio": fundamental.payout_ratio,
+        "market_cap": fundamental.market_cap,
+        "enterprise_value": fundamental.enterprise_value,
+        "summary": fundamental.to_summary(),
+    }
+
+
 async def analyze_command(app: "PulseApp", args: str) -> str:
     """Analyze command handler."""
     if not args:
@@ -56,7 +89,7 @@ async def analyze_command(app: "PulseApp", args: str) -> str:
             "market_cap": stock.market_cap,
         },
         "technical": technical.to_summary() if technical else None,
-        "fundamental": fundamental.to_summary() if fundamental else None,
+        "fundamental": _build_fundamental_payload(fundamental),
         "broker": broker if broker else None,
         "sapta": sapta.to_dict() if sapta else None,
         "happy_lines": happy_lines.to_summary() if happy_lines else None,
@@ -125,7 +158,7 @@ async def analyze_command_stream(app: "PulseApp", args: str):
             "market_cap": stock.market_cap,
         },
         "technical": technical.to_summary() if technical else None,
-        "fundamental": fundamental.to_summary() if fundamental else None,
+        "fundamental": _build_fundamental_payload(fundamental),
         "broker": broker if broker else None,
         "sapta": sapta.to_dict() if sapta else None,
         "happy_lines": happy_lines.to_summary() if happy_lines else None,

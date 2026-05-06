@@ -157,14 +157,16 @@ class StockDataProvider:
 
         Attempts FinMind first, then yfinance.
         """
+        if not start_date or not end_date:
+            start_date, end_date = _resolve_date_range(start_date, end_date, default_days=365 * 5)
+
         # Try FinMind first
-        if start_date and end_date:
-            data = await self.finmind_fetcher.fetch_fundamentals(ticker, start_date, end_date)
-            if data:
-                log.debug(f"Fetched fundamentals for {ticker} from FinMind.")
-                return data
-            else:
-                log.warning(f"FinMind failed for fundamentals of {ticker}, trying yfinance...")
+        data = await self.finmind_fetcher.fetch_fundamentals(ticker, start_date, end_date)
+        if data:
+            log.debug(f"Fetched fundamentals for {ticker} from FinMind.")
+            return data
+        else:
+            log.warning(f"FinMind failed for fundamentals of {ticker}, trying yfinance...")
 
         # Fallback to yfinance
         data = await self.yfinance_fetcher.fetch_fundamentals(ticker)

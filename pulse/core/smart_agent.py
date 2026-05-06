@@ -218,20 +218,44 @@ class SmartAgent:
                 parts.append(f"本益比: {f['pe_ratio']:.2f}")
             if f.get("pb_ratio") is not None:
                 parts.append(f"股價淨值比: {f['pb_ratio']:.2f}")
+            if f.get("ps_ratio") is not None:
+                parts.append(f"股價營收比: {f['ps_ratio']:.2f}")
+            if f.get("peg_ratio") is not None:
+                parts.append(f"PEG: {f['peg_ratio']:.2f}")
             if f.get("roe") is not None:
                 parts.append(f"股東權益報酬率: {f['roe']:.1f}%")
             if f.get("roa") is not None:
                 parts.append(f"資產報酬率: {f['roa']:.1f}%")
             if f.get("npm") is not None:
                 parts.append(f"淨利率: {f['npm']:.1f}%")
+            if f.get("opm") is not None:
+                parts.append(f"營業利益率: {f['opm']:.1f}%")
+            if f.get("gpm") is not None:
+                parts.append(f"毛利率: {f['gpm']:.1f}%")
+            if f.get("eps") is not None:
+                parts.append(f"每股盈餘 EPS: {f['eps']:.2f}")
+            if f.get("bvps") is not None:
+                parts.append(f"每股淨值 BVPS: {f['bvps']:.2f}")
+            if f.get("dps") is not None:
+                parts.append(f"每股股利 DPS: {f['dps']:.2f}")
             if f.get("debt_to_equity") is not None:
                 parts.append(f"負債權益比: {f['debt_to_equity']:.2f}")
+            if f.get("current_ratio") is not None:
+                parts.append(f"流動比率: {f['current_ratio']:.2f}")
+            if f.get("quick_ratio") is not None:
+                parts.append(f"速動比率: {f['quick_ratio']:.2f}")
             if f.get("dividend_yield") is not None:
                 parts.append(f"股利殖利率: {f['dividend_yield']:.2f}%")
+            if f.get("payout_ratio") is not None:
+                parts.append(f"盈餘分派率: {f['payout_ratio']:.1f}%")
             if f.get("revenue_growth") is not None:
                 parts.append(f"營收成長率: {f['revenue_growth']:.1f}%")
             if f.get("earnings_growth") is not None:
                 parts.append(f"獲利成長率: {f['earnings_growth']:.1f}%")
+            if f.get("enterprise_value") is not None:
+                ev = f["enterprise_value"]
+                ev_str = f"{ev / 1e12:.1f}兆" if ev >= 1e12 else f"{ev / 1e9:.1f}億"
+                parts.append(f"企業價值 EV: NT$ {ev_str}")
             parts.append("")
 
         if context.comparison_data:
