@@ -349,6 +349,7 @@ Universe Options (股票池選項):
   /sapta scan tw50             - Scan TW50 (台灣50, 50檔股票, 快速)
   /sapta scan midcap           - Scan Mid-Cap 100 stocks (中型股100檔)
   /sapta scan popular          - Scan popular stocks (熱門股)
+  /sapta scan otc              - Scan OTC stocks (上櫃股票)
   /sapta scan all              - Scan ALL stocks (全部股票, 較慢)
 
 Options (選項):
@@ -359,6 +360,7 @@ Examples (範例):
   /sapta 2330                  - Analyze TSMC (分析台積電)
   /sapta 2881 --detailed       - Detailed analysis (詳細分析國泰金)
   /sapta chart 2330            - Generate SAPTA chart (產生分析圖表)
+  /sapta scan otc              - Scan OTC stocks (掃描上櫃股票)
   /sapta scan all              - Scan all stocks for pre-markup (掃描全市場)
 
 Status Levels (狀態等級 - ML學習門檻):
@@ -499,6 +501,30 @@ Modules (分析模組):
                 min_status = SaptaStatus.READY  # Higher threshold for large scan
             except Exception as e:
                 return f"Could not load tickers: {e}"
+        elif universe in ["otc", "tpex", "tp", "上櫃"]:
+            try:
+                import json
+                from pathlib import Path
+
+                def _load_json_tickers(filename: str) -> list[str]:
+                    candidates = [
+                        Path.cwd() / "data" / filename,
+                        Path(__file__).resolve().parents[3] / "data" / filename,
+                    ]
+                    for path in candidates:
+                        if not path.exists():
+                            continue
+                        with open(path, encoding="utf-8") as f:
+                            data = json.load(f)
+                        if isinstance(data, list):
+                            return [str(t).strip().upper() for t in data if str(t).strip()]
+                    return []
+
+                tickers = _load_json_tickers("tw_codes_otc.json")
+                universe_name = f"OTC ({len(tickers)} stocks)"
+                min_status = SaptaStatus.WATCHLIST
+            except Exception as e:
+                return f"Could not load OTC tickers: {e}"
         else:
             # Select universe using screener's universe logic
             universe_map = {

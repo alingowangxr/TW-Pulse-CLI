@@ -1,6 +1,8 @@
 """yfinance data fetcher for Taiwan stocks (fallback)."""
 
 import asyncio
+import json
+from pathlib import Path
 
 import pandas as pd
 import yfinance as yf
@@ -24,6 +26,9 @@ YFINANCE_RETRY_POLICY = RetryPolicy(
 class YFinanceFetcher:
     """Fetch stock data from yfinance for Taiwan stocks."""
 
+    TWSE_SUFFIX = ".TW"
+    OTC_SUFFIX = ".TWO"
+
     # Taiwan market indices mapping
     INDEX_MAPPING = {
         "TAIEX": ("^TWII", "Taiwan Weighted Index"),
@@ -41,9 +46,43 @@ class YFinanceFetcher:
             suffix: Ticker suffix for Taiwan (default: .TW)
         """
         self.suffix = suffix
+        self._otc_tickers: set[str] | None = None
+
+    def _load_otc_tickers(self) -> set[str]:
+        """Load OTC ticker codes from local JSON cache."""
+        if self._otc_tickers is not None:
+            return self._otc_tickers
+
+        candidates = [
+            Path.cwd() / "data" / "tw_codes_otc.json",
+            Path(__file__).resolve().parents[3] / "data" / "tw_codes_otc.json",
+        ]
+
+        for path in candidates:
+            if not path.exists():
+                continue
+            try:
+                with open(path, encoding="utf-8") as f:
+                    data = json.load(f)
+                if isinstance(data, list):
+                    self._otc_tickers = {str(item).upper().strip() for item in data if item}
+                    log.debug(f"Loaded {len(self._otc_tickers)} OTC tickers from {path}")
+                    return self._otc_tickers
+            except Exception as e:
+                log.debug(f"Could not load OTC tickers from {path}: {e}")
+
+        self._otc_tickers = set()
+        return self._otc_tickers
+
+    def _is_otc_ticker(self, ticker: str) -> bool:
+        """Return True if the code belongs to the OTC universe."""
+        raw_ticker = ticker.upper().strip()
+        if raw_ticker.endswith((self.TWSE_SUFFIX, self.OTC_SUFFIX)):
+            raw_ticker = raw_ticker.rsplit(".", 1)[0]
+        return raw_ticker in self._load_otc_tickers()
 
     def _format_ticker(self, ticker: str) -> str:
-        """Format ticker with Taiwan suffix (.TW)."""
+        """Format ticker with the correct Taiwan suffix (.TW or .TWO)."""
         ticker = ticker.upper().strip()
 
         # Check if it's an index
@@ -54,14 +93,24 @@ class YFinanceFetcher:
         if ticker.startswith("^"):
             return ticker
 
+        # Keep explicit market suffixes intact.
+        if ticker.endswith((self.TWSE_SUFFIX, self.OTC_SUFFIX)):
+            return ticker
+
+        if self._is_otc_ticker(ticker):
+            return f"{ticker}{self.OTC_SUFFIX}"
+
         if not ticker.endswith(self.suffix):
             return f"{ticker}{self.suffix}"
         return ticker
 
     def _clean_ticker(self, ticker: str) -> str:
         """Remove suffix from ticker."""
-        if ticker.endswith(self.suffix):
-            return ticker[: -len(self.suffix)]
+        ticker = ticker.upper().strip()
+        if ticker.endswith(self.TWSE_SUFFIX):
+            return ticker[: -len(self.TWSE_SUFFIX)]
+        if ticker.endswith(self.OTC_SUFFIX):
+            return ticker[: -len(self.OTC_SUFFIX)]
         return ticker
 
     async def fetch_stock(

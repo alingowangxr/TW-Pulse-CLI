@@ -64,6 +64,8 @@ class TestYFinanceFetcher:
         assert fetcher._format_ticker("2330") == "2330.TW"
         assert fetcher._format_ticker("2454") == "2454.TW"
         assert fetcher._format_ticker("2330.TW") == "2330.TW"
+        assert fetcher._format_ticker("1240") == "1240.TWO"
+        assert fetcher._format_ticker("1240.TWO") == "1240.TWO"
 
         # Test index
         assert fetcher._format_ticker("TAIEX") == "^TWII"
@@ -71,6 +73,7 @@ class TestYFinanceFetcher:
 
     def test_clean_ticker(self, fetcher):
         assert fetcher._clean_ticker("2330.TW") == "2330"
+        assert fetcher._clean_ticker("1240.TWO") == "1240"
         assert fetcher._clean_ticker("2330") == "2330"
 
     @pytest.mark.asyncio
@@ -87,6 +90,15 @@ class TestYFinanceFetcher:
         assert data.change == 10.0
         assert data.change_percent == pytest.approx(0.985, abs=0.001)
         assert len(data.history) == 5
+
+    @pytest.mark.asyncio
+    async def test_fetch_stock_otc_uses_two_suffix(self, fetcher, mock_stock_data, mock_yf_ticker):
+        ticker = "1240"
+        data = await fetcher.fetch_stock(ticker)
+
+        assert data is not None
+        assert data.ticker == "1240"
+        mock_yf_ticker.assert_called_with("1240.TWO")
 
     @pytest.mark.asyncio
     async def test_fetch_stock_no_data(self, fetcher, mock_yf_ticker):

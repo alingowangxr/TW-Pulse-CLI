@@ -505,3 +505,24 @@ class TestCommandRegistration:
         assert any(
             event["type"] == "response" and "倉庫同步完成" in event["message"] for event in events
         )
+
+
+class TestSaptaCommand:
+    """Test cases for SAPTA command handler."""
+
+    @pytest.mark.asyncio
+    async def test_sapta_scan_otc_uses_otc_universe(self, mock_app):
+        from pulse.cli.commands.advanced import sapta_command
+
+        with patch("pulse.core.sapta.SaptaEngine") as MockEngine:
+            engine = MockEngine.return_value
+            engine.scan = AsyncMock(return_value=[MagicMock(ticker="1240")])
+            engine.format_scan_results = MagicMock(return_value="OTC scan OK")
+
+            result = await sapta_command(mock_app, "scan otc")
+
+        assert result == "OTC scan OK"
+        engine.scan.assert_awaited_once()
+        tickers = engine.scan.await_args.args[0]
+        assert "1240" in tickers
+        assert engine.scan.await_args.kwargs["min_status"].name == "WATCHLIST"
