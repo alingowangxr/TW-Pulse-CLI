@@ -139,7 +139,27 @@ python -m pulse.cli.app
 |------|------|------|------|
 | `/screen` | `/s`, `/filter` | 股票篩選 | `/screen oversold` |
 | `/smart-money` | `/tvb`, `/主力` | 主力足跡選股 | `/smart-money --tw50` |
+| `/stocks` | - | 更新股票清單檔案 | `/stocks --sync` |
 | `/warehouse` | `/db`, `/datahub` | 本地台股倉庫狀態/同步 | `/warehouse sync --mode=copy` |
+
+#### `/stocks`
+
+`/stocks` 用來更新股票清單檔案，適合排程執行。
+
+```bash
+/stocks --sync
+```
+
+會更新：
+- `data/tw_codes_tw50.json`
+- `data/tw_codes_listed.json`
+- `data/tw_codes_otc.json`
+- `data/tw_tickers.json`
+- `data/stock_list.json`
+
+可搭配 Windows Task Scheduler 或 cron 定時跑 `python scripts/fetch_stock_list.py --sync`。
+
+#### `/warehouse`
 
 如果你要使用本地股票資料，請先執行 `/warehouse` 或 `/warehouse sync` 來建立 `data/local_warehouse/tw_stock_warehouse.db`。
 這個檔案不會隨著 GitHub repository 一起提供，因為它是本機環境專用的資料庫檔。
@@ -308,16 +328,26 @@ python -m pulse.cli.app
 ```bash
 /smart-money              # TW50 (50檔, ~10秒)
 /smart-money --tw50       # 台灣50
-/smart-money --listed     # 上市公司 (1,067檔, ~2分鐘)
-/smart-money --otc        # 上櫃公司 (874檔, ~90秒)
-/smart-money --all        # 全部市場 (1,941檔, ~4分鐘)
-/smart-money --fast       # 快速模式 (跳過OBV)
+/smart-money --listed     # 上市公司
+/smart-money --otc        # 上櫃公司
+/smart-money --all        # 全部市場
+/smart-money --fast       # 快速模式 (跳過 OBV 歷史比對)
 /smart-money --min=60     # 高分篩選
-/smart-money --limit=10   # 限制數量
+/smart-money --limit=10    # 限制數量
 ```
 
-如果本機有可用的 warehouse SQLite，`smart-money` 會優先讀本地資料。
-`/warehouse` 用來查看狀態或同步本地倉庫，`copy` 複製現成 DB，`run` 先執行本地內建 downloader 再同步。
+### 使用說明
+
+- 預設 universe 為 `TW50`，適合日常快速查看
+- `--listed` 使用上市公司清單
+- `--otc` 使用上櫃公司清單
+- `--all` 使用上市 + 上櫃合併清單
+- `--fast` 會略過 OBV 的較重歷史比對，適合大 universe
+- `--min` 可提高篩選門檻，減少輸出數量
+- `--limit` 控制最多輸出幾檔
+- 如果本機有可用的 warehouse SQLite，`smart-money` 會優先讀本地資料
+- `/stocks --sync` 或 `python scripts/fetch_stock_list.py --sync` 會更新 `TW50 / listed / otc / all` 的股票清單檔案
+- `/warehouse` 用來查看狀態或同步本地倉庫，`copy` 複製現成 DB，`run` 先執行本地內建 downloader 再同步
 預設會自動尋找 `data/local_warehouse/tw_stock_warehouse.db`，也可用 `PULSE_DATA__LOCAL_WAREHOUSE_DB` 指定自訂路徑。
 如果這個檔案尚未建立，請先執行 `/warehouse` 或 `/warehouse sync`。
 

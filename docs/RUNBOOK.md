@@ -120,8 +120,10 @@ data/cache/          # 快取數據
 # 1. 測試 AI 連線
 python scripts/check_api_keys.py
 
-# 2. 測試數據源
-python scripts/fetch_stock_list.py
+# 2. 更新股票清單（可排程）
+python scripts/fetch_stock_list.py --sync
+# 或在 CLI 內執行：/stocks --sync
+# 會更新 data/tw_codes_tw50.json、data/tw_codes_listed.json、data/tw_codes_otc.json、data/tw_tickers.json、data/stock_list.json
 
 # 3. 驗證模型過濾
 python scripts/verify_model_filtering.py

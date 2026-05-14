@@ -482,6 +482,14 @@ class PulseApp(App):
             return 7200
         if normalized.startswith("/warehouse") and "sync" in normalized:
             return 600
+        if normalized.startswith("/smart-money"):
+            if "--all" in normalized:
+                return 2400 if "--fast" not in normalized else 1200
+            if "--listed" in normalized:
+                return 1200 if "--fast" not in normalized else 720
+            if "--otc" in normalized:
+                return 900 if "--fast" not in normalized else 540
+            return 180
         return 180
 
     def _schedule_scroll(self) -> None:

@@ -9,6 +9,7 @@ from typing import Literal
 
 import pandas as pd
 
+from pulse.utils.constants import TW50_TICKERS
 from pulse.utils.logger import get_logger
 
 log = get_logger(__name__)
@@ -346,6 +347,26 @@ class StockListFetcher:
         log.info(f"Stock tickers saved to {filepath}")
         return filepath
 
+    def save_tw50_json(self, filepath: str | Path | None = None) -> Path:
+        """Save TW50 ticker list to JSON (compatible with smart_money_screener)."""
+        if filepath is None:
+            filepath = Path("data/tw_codes_tw50.json")
+
+        # Keep 0050 in the file for backwards compatibility; loader filters it out.
+        tickers = ["0050"] + [ticker for ticker in TW50_TICKERS if ticker != "0050"]
+        tickers = sorted(set(tickers))
+
+        filepath = Path(filepath)
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+
+        import json
+
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(tickers, f, ensure_ascii=False, indent=2)
+
+        log.info(f"TW50 stocks saved to {filepath}")
+        return filepath
+
     def save_listed_json(self, filepath: str | Path | None = None) -> Path:
         """
         Save TWSE listed stocks to JSON (compatible with smart_money_screener).
@@ -410,6 +431,9 @@ class StockListFetcher:
             Dict with file paths
         """
         files: dict = {}
+
+        # 0. tw_codes_tw50.json - TW50 stocks for smart_money_screener
+        files["tw_codes_tw50"] = str(self.save_tw50_json())
 
         # 1. tw_tickers.json - all tickers for config.py
         files["tw_tickers"] = str(self.save_tickers_json())

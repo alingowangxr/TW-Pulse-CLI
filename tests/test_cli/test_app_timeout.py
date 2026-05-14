@@ -15,3 +15,15 @@ def test_default_command_timeout_is_short():
 
     assert app._get_command_timeout("/help") == 180
     assert app._get_command_timeout("/warehouse") == 180
+
+
+def test_smart_money_timeout_scales_with_universe():
+    app = PulseApp.__new__(PulseApp)
+
+    assert app._get_command_timeout("/smart-money") == 180
+    assert app._get_command_timeout("/smart-money --tw50") == 180
+    assert app._get_command_timeout("/smart-money --listed") == 1200
+    assert app._get_command_timeout("/smart-money --listed --fast") == 720
+    assert app._get_command_timeout("/smart-money --otc") == 900
+    assert app._get_command_timeout("/smart-money --all") == 2400
+    assert app._get_command_timeout("/smart-money --all --fast") == 1200

@@ -199,6 +199,27 @@ pulse
 /warehouse sync --mode=run
 ```
 
+### 股票清單同步
+
+如果你要定時更新 `TW50 / listed / otc / all` 的股票清單，使用：
+
+```bash
+/stocks --sync
+python scripts/fetch_stock_list.py --sync
+```
+
+會同步更新以下檔案：
+- `data/tw_codes_tw50.json`
+- `data/tw_codes_listed.json`
+- `data/tw_codes_otc.json`
+- `data/tw_tickers.json`
+- `data/stock_list.json`
+
+建議排程方式：
+- Windows Task Scheduler 或 cron 每天固定時間執行 `python scripts/fetch_stock_list.py --sync`
+- 如果你想手動確認結果，可直接在 CLI 執行 `/stocks --sync`
+- `smart-money` 與 `sapta` 會讀這些清單檔，因此清單更新後，篩選範圍也會同步更新
+
 ---
 
 ## Command Examples
@@ -243,7 +264,23 @@ pulse
 ```bash
 /screen                            # 股票篩選
 /smart-money                       # 主力足跡選股
+/smart-money --listed              # 上市公司
+/smart-money --otc                 # 上櫃公司
+/smart-money --all                 # 全部市場
+/smart-money --fast                # 快速模式，跳過 OBV 歷史比對
+/smart-money --min=60              # 提高門檻，只看高分股
+/smart-money --limit=10            # 限制輸出筆數
+/stocks --sync                     # 更新股票清單檔案
 ```
+
+`/smart-money` 說明：
+- 預設為 `TW50`，適合日常快速查看
+- `--listed` 使用上市公司清單
+- `--otc` 使用上櫃公司清單
+- `--all` 使用上市 + 上櫃合併清單
+- `--fast` 會略過 OBV 的較重歷史比對，適合大池子
+- `--min` 與 `--limit` 可控制篩選嚴格度與輸出數量
+- 如果本機有可用的 local warehouse，會優先讀本地資料，否則 fallback 到網路資料源
 
 ---
 

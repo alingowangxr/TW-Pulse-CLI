@@ -38,6 +38,11 @@ def parse_stocks_args(args: str) -> dict:
         action="store_true",
         help="Return only ticker codes (one per line)",
     )
+    parser.add_argument(
+        "--sync",
+        action="store_true",
+        help="Refresh and save all stock list files for scheduled updates",
+    )
 
     try:
         parsed = parser.parse_args(args.split() if args else [])
@@ -47,6 +52,7 @@ def parse_stocks_args(args: str) -> dict:
             "twse_only": parsed.twse,
             "tpex_only": parsed.tpex,
             "tickers_only": parsed.tickers,
+            "sync": parsed.sync,
         }
     except SystemExit:
         return {"error": "Invalid arguments"}
@@ -76,6 +82,27 @@ async def stocks_command(app: "PulseApp", args: str) -> str:
     fetcher = StockListFetcher(token=token)
 
     try:
+        if parsed.get("sync"):
+            files = fetcher.save_all_for_main_program()
+            twse_stocks = fetcher.get_twse_stocks()
+            tpex_stocks = fetcher.get_tpex_stocks()
+
+            return "\n".join(
+                [
+                    "股票清單同步完成",
+                    f"TW50: {files.get('tw_codes_tw50')}",
+                    f"TWSE: {files.get('tw_codes_listed')}",
+                    f"TPEx: {files.get('tw_codes_otc')}",
+                    f"All: {files.get('stock_list')}",
+                    "",
+                    f"上市 (TWSE): {len(twse_stocks)} 檔股票",
+                    f"上櫃 (TPEx): {len(tpex_stocks)} 檔股票",
+                    f"總計: {len(twse_stocks) + len(tpex_stocks)} 檔股票",
+                    "",
+                    "可搭配 Windows Task Scheduler / cron 定時執行 `python scripts/fetch_stock_list.py` 或 `/stocks --sync`。",
+                ]
+            )
+
         # Fetch data
         twse_stocks = []
         tpex_stocks = []

@@ -33,8 +33,8 @@ from typing import cast
 
 import pandas as pd
 
-from pulse.core.analysis.technical import TechnicalAnalyzer
 from pulse.core.data.stock_data_provider import StockDataProvider
+from pulse.core.models import OHLCV
 from pulse.utils.logger import get_logger
 
 log = get_logger(__name__)
@@ -167,7 +167,6 @@ class SmartMoneyScreener:
         """
         self.universe = universe
         self.fetcher = StockDataProvider()
-        self.analyzer = TechnicalAnalyzer()
 
     def load_market_tickers(self, market: StockMarket = "tw50") -> list[str]:
         """依市場類型載入股票代號"""
@@ -186,6 +185,31 @@ class SmartMoneyScreener:
     def _load_all_tickers(self) -> list[str]:
         """載入所有股票代號 (預設 TW50)"""
         return self.load_market_tickers("tw50")
+
+    def _history_to_dataframe(self, history: list[OHLCV]) -> pd.DataFrame | None:
+        """Convert cached OHLCV history into a technical-analysis DataFrame."""
+        if not history:
+            return None
+
+        df = pd.DataFrame(
+            [
+                {
+                    "date": item.date,
+                    "open": item.open,
+                    "high": item.high,
+                    "low": item.low,
+                    "close": item.close,
+                    "volume": item.volume,
+                }
+                for item in history
+            ]
+        )
+        if df.empty:
+            return None
+
+        df.columns = [str(col).lower() for col in df.columns]
+        df["date"] = pd.to_datetime(df["date"])
+        return df
 
     async def _fetch_full_data(
         self, ticker: str, fast_mode: bool = False
@@ -210,26 +234,14 @@ class SmartMoneyScreener:
             if not stock:
                 return None
 
-            # Get historical data for additional analysis
-            df = await self.fetcher.fetch_history(
-                ticker, period="1y", start_date=start_date_str, end_date=end_date_str
-            )
+            # Reuse the historical prices already returned with the stock payload.
+            # This avoids a second database/network round-trip per ticker.
+            df = self._history_to_dataframe(stock.history)
+            if df is None:
+                df = await self.fetcher.fetch_history(
+                    ticker, period="1y", start_date=start_date_str, end_date=end_date_str
+                )
             if df is None or df.empty:
-                return None
-
-            stock = await self.fetcher.fetch_stock(
-                ticker,
-                period="1y",
-                start_date=start_date_str,
-                end_date=end_date_str,
-                history_df=df,
-            )
-            if not stock:
-                return None
-
-            # Get technical indicators from the same data to avoid duplicate fetches
-            technical = await self.analyzer.analyze(ticker, df=df)
-            if not technical:
                 return None
 
             result = SmartMoneyResult(
@@ -239,13 +251,6 @@ class SmartMoneyScreener:
                 price=stock.current_price,
                 change_percent=stock.change_percent,
                 volume=stock.volume,
-                bb_upper=technical.bb_upper,
-                bb_middle=technical.bb_middle,
-                bb_lower=technical.bb_lower,
-                bb_width=technical.bb_width,
-                sma_20=technical.sma_20,
-                sma_200=technical.sma_200,
-                obv=technical.obv,
             )
 
             # Additional analysis from historical data (skip OBV in fast mode)
@@ -262,10 +267,40 @@ class SmartMoneyScreener:
     ) -> SmartMoneyResult:
         """從DataFrame進行額外分析"""
         df = df.copy()
+        df.columns = [str(col).lower() for col in df.columns]
+
+        # 0. Calculate the indicators needed for scoring directly from the cached history.
+        close = df["close"] if "close" in df.columns else None
+        high = df["high"] if "high" in df.columns else None
+        low = df["low"] if "low" in df.columns else None
+        volume = df["volume"] if "volume" in df.columns else None
+        bb_width_series = None
+
+        if close is not None:
+            sma_20 = close.rolling(20).mean().iloc[-1] if len(close) >= 20 else None
+            sma_200 = close.rolling(200).mean().iloc[-1] if len(close) >= 200 else None
+            result.sma_20 = float(sma_20) if sma_20 is not None and pd.notna(sma_20) else None
+            result.sma_200 = float(sma_200) if sma_200 is not None and pd.notna(sma_200) else None
+
+            if len(close) >= 20:
+                rolling = close.rolling(20)
+                bb_middle_series = rolling.mean()
+                bb_std_series = rolling.std()
+                bb_width_series = ((4 * bb_std_series) / bb_middle_series) * 100
+                bb_middle = bb_middle_series.iloc[-1]
+                bb_std = bb_std_series.iloc[-1]
+                if pd.notna(bb_middle) and pd.notna(bb_std) and bb_middle > 0:
+                    result.bb_middle = float(bb_middle)
+                    result.bb_upper = float(bb_middle + 2 * bb_std)
+                    result.bb_lower = float(bb_middle - 2 * bb_std)
+                    result.bb_width = float(bb_width_series.iloc[-1])
+
+        if volume is not None and len(volume) > 0:
+            result.volume = int(volume.iloc[-1])
 
         # 1. 計算 MV5 (5日均量)
-        if "volume" in df.columns:
-            vol_ma5 = df["volume"].rolling(5).mean()
+        if volume is not None:
+            vol_ma5 = volume.rolling(5).mean()
             if isinstance(vol_ma5, pd.Series) and len(vol_ma5) > 0:
                 result.volume_sma_5 = float(vol_ma5.iloc[-1])
 
@@ -286,60 +321,47 @@ class SmartMoneyScreener:
             result.bias_ma20 = ((result.price - result.sma_20) / result.sma_20) * 100
 
         # 4. OBV 先行創高分析
-        if result.obv is not None and "close" in df.columns:
-            df = df.copy()
+        if close is not None and volume is not None:
             df["obv"] = self._calculate_obv(df)
+            result.obv = float(df["obv"].iloc[-1]) if len(df["obv"]) else None
 
-            # 找出近期盤整期間 (價格波動小於ATR的1.5倍)
-            atr_threshold = None
-            if "atr_14" in df.columns:
-                atr_threshold = df["atr_14"].iloc[-1] * 1.5
+            if not fast_mode:
+                # 找出近期盤整期間 (價格波動小於ATR的1.5倍)
+                atr_threshold = None
+                if "atr_14" in df.columns:
+                    atr_threshold = df["atr_14"].iloc[-1] * 1.5
 
-            if atr_threshold is None:
-                # 如果沒有ATR，使用價格標準差作為閾值
-                atr_threshold = df["close"].std() * 2
+                if atr_threshold is None:
+                    # 如果沒有ATR，使用價格標準差作為閾值
+                    atr_threshold = df["close"].std() * 2
 
-            # 最近30天內找出盤整區間
-            recent_df = df.tail(30)
+                # 最近30天內找出盤整區間
+                recent_df = df.tail(30)
 
-            # 計算價格波動
-            price_std = recent_df["close"].std()
-            price_mean = recent_df["close"].mean()
-            is_consolidation = price_std / price_mean < 0.03  # 波動率 < 3%
+                # 計算價格波動
+                price_std = recent_df["close"].std()
+                price_mean = recent_df["close"].mean()
+                is_consolidation = price_std / price_mean < 0.03  # 波動率 < 3%
 
-            if is_consolidation:
-                # 盤整期間的 OBV 高點
-                consolidation_obv = recent_df["obv"].max()
-                result.obv_consolidation_high = float(consolidation_obv)
+                if is_consolidation:
+                    # 盤整期間的 OBV 高點
+                    consolidation_obv = recent_df["obv"].max()
+                    result.obv_consolidation_high = float(consolidation_obv)
 
-                # 檢查 OBV 是否突破盤整高點 (使用iloc確保是pandas Series)
-                prev_obv_values = df["obv"].iloc[-30:-10] if len(df) >= 30 else df["obv"]
-                if hasattr(prev_obv_values, "max"):
-                    prev_obv_high = prev_obv_values.max()
-                    result.obv_broke_high = result.obv > prev_obv_high
+                    # 檢查 OBV 是否突破盤整高點 (使用iloc確保是pandas Series)
+                    prev_obv_values = df["obv"].iloc[-30:-10] if len(df) >= 30 else df["obv"]
+                    if hasattr(prev_obv_values, "max"):
+                        prev_obv_high = prev_obv_values.max()
+                        result.obv_broke_high = result.obv > prev_obv_high
 
         # 5. 極致壓縮分析 (布林帶寬持續低於閾值)
-        if result.bb_width is not None:
+        if result.bb_width is not None and bb_width_series is not None:
             squeeze_days = 0
-            # Calculate BB width for each row and check squeeze duration
-            for i in range(-1, -min(30, len(df)), -1):
-                # Recalculate BB width for this row
-                close_i = df["close"].iloc[i]
-                n = 20
-                if len(df) >= n + i + 1:
-                    recent_close = df["close"].iloc[max(0, i - n + 1) : i + 1]
-                    if len(recent_close) >= n:
-                        bb_middle_i = recent_close.mean()
-                        bb_std_i = recent_close.std()
-                        bb_width_i = (
-                            (bb_middle_i + 2 * bb_std_i - (bb_middle_i - 2 * bb_std_i))
-                            / bb_middle_i
-                            * 100
-                        )
-                        if bb_width_i < self.BB_SQUEEZE_WIDTH:
-                            squeeze_days += 1
-                        else:
-                            break
+            for width in bb_width_series.dropna().iloc[::-1].head(30):
+                if width < self.BB_SQUEEZE_WIDTH:
+                    squeeze_days += 1
+                else:
+                    break
             result.squeeze_days = squeeze_days
 
         # 6. 帶量突破分析
@@ -363,17 +385,13 @@ class SmartMoneyScreener:
         close = df["close"]
         volume = df["volume"]
 
-        obv = pd.Series(index=df.index, dtype=float)
-        obv.iloc[0] = volume.iloc[0]
+        if len(df) == 0:
+            return pd.Series(dtype=float)
 
-        for i in range(1, len(df)):
-            if close.iloc[i] > close.iloc[i - 1]:
-                obv.iloc[i] = obv.iloc[i - 1] + volume.iloc[i]
-            elif close.iloc[i] < close.iloc[i - 1]:
-                obv.iloc[i] = obv.iloc[i - 1] - volume.iloc[i]
-            else:
-                obv.iloc[i] = obv.iloc[i - 1]
-
+        close_diff = close.diff()
+        direction = close_diff.apply(lambda x: 1 if x > 0 else -1 if x < 0 else 0)
+        obv = (direction * volume).fillna(0).cumsum()
+        obv.iloc[0] = float(volume.iloc[0])
         return obv
 
     def _calculate_smart_money_score(self, result: SmartMoneyResult) -> SmartMoneyResult:
@@ -543,7 +561,7 @@ class SmartMoneyScreener:
         log.info(f"Scanning {total} stocks ({market_name})...")
 
         # Fetch data for all stocks in parallel with semaphore
-        semaphore = asyncio.Semaphore(10)
+        semaphore = asyncio.Semaphore(30 if self.fetcher.local_warehouse.is_available else 10)
 
         async def fetch_and_score(ticker: str) -> SmartMoneyResult | None:
             async with semaphore:
@@ -552,9 +570,14 @@ class SmartMoneyScreener:
                     return self._calculate_smart_money_score(data)
                 return None
 
-        # Create and execute all tasks
-        tasks = [fetch_and_score(ticker) for ticker in target_universe]
-        all_results = await asyncio.gather(*tasks, return_exceptions=True)
+        # Create and execute tasks in batches to reduce memory pressure on large universes.
+        batch_size = 80 if market == "all" else 30
+        all_results: list[SmartMoneyResult | None | BaseException] = []
+        for i in range(0, len(target_universe), batch_size):
+            batch = target_universe[i : i + batch_size]
+            tasks = [fetch_and_score(ticker) for ticker in batch]
+            batch_results = await asyncio.gather(*tasks, return_exceptions=True)
+            all_results.extend(batch_results)
 
         # Filter results
         results: list[SmartMoneyResult] = []

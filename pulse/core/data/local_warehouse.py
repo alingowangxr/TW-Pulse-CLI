@@ -22,6 +22,8 @@ class LocalWarehouseFetcher:
 
     def _discover_db_path(self) -> Path | None:
         candidates = [
+            settings.base_dir / "tw_stock_warehouse.db",
+            settings.base_dir / "data" / "tw_stock_warehouse.db",
             settings.base_dir / "data" / "local_warehouse" / "tw_stock_warehouse.db",
             Path(r"D:\code\global-stock-data-warehouse\tw_stock_warehouse.db"),
         ]

@@ -2,11 +2,11 @@
 """Standalone script to fetch Taiwan stock code lists.
 
 Usage:
-    python scripts/fetch_stock_list.py [--json] [--csv] [--twse] [--tpex]
+    python scripts/fetch_stock_list.py [--sync] [--json] [--csv] [--twse] [--tpex]
 
 Examples:
-    # Fetch all stocks and save to JSON
-    python scripts/fetch_stock_list.py --json
+    # Refresh all stock list files for scheduled updates
+    python scripts/fetch_stock_list.py --sync
 
     # Fetch only TWSE stocks
     python scripts/fetch_stock_list.py --twse
@@ -32,6 +32,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Fetch Taiwan stock code lists (上市/上櫃股票代碼清單)"
     )
+    parser.add_argument("--sync", action="store_true", help="Refresh all generated stock lists")
     parser.add_argument(
         "--json", action="store_true", help="Save to JSON file (data/stock_list.json)"
     )
