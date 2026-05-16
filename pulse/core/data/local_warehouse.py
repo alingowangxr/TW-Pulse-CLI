@@ -7,7 +7,7 @@ from typing import Any
 import pandas as pd
 
 from pulse.core.config import settings
-from pulse.core.models import OHLCV, StockData
+from pulse.core.models import OHLCV, FundamentalData, StockData
 from pulse.utils.logger import get_logger
 
 log = get_logger(__name__)
@@ -282,9 +282,8 @@ class LocalWarehouseFetcher:
         change = current_price - previous_close
         change_percent = (change / previous_close * 100) if previous_close else 0.0
 
-        week_52_data = df.tail(252) if len(df) >= 252 else df
-        week_52_high = float(week_52_data["high"].max()) if not week_52_data.empty else 0.0
-        week_52_low = float(week_52_data["low"].min()) if not week_52_data.empty else 0.0
+        week_52_high = float(df["high"].tail(252).max()) if not df["high"].empty else 0.0
+        week_52_low = float(df["low"].tail(252).min()) if not df["low"].empty else 0.0
         avg_volume = int(df["volume"].tail(20).mean()) if not df["volume"].empty else 0
 
         return StockData(
@@ -348,9 +347,8 @@ class LocalWarehouseFetcher:
         change = current_price - previous_close
         change_percent = (change / previous_close * 100) if previous_close else 0.0
 
-        week_52_data = local_df.tail(252) if len(local_df) >= 252 else local_df
-        week_52_high = float(week_52_data["high"].max()) if not week_52_data.empty else 0.0
-        week_52_low = float(week_52_data["low"].min()) if not week_52_data.empty else 0.0
+        week_52_high = float(local_df["high"].tail(252).max()) if not local_df["high"].empty else 0.0
+        week_52_low = float(local_df["low"].tail(252).min()) if not local_df["low"].empty else 0.0
         avg_volume = int(local_df["volume"].tail(20).mean()) if not local_df["volume"].empty else 0
 
         return StockData(
@@ -387,6 +385,55 @@ class LocalWarehouseFetcher:
             start_date,
             end_date,
         )
+
+    async def fetch_fundamentals(self, ticker: str) -> FundamentalData | None:
+        """Fetch fundamental data from local database."""
+        if not self.is_available:
+            return None
+        return await asyncio.to_thread(self._fetch_fundamentals_sync, ticker)
+
+    def _fetch_fundamentals_sync(self, ticker: str) -> FundamentalData | None:
+        symbol = self._clean_ticker(ticker)
+        try:
+            with self._connect() as conn:
+                cur = conn.cursor()
+                cur.execute(
+                    "SELECT * FROM stock_fundamentals WHERE ticker = ? LIMIT 1",
+                    (symbol,),
+                )
+                row = cur.fetchone()
+                if not row:
+                    return None
+                
+                return FundamentalData(
+                    ticker=symbol,
+                    pe_ratio=row["pe_ratio"],
+                    pb_ratio=row["pb_ratio"],
+                    ps_ratio=row["ps_ratio"],
+                    peg_ratio=row["peg_ratio"],
+                    ev_ebitda=row["ev_ebitda"],
+                    roe=row["roe"],
+                    roa=row["roa"],
+                    npm=row["npm"],
+                    opm=row["opm"],
+                    gpm=row["gpm"],
+                    eps=row["eps"],
+                    bvps=row["bvps"],
+                    dps=row["dps"],
+                    revenue_growth=row["revenue_growth"],
+                    earnings_growth=row["earnings_growth"],
+                    debt_to_equity=row["debt_to_equity"],
+                    current_ratio=row["current_ratio"],
+                    quick_ratio=row["quick_ratio"],
+                    dividend_yield=row["dividend_yield"],
+                    payout_ratio=row["payout_ratio"],
+                    market_cap=row["market_cap"],
+                    enterprise_value=row["enterprise_value"],
+                    fetched_at=datetime.strptime(row["updated_at"], "%Y-%m-%d %H:%M:%S") if row["updated_at"] else datetime.now()
+                )
+        except Exception as e:
+            log.debug(f"Failed to fetch local fundamentals for {ticker}: {e}")
+            return None
 
     async def fetch_stock(
         self,

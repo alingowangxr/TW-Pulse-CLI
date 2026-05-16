@@ -321,6 +321,7 @@ python scripts/fetch_stock_list.py --sync
 
 | Version | Date | Changes |
 |---------|------|---------|
+| **0.5.1** | **2026-05-16** | **基本面本地化：新增 `stock_fundamentals` 資料表、`update_fundamentals.py` 同步腳本、`LocalWarehouseFetcher` 支援財務數據讀取、`StockDataProvider` 優先讀取本地財務資料** |
 | **0.5.0** | **2026-05-05** | **效能優化：快取單例模式、FinMind 向量化、yfinance 非同步化、技術指標快取、SMA 向量加速、TUI 滾動修復、投資人友善版 AI 提示詞** |
 | **0.4.6** | **2026-05-04** | **樂活通道 (LOHAS Channel) 整合：實作 20 日高低點平均線、站回 LB 買進/跌破 UB 賣出策略規則、AI 分析同步支援** |
 | **0.4.5** | **2026-04-20** | **AI 分析提示詞重寫、SmartAgent 輸出統一繁中、run/run_stream 整合測試補強** |
@@ -385,5 +386,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 [Report Bug](https://github.com/alingowangxr/TW-Pulse-CLI/issues) | [Request Feature](https://github.com/alingowangxr/TW-Pulse-CLI/issues)
 
 ⭐ If you find this project useful, please consider giving it a star!
+
+</div>
+ind this project useful, please consider giving it a star!
 
 </div>

@@ -164,6 +164,16 @@ python -m pulse.cli.app
 如果你要使用本地股票資料，請先執行 `/warehouse` 或 `/warehouse sync` 來建立 `data/local_warehouse/tw_stock_warehouse.db`。
 這個檔案不會隨著 GitHub repository 一起提供，因為它是本機環境專用的資料庫檔。
 
+#### 基本面數據批量更新
+
+為了加速 AI 推論並解決即時 API 缺資料的問題，建議同步個股基本面數據到本地 SQLite 資料庫：
+
+```bash
+python scripts/update_fundamentals.py
+```
+
+此腳本會遍歷所有已知的股票代碼，透過 `yfinance` 抓取最新的估值指標與財務數據（如 PE, PB, ROE, ROA 等）並存入 `stock_fundamentals` 表格。建議每週執行一次。
+
 ### 系統命令
 
 | 命令 | 別名 | 說明 |

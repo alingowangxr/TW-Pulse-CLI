@@ -155,12 +155,19 @@ class StockDataProvider:
         """
         Fetches fundamental data for a ticker.
 
-        Attempts FinMind first, then yfinance.
+        Attempts local warehouse first, then FinMind, then yfinance.
         """
+        # Try local warehouse first
+        if settings.data.local_warehouse_enabled:
+            local_fundamentals = await self.local_warehouse.fetch_fundamentals(ticker)
+            if local_fundamentals:
+                log.debug(f"Fetched fundamentals for {ticker} from local warehouse.")
+                return local_fundamentals
+
         if not start_date or not end_date:
             start_date, end_date = _resolve_date_range(start_date, end_date, default_days=365 * 5)
 
-        # Try FinMind first
+        # Try FinMind next
         data = await self.finmind_fetcher.fetch_fundamentals(ticker, start_date, end_date)
         if data:
             log.debug(f"Fetched fundamentals for {ticker} from FinMind.")
